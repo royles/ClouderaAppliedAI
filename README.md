@@ -19,7 +19,7 @@ app/            FastAPI app + model training/inference logic
 scripts/train.py  Trains and persists the model artifact (models/sentiment.joblib)
 static/index.html Single-page demo UI
 tests/          pytest unit + API tests
-.cursor/        Cloud Agent environment (environment.json, install.sh, start.sh)
+.cursor/        Cloud Agent environment scripts (install.sh, start.sh)
 ```
 
 ## Quick start
@@ -33,9 +33,9 @@ bash .cursor/start.sh
 # -> http://localhost:8000  (web UI)
 ```
 
-The Cloud Agent environment runs step 1 automatically as `install` and step 2 as
-a persistent `api` terminal, so the service is already running when an agent
-starts.
+In the Cloud Agent environment these are wired up as the `install` command
+(`bash .cursor/install.sh`) and the `start` command (`bash .cursor/start.sh`),
+so the service is already running when an agent starts.
 
 ### Manual (without the helper scripts)
 
