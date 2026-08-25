@@ -1,0 +1,16 @@
+{
+  "name": "Cloudera Applied AI",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "api",
+      "command": "bash .cursor/start.sh"
+    }
+  ],
+  "ports": [
+    {
+      "name": "api",
+      "port": 8000
+    }
+  ]
+}
