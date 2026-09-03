@@ -34,9 +34,11 @@ cp backend/.env.example backend/.env   # optional: add AWS credentials
 python start.py
 ```
 
-- Frontend: http://localhost:5173  
-- Backend API: http://localhost:8000  
-- Swagger: http://localhost:8000/docs  
+- Frontend: http://127.0.0.1:5173 (or `CDSW_APP_PORT` in Cloudera CML/CDSW)  
+- Backend API: http://127.0.0.1:8000  
+- Swagger: http://127.0.0.1:8000/docs  
+
+On Cloudera Machine Learning / CDSW, the platform sets `CDSW_APP_PORT`; `start.py` uses it automatically for the Vite dev server on `127.0.0.1`.
 
 Options:
 
@@ -44,7 +46,8 @@ Options:
 python start.py --backend-only      # API only
 python start.py --frontend-only     # UI only (proxies /api to backend if running)
 python start.py --skip-install      # skip pip/npm install checks
-python start.py --backend-port 9000 --frontend-port 3000
+python start.py --frontend-host 127.0.0.1 --frontend-port 8090
+python start.py --backend-port 9000
 ```
 
 Requires **Python 3.10+** and **Node.js/npm** on your machine.
@@ -62,7 +65,7 @@ cp .env.example .env         # Add your AWS credentials
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Frontend
+#### Frontend
 
 ```bash
 cd frontend

@@ -3,8 +3,8 @@
 Start the Bedrock Playground backend and frontend.
 
 Ensures Python and npm dependencies are installed, then launches:
-  - FastAPI backend on http://localhost:8000 (Swagger at /docs)
-  - Vite frontend on http://localhost:5173
+  - FastAPI backend on http://127.0.0.1:8000 (Swagger at /docs)
+  - Vite frontend on http://127.0.0.1:{CDSW_APP_PORT or 5173}
 """
 
 from __future__ import annotations
@@ -22,6 +22,18 @@ ROOT = Path(__file__).resolve().parent
 BACKEND_DIR = ROOT / "backend"
 FRONTEND_DIR = ROOT / "frontend"
 VENV_DIR = BACKEND_DIR / "venv"
+DEFAULT_FRONTEND_HOST = "127.0.0.1"
+DEFAULT_BACKEND_HOST = "127.0.0.1"
+DEFAULT_BACKEND_PORT = 8000
+DEFAULT_FRONTEND_PORT = 5173
+
+
+def default_frontend_port() -> int:
+    """Use CDSW/CML app port when set by the platform."""
+    cdsw_port = os.environ.get("CDSW_APP_PORT")
+    if cdsw_port:
+        return int(cdsw_port)
+    return DEFAULT_FRONTEND_PORT
 
 
 def log(message: str) -> None:
@@ -175,28 +187,44 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--backend-port",
         type=int,
-        default=8000,
-        help="Backend port (default: 8000).",
+        default=DEFAULT_BACKEND_PORT,
+        help=f"Backend port (default: {DEFAULT_BACKEND_PORT}).",
+    )
+    parser.add_argument(
+        "--backend-host",
+        default=DEFAULT_BACKEND_HOST,
+        help=f"Backend bind host (default: {DEFAULT_BACKEND_HOST}).",
     )
     parser.add_argument(
         "--frontend-port",
         type=int,
-        default=5173,
-        help="Frontend dev server port (default: 5173).",
+        default=None,
+        help="Frontend dev server port (default: CDSW_APP_PORT env var, else 5173).",
     )
     parser.add_argument(
-        "--host",
-        default="0.0.0.0",
-        help="Bind host for both services (default: 0.0.0.0).",
+        "--frontend-host",
+        default=DEFAULT_FRONTEND_HOST,
+        help=f"Frontend bind host (default: {DEFAULT_FRONTEND_HOST}).",
     )
     return parser.parse_args()
 
 
+def resolve_frontend_port(args: argparse.Namespace) -> int:
+    if args.frontend_port is not None:
+        return args.frontend_port
+    return default_frontend_port()
+
+
 def main() -> int:
     args = parse_args()
+    frontend_port = resolve_frontend_port(args)
+
     if args.backend_only and args.frontend_only:
         log("error: use only one of --backend-only or --frontend-only")
         return 1
+
+    if os.environ.get("CDSW_APP_PORT") and args.frontend_port is None:
+        log(f"using CDSW_APP_PORT={os.environ['CDSW_APP_PORT']} for frontend")
 
     start_backend = not args.frontend_only
     start_frontend = not args.backend_only
@@ -214,7 +242,7 @@ def main() -> int:
                     "uvicorn",
                     "app.main:app",
                     "--host",
-                    args.host,
+                    args.backend_host,
                     "--port",
                     str(args.backend_port),
                     "--reload",
@@ -231,17 +259,19 @@ def main() -> int:
                     "dev",
                     "--",
                     "--host",
-                    args.host,
+                    args.frontend_host,
                     "--port",
-                    str(args.frontend_port),
+                    str(frontend_port),
                 ],
                 cwd=FRONTEND_DIR,
             )
 
         if backend_proc:
-            log(f"backend:  http://localhost:{args.backend_port} (docs: /docs)")
+            log(
+                f"backend:  http://{args.backend_host}:{args.backend_port} (docs: /docs)"
+            )
         if frontend_proc:
-            log(f"frontend: http://localhost:{args.frontend_port}")
+            log(f"frontend: http://{args.frontend_host}:{frontend_port}")
         log("press Ctrl+C to stop")
 
         while True:
