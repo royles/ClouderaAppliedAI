@@ -26,6 +26,10 @@ DEFAULT_FRONTEND_HOST = "127.0.0.1"
 DEFAULT_BACKEND_HOST = "127.0.0.1"
 DEFAULT_BACKEND_PORT = 8000
 DEFAULT_FRONTEND_PORT = 5173
+# Fixed loopback port for API traffic between Vite and FastAPI on CML/CDSW.
+# CDSW_READONLY_PORT is for external readonly URLs and is not reliable for
+# in-container proxy connections (EADDRNOTAVAIL on 127.0.0.1).
+INTERNAL_API_PORT = 8000
 
 
 def env_int(name: str, fallback: int) -> int:
@@ -33,11 +37,6 @@ def env_int(name: str, fallback: int) -> int:
     if value:
         return int(value)
     return fallback
-
-
-def default_backend_port() -> int:
-    """Use CDSW/CML readonly port when set by the platform."""
-    return env_int("CDSW_READONLY_PORT", DEFAULT_BACKEND_PORT)
 
 
 def default_frontend_port() -> int:
@@ -218,10 +217,46 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def resolve_backend_port(args: argparse.Namespace) -> int:
+def is_cml_runtime() -> bool:
+    return bool(os.environ.get("CDSW_APP_PORT"))
+
+
+def resolve_backend_port(args: argparse.Namespace, start_frontend: bool) -> int:
     if args.backend_port is not None:
         return args.backend_port
-    return default_backend_port()
+    # When both services run on CML, keep API on a stable internal port.
+    if is_cml_runtime() and start_frontend:
+        return INTERNAL_API_PORT
+    return env_int("CDSW_READONLY_PORT", INTERNAL_API_PORT)
+
+
+def resolve_proxy_port(backend_port: int) -> int:
+    """Port Vite uses to reach the API (always loopback-safe)."""
+    if is_cml_runtime():
+        return INTERNAL_API_PORT
+    return backend_port
+
+
+def wait_for_backend(host: str, port: int, timeout: float = 60.0) -> None:
+    import urllib.error
+    import urllib.request
+
+    url = f"http://{host}:{port}/api/health"
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=2) as response:
+                if response.status == 200:
+                    log(f"backend ready at {url}")
+                    return
+        except (urllib.error.URLError, TimeoutError, OSError):
+            time.sleep(0.25)
+    raise RuntimeError(f"Backend did not become ready at {url} within {timeout}s")
+
+
+def use_reload() -> bool:
+    # uvicorn --reload is unreliable on CML-managed ports.
+    return not is_cml_runtime()
 
 
 def resolve_frontend_port(args: argparse.Namespace) -> int:
@@ -232,20 +267,25 @@ def resolve_frontend_port(args: argparse.Namespace) -> int:
 
 def main() -> int:
     args = parse_args()
-    backend_port = resolve_backend_port(args)
+    start_backend = not args.frontend_only
+    start_frontend = not args.backend_only
+    backend_port = resolve_backend_port(args, start_frontend)
+    proxy_port = resolve_proxy_port(backend_port)
     frontend_port = resolve_frontend_port(args)
 
     if args.backend_only and args.frontend_only:
         log("error: use only one of --backend-only or --frontend-only")
         return 1
 
-    if os.environ.get("CDSW_READONLY_PORT") and args.backend_port is None:
+    if is_cml_runtime() and start_frontend and args.backend_port is None:
+        log(
+            f"CML runtime: API on internal port {backend_port}, "
+            f"Vite proxies to {proxy_port} (CDSW_READONLY_PORT is not used for loopback)"
+        )
+    elif os.environ.get("CDSW_READONLY_PORT") and args.backend_port is None:
         log(f"using CDSW_READONLY_PORT={os.environ['CDSW_READONLY_PORT']} for backend")
     if os.environ.get("CDSW_APP_PORT") and args.frontend_port is None:
         log(f"using CDSW_APP_PORT={os.environ['CDSW_APP_PORT']} for frontend")
-
-    start_backend = not args.frontend_only
-    start_frontend = not args.backend_only
 
     backend_proc: subprocess.Popen[bytes] | None = None
     frontend_proc: subprocess.Popen[bytes] | None = None
@@ -253,25 +293,29 @@ def main() -> int:
     try:
         if start_backend:
             py = ensure_backend_deps(find_python(), args.skip_install)
-            backend_proc = spawn(
-                [
-                    str(py),
-                    "-m",
-                    "uvicorn",
-                    "app.main:app",
-                    "--host",
-                    args.backend_host,
-                    "--port",
-                    str(backend_port),
-                    "--reload",
-                ],
-                cwd=BACKEND_DIR,
-            )
+            uvicorn_cmd = [
+                str(py),
+                "-m",
+                "uvicorn",
+                "app.main:app",
+                "--host",
+                args.backend_host,
+                "--port",
+                str(backend_port),
+            ]
+            if use_reload():
+                uvicorn_cmd.append("--reload")
+            backend_proc = spawn(uvicorn_cmd, cwd=BACKEND_DIR)
 
         if start_frontend:
+            if start_backend:
+                wait_for_backend(args.backend_host, proxy_port)
             ensure_frontend_deps(args.skip_install)
-            # Ensure Vite proxies /api to the same backend port we started.
-            frontend_env = {"CDSW_READONLY_PORT": str(backend_port)}
+            proxy_target = f"http://{args.backend_host}:{proxy_port}"
+            frontend_env = {
+                "BACKEND_PROXY_TARGET": proxy_target,
+                "BACKEND_PROXY_PORT": str(proxy_port),
+            }
             frontend_proc = spawn(
                 [
                     "npm",
@@ -293,6 +337,8 @@ def main() -> int:
             )
         if frontend_proc:
             log(f"frontend: http://{args.frontend_host}:{frontend_port}")
+            if start_backend:
+                log(f"api proxy: {proxy_target} (/api, /docs)")
         log("press Ctrl+C to stop")
 
         while True:

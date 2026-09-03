@@ -40,9 +40,9 @@ python start.py
 
 On Cloudera Machine Learning / CDSW, the platform sets:
 - `CDSW_APP_PORT` → Vite frontend on `127.0.0.1`
-- `CDSW_READONLY_PORT` → FastAPI backend on `127.0.0.1`
+- API traffic uses internal port **8000** between Vite and FastAPI (loopback-safe)
 
-`start.py` picks these up automatically. The Vite dev server proxies `/api` to the backend readonly port.
+`CDSW_READONLY_PORT` is not used for in-container proxying — it can cause `EADDRNOTAVAIL` when Vite tries to reach `127.0.0.1:CDSW_READONLY_PORT`. Use the app URL for the UI; `/api` and `/docs` are proxied through Vite. For backend-only on CML, the API binds to `CDSW_READONLY_PORT`.
 
 Options:
 
