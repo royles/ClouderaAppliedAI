@@ -25,7 +25,33 @@ A lightweight playground for experimenting with AWS Bedrock models. The React fr
 
 ## Quick Start
 
-### Backend
+### One command (recommended)
+
+From the repo root, this installs Python and npm dependencies if needed and starts both services:
+
+```bash
+cp backend/.env.example backend/.env   # optional: add AWS credentials
+python start.py
+```
+
+- Frontend: http://localhost:5173  
+- Backend API: http://localhost:8000  
+- Swagger: http://localhost:8000/docs  
+
+Options:
+
+```bash
+python start.py --backend-only      # API only
+python start.py --frontend-only     # UI only (proxies /api to backend if running)
+python start.py --skip-install      # skip pip/npm install checks
+python start.py --backend-port 9000 --frontend-port 3000
+```
+
+Requires **Python 3.10+** and **Node.js/npm** on your machine.
+
+### Manual setup
+
+#### Backend
 
 ```bash
 cd backend
