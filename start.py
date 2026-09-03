@@ -3,7 +3,7 @@
 Start the Bedrock Playground backend and frontend.
 
 Ensures Python and npm dependencies are installed, then launches:
-  - FastAPI backend on http://127.0.0.1:8000 (Swagger at /docs)
+  - FastAPI backend on http://127.0.0.1:{CDSW_READONLY_PORT or 8000}
   - Vite frontend on http://127.0.0.1:{CDSW_APP_PORT or 5173}
 """
 
@@ -28,12 +28,21 @@ DEFAULT_BACKEND_PORT = 8000
 DEFAULT_FRONTEND_PORT = 5173
 
 
+def env_int(name: str, fallback: int) -> int:
+    value = os.environ.get(name)
+    if value:
+        return int(value)
+    return fallback
+
+
+def default_backend_port() -> int:
+    """Use CDSW/CML readonly port when set by the platform."""
+    return env_int("CDSW_READONLY_PORT", DEFAULT_BACKEND_PORT)
+
+
 def default_frontend_port() -> int:
     """Use CDSW/CML app port when set by the platform."""
-    cdsw_port = os.environ.get("CDSW_APP_PORT")
-    if cdsw_port:
-        return int(cdsw_port)
-    return DEFAULT_FRONTEND_PORT
+    return env_int("CDSW_APP_PORT", DEFAULT_FRONTEND_PORT)
 
 
 def log(message: str) -> None:
@@ -187,8 +196,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--backend-port",
         type=int,
-        default=DEFAULT_BACKEND_PORT,
-        help=f"Backend port (default: {DEFAULT_BACKEND_PORT}).",
+        default=None,
+        help="Backend port (default: CDSW_READONLY_PORT env var, else 8000).",
     )
     parser.add_argument(
         "--backend-host",
@@ -209,6 +218,12 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def resolve_backend_port(args: argparse.Namespace) -> int:
+    if args.backend_port is not None:
+        return args.backend_port
+    return default_backend_port()
+
+
 def resolve_frontend_port(args: argparse.Namespace) -> int:
     if args.frontend_port is not None:
         return args.frontend_port
@@ -217,12 +232,15 @@ def resolve_frontend_port(args: argparse.Namespace) -> int:
 
 def main() -> int:
     args = parse_args()
+    backend_port = resolve_backend_port(args)
     frontend_port = resolve_frontend_port(args)
 
     if args.backend_only and args.frontend_only:
         log("error: use only one of --backend-only or --frontend-only")
         return 1
 
+    if os.environ.get("CDSW_READONLY_PORT") and args.backend_port is None:
+        log(f"using CDSW_READONLY_PORT={os.environ['CDSW_READONLY_PORT']} for backend")
     if os.environ.get("CDSW_APP_PORT") and args.frontend_port is None:
         log(f"using CDSW_APP_PORT={os.environ['CDSW_APP_PORT']} for frontend")
 
@@ -244,7 +262,7 @@ def main() -> int:
                     "--host",
                     args.backend_host,
                     "--port",
-                    str(args.backend_port),
+                    str(backend_port),
                     "--reload",
                 ],
                 cwd=BACKEND_DIR,
@@ -252,6 +270,8 @@ def main() -> int:
 
         if start_frontend:
             ensure_frontend_deps(args.skip_install)
+            # Ensure Vite proxies /api to the same backend port we started.
+            frontend_env = {"CDSW_READONLY_PORT": str(backend_port)}
             frontend_proc = spawn(
                 [
                     "npm",
@@ -264,11 +284,12 @@ def main() -> int:
                     str(frontend_port),
                 ],
                 cwd=FRONTEND_DIR,
+                env=frontend_env,
             )
 
         if backend_proc:
             log(
-                f"backend:  http://{args.backend_host}:{args.backend_port} (docs: /docs)"
+                f"backend:  http://{args.backend_host}:{backend_port} (docs: /docs)"
             )
         if frontend_proc:
             log(f"frontend: http://{args.frontend_host}:{frontend_port}")

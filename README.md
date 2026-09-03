@@ -34,11 +34,15 @@ cp backend/.env.example backend/.env   # optional: add AWS credentials
 python start.py
 ```
 
-- Frontend: http://127.0.0.1:5173 (or `CDSW_APP_PORT` in Cloudera CML/CDSW)  
-- Backend API: http://127.0.0.1:8000  
-- Swagger: http://127.0.0.1:8000/docs  
+- Frontend: http://127.0.0.1:5173 (or `CDSW_APP_PORT` on CML/CDSW)  
+- Backend API: http://127.0.0.1:8000 (or `CDSW_READONLY_PORT` on CML/CDSW)  
+- Swagger: http://127.0.0.1:{backend port}/docs  
 
-On Cloudera Machine Learning / CDSW, the platform sets `CDSW_APP_PORT`; `start.py` uses it automatically for the Vite dev server on `127.0.0.1`.
+On Cloudera Machine Learning / CDSW, the platform sets:
+- `CDSW_APP_PORT` → Vite frontend on `127.0.0.1`
+- `CDSW_READONLY_PORT` → FastAPI backend on `127.0.0.1`
+
+`start.py` picks these up automatically. The Vite dev server proxies `/api` to the backend readonly port.
 
 Options:
 
