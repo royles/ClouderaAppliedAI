@@ -54,14 +54,16 @@ Requires **Python 3.10+** and **Node.js/npm**.
 
 ### How start.py works
 
-The script is intentionally linear — four steps, no hidden magic:
+**On Cloudera AI** (no npm):
 
-1. **Install** — `pip install` into `backend/venv`, `npm install` if `node_modules` is missing  
+1. **Install** — `pip install` into `backend/venv`  
+2. **Serve** — FastAPI on `CDSW_APP_PORT` serves `/api` and the built UI from `frontend/dist`  
+
+**Local dev** (with npm):
+
+1. **Install** — pip + npm  
 2. **Backend** — FastAPI on `127.0.0.1:8000`  
-3. **Wait** — polls `/api/health` until the API is up  
-4. **Frontend** — Vite on `127.0.0.1:CDSW_APP_PORT` (or `5173` locally); proxies `/api` to port 8000  
-
-On Cloudera AI, only `CDSW_APP_PORT` matters for the public URL. The API always stays on internal port **8000**.
+3. **Frontend** — Vite on `127.0.0.1:5173` (proxies `/api` to port 8000)
 
 ## Deploying on Cloudera AI (CAI)
 
@@ -71,21 +73,20 @@ On Cloudera AI, only `CDSW_APP_PORT` matters for the public URL. The API always 
 Browser  -->  CAI App URL (*.cloudera.site)
                     |
                     v
-         Vite @ 127.0.0.1:CDSW_APP_PORT
-              |              |
-              | /api,/docs   |
-              v              v
-         FastAPI @ 127.0.0.1:8000  -->  AWS Bedrock
+    FastAPI @ 127.0.0.1:CDSW_APP_PORT
+      - /api/*     -> Bedrock backend
+      - /docs      -> Swagger
+      - /*         -> pre-built React UI (frontend/dist)
 ```
 
-The platform exposes only `CDSW_APP_PORT`. The FastAPI backend runs on an internal loopback port; Vite proxies `/api`, `/docs`, and `/openapi.json` to it.
+No npm or Node.js is required on CAI. The React app is **built ahead of time** and committed in `frontend/dist`. FastAPI serves the UI and API on a single port.
 
 ### 1. Project setup (Workbench session)
 
-Use a **Python 3** runtime that includes **Node.js/npm** (required for the React frontend).
+Use a **Python 3** runtime. **Node.js is not required** on CAI — only Python dependencies are installed at startup.
 
 ```bash
-pip install -r requirements.txt
+pip install -r requirements.txt   # optional; start.py also installs into backend/venv
 ```
 
 Set AWS credentials as **project or application environment variables** (never commit them):
@@ -105,31 +106,33 @@ In Cloudera AI → **Applications** → **New Application**:
 | **Script** | `entry.py` (or `start.py`) |
 | **Kernel** | Python 3 |
 
-`entry.py` is a thin wrapper that calls `start.py`. The start script will:
+`entry.py` is a thin wrapper that calls `start.py`. On CAI the script will:
 
-1. Install Python deps into `backend/venv` if needed  
-2. Run `npm install` in `frontend/` if needed  
-3. Start FastAPI on `127.0.0.1:8000`  
-4. Start Vite on `127.0.0.1:$CDSW_APP_PORT`  
-5. Wait for the backend health check before opening the frontend  
+1. Install Python deps into `backend/venv`  
+2. Start FastAPI on `127.0.0.1:$CDSW_APP_PORT` (API + static UI from `frontend/dist`)  
+
+To rebuild the UI after frontend changes (on a machine with Node.js):
+
+```bash
+cd frontend && npm install && npm run build
+```
+
+Commit the updated `frontend/dist` folder.
 
 ### 3. Access
 
 - **UI**: open the Application URL from the CAI dashboard  
-- **Swagger**: `{app-url}/docs` (proxied through Vite)  
+- **Swagger**: `{app-url}/docs`  
 - **Health**: `{app-url}/api/health`  
 
 ### CAI environment variables (set by platform)
 
 | Variable | Used for |
 |----------|----------|
-| `CDSW_APP_PORT` | Vite frontend bind port |
-| `CDSW_DOMAIN` | Added to Vite `allowedHosts` |
-| `CDSW_READONLY_PORT` | Not used when both services run (see note below) |
+| `CDSW_APP_PORT` | FastAPI bind port (API + UI) |
+| `CDSW_DOMAIN` | Used by Vite in local dev only |
 
-`start.py` sets `BACKEND_PROXY_TARGET=http://127.0.0.1:8000` for Vite so the frontend and backend connect correctly inside the workload.
-
-On CAI, Python packages install into **`backend/venv`** in your project (the system Python at `/usr/local` is read-only). If a previous install failed, delete `backend/venv` and restart the Application.
+On CAI, `start.py` does **not** use npm. Python packages install into **`backend/venv`**. If a previous install failed, delete `backend/venv` and restart.
 
 ### Manual setup
 

@@ -12,16 +12,15 @@ __pycache__/
 .Python
 venv/
 .venv/
+backend/venv/
 env/
 *.egg-info/
-dist/
 build/
 .pytest_cache/
 .mypy_cache/
 
 # Node
 node_modules/
-frontend/dist/
 frontend/.vite/
 *.log
 npm-debug.log*

@@ -2,13 +2,13 @@
 """
 Bedrock Playground — start backend + frontend.
 
-What this does (in order):
-  1. Install Python and npm dependencies (unless --skip-install)
-  2. Start FastAPI on 127.0.0.1:8000
-  3. Start Vite on 127.0.0.1:5173  (or CDSW_APP_PORT on Cloudera AI)
-  4. Vite proxies /api and /docs to the backend
+Cloudera AI (no npm):
+  1. pip install into backend/venv
+  2. FastAPI serves API + pre-built UI on CDSW_APP_PORT
 
-Cloudera AI: register entry.py as the Application script.
+Local dev (with npm):
+  1. pip + npm install
+  2. FastAPI on :8000, Vite dev server on :5173 (Vite proxies /api)
 """
 
 from __future__ import annotations
@@ -24,20 +24,16 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-# --- paths -------------------------------------------------------------------
-
 ROOT = Path(__file__).resolve().parent
 BACKEND_DIR = ROOT / "backend"
 FRONTEND_DIR = ROOT / "frontend"
 VENV_DIR = BACKEND_DIR / "venv"
-
-# --- networking (one place to read) ------------------------------------------
+FRONTEND_DIST = FRONTEND_DIR / "dist"
 
 HOST = "127.0.0.1"
-API_PORT = 8000
-FRONTEND_PORT = int(os.environ.get("CDSW_APP_PORT", "5173"))
+DEV_API_PORT = 8000
+APP_PORT = int(os.environ.get("CDSW_APP_PORT", "5173"))
 ON_CLOUDERA_AI = "CDSW_APP_PORT" in os.environ
-API_URL = f"http://{HOST}:{API_PORT}"
 
 
 def log(message: str) -> None:
@@ -49,8 +45,20 @@ def venv_python() -> Path:
     return VENV_DIR / name
 
 
+def has_npm() -> bool:
+    return shutil.which("npm") is not None
+
+
+def has_built_frontend() -> bool:
+    return (FRONTEND_DIST / "index.html").exists()
+
+
+def use_single_server() -> bool:
+    """CAI and other npm-less environments serve UI+API from FastAPI."""
+    return ON_CLOUDERA_AI or (not has_npm() and has_built_frontend())
+
+
 def pip_env() -> dict[str, str]:
-    """CAI sets PIP_USER=1; that must be off when installing into a project venv."""
     env = os.environ.copy()
     for key in ("PIP_USER", "PIP_USER_SITE"):
         env.pop(key, None)
@@ -59,16 +67,12 @@ def pip_env() -> dict[str, str]:
     return env
 
 
-def run_checked(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
+def run_checked(cmd: list[str], cwd: Path) -> None:
     log("$ " + " ".join(cmd))
-    merged = pip_env()
-    if env:
-        merged.update(env)
-    subprocess.run(cmd, cwd=cwd, check=True, env=merged)
+    subprocess.run(cmd, cwd=cwd, check=True, env=pip_env())
 
 
 def ensure_venv() -> Path:
-    """Project-local venv (writable on CAI; system Python site-packages are not)."""
     if not VENV_DIR.exists():
         log("creating backend/venv")
         run_checked([sys.executable, "-m", "venv", str(VENV_DIR)], BACKEND_DIR)
@@ -78,27 +82,30 @@ def ensure_venv() -> Path:
     return python
 
 
-def install_dependencies(skip: bool) -> Path:
-    """Install pip + npm deps into backend/venv. Returns venv python."""
+def install_python(skip: bool) -> Path:
     if skip:
         return ensure_venv()
-
     python = ensure_venv()
     log("installing Python packages into backend/venv")
     run_checked([str(python), "-m", "pip", "install", "--upgrade", "pip"], BACKEND_DIR)
-    run_checked(
-        [str(python), "-m", "pip", "install", "-r", "requirements.txt"],
-        BACKEND_DIR,
-    )
+    run_checked([str(python), "-m", "pip", "install", "-r", "requirements.txt"], BACKEND_DIR)
+    return python
 
-    if shutil.which("npm") is None:
-        raise RuntimeError("npm is not installed — use a runtime with Node.js")
 
+def install_frontend_dev(skip: bool) -> None:
+    if skip:
+        return
+    if not has_npm():
+        if has_built_frontend():
+            log("using pre-built frontend/dist (npm not required)")
+            return
+        raise RuntimeError(
+            "npm is not installed and frontend/dist is missing. "
+            "Run 'cd frontend && npm install && npm run build' locally, then commit dist."
+        )
     if not (FRONTEND_DIR / "node_modules").exists():
         log("installing frontend packages")
         run_checked(["npm", "install"], FRONTEND_DIR)
-
-    return python
 
 
 def start_process(cmd: list[str], cwd: Path, extra_env: dict[str, str] | None = None):
@@ -122,18 +129,18 @@ def stop_process(proc: subprocess.Popen | None) -> None:
             pass
 
 
-def wait_for_api(timeout: float = 60) -> None:
-    url = f"{API_URL}/api/health"
+def wait_for_api(port: int, timeout: float = 120) -> None:
+    url = f"http://{HOST}:{port}/api/health"
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
             with urllib.request.urlopen(url, timeout=2) as response:
                 if response.status == 200:
-                    log(f"backend ready ({url})")
+                    log(f"ready at {url}")
                     return
         except (urllib.error.URLError, TimeoutError, OSError):
             time.sleep(0.25)
-    raise RuntimeError(f"backend did not start within {timeout}s ({url})")
+    raise RuntimeError(f"server did not start within {timeout}s ({url})")
 
 
 def parse_args() -> argparse.Namespace:
@@ -147,44 +154,50 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-
-    if ON_CLOUDERA_AI:
-        log(f"Cloudera AI detected — UI port {FRONTEND_PORT}, API port {API_PORT}")
-    else:
-        log(f"local dev — UI http://{HOST}:{FRONTEND_PORT}, API {API_URL}")
-
+    single = use_single_server()
     api_proc = None
     ui_proc = None
 
     try:
-        python = install_dependencies(args.skip_install)
+        python = install_python(args.skip_install)
 
-        api_cmd = [
-            str(python), "-m", "uvicorn", "app.main:app",
-            "--host", HOST, "--port", str(API_PORT),
-        ]
-        if not ON_CLOUDERA_AI:
-            api_cmd.append("--reload")
+        if single:
+            if not has_built_frontend():
+                raise RuntimeError(
+                    "frontend/dist is missing. Build locally: cd frontend && npm run build"
+                )
+            log(f"Cloudera AI / production mode — one server on port {APP_PORT}")
+            api_cmd = [
+                str(python), "-m", "uvicorn", "app.main:app",
+                "--host", HOST, "--port", str(APP_PORT),
+            ]
+            api_proc = start_process(api_cmd, BACKEND_DIR)
+            wait_for_api(APP_PORT)
+            log(f"open the Application URL (API + UI on :{APP_PORT}, docs at /docs)")
+        else:
+            install_frontend_dev(args.skip_install)
+            log(f"dev mode — API :{DEV_API_PORT}, Vite :{APP_PORT}")
+            api_cmd = [
+                str(python), "-m", "uvicorn", "app.main:app",
+                "--host", HOST, "--port", str(DEV_API_PORT), "--reload",
+            ]
+            api_proc = start_process(api_cmd, BACKEND_DIR)
+            wait_for_api(DEV_API_PORT)
+            ui_proc = start_process(
+                ["npm", "run", "dev", "--", "--host", HOST, "--port", str(APP_PORT)],
+                FRONTEND_DIR,
+                extra_env={
+                    "BACKEND_PROXY_TARGET": f"http://{HOST}:{DEV_API_PORT}",
+                    "BACKEND_PROXY_PORT": str(DEV_API_PORT),
+                },
+            )
+            log(f"UI http://{HOST}:{APP_PORT}  API http://{HOST}:{DEV_API_PORT}")
 
-        api_proc = start_process(api_cmd, BACKEND_DIR)
-        wait_for_api()
-
-        ui_proc = start_process(
-            ["npm", "run", "dev", "--", "--host", HOST, "--port", str(FRONTEND_PORT)],
-            FRONTEND_DIR,
-            extra_env={
-                "BACKEND_PROXY_TARGET": API_URL,
-                "BACKEND_PROXY_PORT": str(API_PORT),
-            },
-        )
-
-        log(f"running — open the app URL (UI :{FRONTEND_PORT}, swagger /docs)")
         log("press Ctrl+C to stop")
-
         while True:
             if api_proc.poll() is not None:
-                raise RuntimeError("backend exited unexpectedly")
-            if ui_proc.poll() is not None:
+                raise RuntimeError("server exited unexpectedly")
+            if ui_proc and ui_proc.poll() is not None:
                 raise RuntimeError("frontend exited unexpectedly")
             time.sleep(0.5)
 
