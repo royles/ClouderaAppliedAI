@@ -198,4 +198,4 @@ Environment variables (backend only):
 
 ## Supported Models
 
-Anthropic Claude 3/3.5, Amazon Titan, Meta Llama 3, and Mistral models are pre-configured. Add more in `backend/app/models_catalog.py`.
+Anthropic Claude 4.5, Amazon Nova, Titan, Meta Llama 3, and Mistral models are pre-configured. EOL/Legacy models are excluded automatically. Add more in `backend/app/models_catalog.py`.

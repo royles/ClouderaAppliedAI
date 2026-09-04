@@ -26,7 +26,7 @@ class Settings(BaseSettings):
         alias="CORS_ORIGINS",
     )
     default_model_id: str = Field(
-        default="anthropic.claude-3-haiku-20240307-v1:0",
+        default="anthropic.claude-haiku-4-5-20251001-v1:0",
         alias="DEFAULT_MODEL_ID",
     )
     host: str = Field(default="0.0.0.0", alias="HOST")

@@ -1,23 +1,27 @@
-"""Curated Bedrock models for the playground."""
+"""Curated Bedrock models for the playground (Active models only)."""
+
+import logging
+from functools import lru_cache
+
+import boto3
+from botocore.exceptions import BotoCoreError, ClientError
 
 from app.schemas import ModelInfo
+from app.state import runtime_state
 
-# Common on-demand Bedrock models — extend as needed.
+logger = logging.getLogger(__name__)
+
+# Curated list — exclude EOL/Legacy IDs (see AWS Bedrock model lifecycle docs).
 AVAILABLE_MODELS: list[ModelInfo] = [
     ModelInfo(
-        model_id="anthropic.claude-3-haiku-20240307-v1:0",
+        model_id="anthropic.claude-haiku-4-5-20251001-v1:0",
         provider="Anthropic",
-        display_name="Claude 3 Haiku",
+        display_name="Claude Haiku 4.5",
     ),
     ModelInfo(
-        model_id="anthropic.claude-3-sonnet-20240229-v1:0",
+        model_id="anthropic.claude-sonnet-4-5-20250929-v1:0",
         provider="Anthropic",
-        display_name="Claude 3 Sonnet",
-    ),
-    ModelInfo(
-        model_id="anthropic.claude-3-5-sonnet-20240620-v1:0",
-        provider="Anthropic",
-        display_name="Claude 3.5 Sonnet",
+        display_name="Claude Sonnet 4.5",
     ),
     ModelInfo(
         model_id="amazon.nova-lite-v1:0",
@@ -66,11 +70,54 @@ AVAILABLE_MODELS: list[ModelInfo] = [
     ),
 ]
 
-MODEL_IDS = {m.model_id for m in AVAILABLE_MODELS}
+# Hard blocklist: models past EOL or in Legacy on Bedrock (Sep 2026 lifecycle).
+EOL_OR_LEGACY_MODEL_IDS = {
+    "anthropic.claude-3-haiku-20240307-v1:0",
+    "anthropic.claude-3-sonnet-20240229-v1:0",
+    "anthropic.claude-3-5-sonnet-20240620-v1:0",
+    "anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "anthropic.claude-sonnet-4-20250514-v1:0",
+}
+
+
+@lru_cache(maxsize=8)
+def _active_bedrock_model_ids(region: str) -> frozenset[str] | None:
+    """Return ACTIVE on-demand model IDs from Bedrock, or None if lookup fails."""
+    try:
+        client = boto3.client("bedrock", region_name=region)
+        response = client.list_foundation_models(byInferenceType="ON_DEMAND")
+        active = {
+            summary["modelId"]
+            for summary in response.get("modelSummaries", [])
+            if summary.get("modelLifecycle", {}).get("status") == "ACTIVE"
+        }
+        return frozenset(active) if active else None
+    except (ClientError, BotoCoreError, Exception) as exc:
+        logger.debug("Bedrock model lifecycle lookup failed: %s", exc)
+        return None
+
+
+def list_available_models() -> list[ModelInfo]:
+    """Curated models that are not EOL/Legacy, filtered by Bedrock when possible."""
+    region = runtime_state.get_region()
+    active_ids = _active_bedrock_model_ids(region)
+
+    models: list[ModelInfo] = []
+    for model in AVAILABLE_MODELS:
+        if model.model_id in EOL_OR_LEGACY_MODEL_IDS:
+            continue
+        if active_ids is not None and model.model_id not in active_ids:
+            continue
+        models.append(model)
+    return models
+
+
+def allowed_model_ids() -> set[str]:
+    return {m.model_id for m in list_available_models()}
 
 
 def get_model_info(model_id: str) -> ModelInfo | None:
-    for model in AVAILABLE_MODELS:
+    for model in list_available_models():
         if model.model_id == model_id:
             return model
     return None

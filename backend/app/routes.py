@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from app.bedrock_service import BedrockError, _credential_source, is_aws_configured, invoke_chat
-from app.models_catalog import AVAILABLE_MODELS, MODEL_IDS, get_model_info
+from app.models_catalog import get_model_info, list_available_models, allowed_model_ids
 from app.schemas import (
     ChatRequest,
     ChatResponse,
@@ -28,7 +28,7 @@ def health() -> HealthResponse:
 
 @router.get("/models", response_model=list[ModelInfo])
 def list_models() -> list[ModelInfo]:
-    return AVAILABLE_MODELS
+    return list_available_models()
 
 
 @router.get("/config", response_model=PublicConfig)
@@ -44,7 +44,7 @@ def get_config() -> PublicConfig:
 @router.put("/config", response_model=PublicConfig)
 def update_config(payload: ConfigUpdate) -> PublicConfig:
     if payload.model_id is not None:
-        if payload.model_id not in MODEL_IDS:
+        if payload.model_id not in allowed_model_ids():
             raise HTTPException(
                 status_code=400,
                 detail=f"Unknown model_id. Choose from /api/models.",
@@ -70,7 +70,7 @@ def chat(request: ChatRequest) -> ChatResponse:
         )
 
     model_id = request.model_id or runtime_state.get_model_id()
-    if request.model_id and request.model_id not in MODEL_IDS:
+    if request.model_id and request.model_id not in allowed_model_ids():
         raise HTTPException(status_code=400, detail="Unknown model_id.")
 
     try:
