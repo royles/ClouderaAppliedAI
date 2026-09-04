@@ -1,7 +1,7 @@
 """Application configuration. Secrets are loaded from environment only."""
 
 from functools import lru_cache
-from typing import List
+from typing import List, Literal
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -29,6 +29,13 @@ class Settings(BaseSettings):
         default="anthropic.claude-haiku-4-5-20251001-v1:0",
         alias="DEFAULT_MODEL_ID",
     )
+    default_provider: Literal["bedrock", "local"] = Field(
+        default="bedrock",
+        alias="DEFAULT_PROVIDER",
+    )
+    local_llm_base_url: str | None = Field(default=None, alias="LOCAL_LLM_BASE_URL")
+    local_llm_api_token: str | None = Field(default=None, alias="LOCAL_LLM_API_TOKEN")
+    local_llm_model: str | None = Field(default=None, alias="LOCAL_LLM_MODEL")
     host: str = Field(default="0.0.0.0", alias="HOST")
     port: int = Field(default=8000, alias="PORT")
 

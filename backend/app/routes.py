@@ -4,8 +4,9 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from app.bedrock_service import BedrockError, _credential_source, is_aws_configured, invoke_chat
-from app.models_catalog import get_model_info, list_available_models, allowed_model_ids
+from app.bedrock_service import BedrockError, _credential_source, is_aws_configured, invoke_chat as invoke_bedrock
+from app.local_llm_service import LocalLLMError, is_local_configured, invoke_chat as invoke_local
+from app.models_catalog import allowed_model_ids, get_model_info, list_available_models
 from app.schemas import (
     ChatRequest,
     ChatResponse,
@@ -21,35 +22,80 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 
+def _chat_ready() -> bool:
+    provider = runtime_state.get_provider()
+    if provider == "local":
+        return is_local_configured()
+    return is_aws_configured()
+
+
+def _public_config() -> PublicConfig:
+    provider = runtime_state.get_provider()
+    return PublicConfig(
+        provider=provider,
+        model_id=(
+            runtime_state.get_local_model_id()
+            if provider == "local"
+            else runtime_state.get_model_id()
+        ),
+        aws_region=runtime_state.get_region(),
+        aws_configured=is_aws_configured(),
+        credential_source=_credential_source(),
+        local_endpoint_url=runtime_state.get_local_endpoint_url(),
+        local_model_id=runtime_state.get_local_model_id(),
+        local_configured=is_local_configured(),
+        local_token_configured=runtime_state.has_local_token(),
+        chat_ready=_chat_ready(),
+    )
+
+
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    return HealthResponse(status="ok", aws_configured=is_aws_configured())
+    return HealthResponse(
+        status="ok",
+        provider=runtime_state.get_provider(),
+        aws_configured=is_aws_configured(),
+        local_configured=is_local_configured(),
+        chat_ready=_chat_ready(),
+    )
 
 
 @router.get("/models", response_model=list[ModelInfo])
 def list_models() -> list[ModelInfo]:
+    if runtime_state.get_provider() == "local":
+        return [
+            ModelInfo(
+                model_id=runtime_state.get_local_model_id(),
+                provider="Local",
+                display_name=f"Local: {runtime_state.get_local_model_id()}",
+            )
+        ]
     return list_available_models()
 
 
 @router.get("/config", response_model=PublicConfig)
 def get_config() -> PublicConfig:
-    return PublicConfig(
-        model_id=runtime_state.get_model_id(),
-        aws_region=runtime_state.get_region(),
-        aws_configured=is_aws_configured(),
-        credential_source=_credential_source(),
-    )
+    return _public_config()
 
 
 @router.put("/config", response_model=PublicConfig)
 def update_config(payload: ConfigUpdate) -> PublicConfig:
-    if payload.model_id is not None:
-        if payload.model_id not in allowed_model_ids():
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unknown model_id. Choose from /api/models.",
-            )
-        runtime_state.set_model_id(payload.model_id)
+    if payload.provider is not None:
+        runtime_state.set_provider(payload.provider)
+
+    if payload.local_endpoint_url is not None:
+        runtime_state.set_local_endpoint_url(payload.local_endpoint_url)
+
+    if payload.local_model_id is not None:
+        model = payload.local_model_id.strip()
+        if not model:
+            raise HTTPException(status_code=400, detail="local_model_id cannot be empty.")
+        runtime_state.set_local_model_id(model)
+
+    if payload.clear_local_api_token:
+        runtime_state.clear_local_api_token()
+    elif payload.local_api_token is not None:
+        runtime_state.set_local_api_token(payload.local_api_token)
 
     if payload.aws_region is not None:
         region = payload.aws_region.strip()
@@ -57,24 +103,70 @@ def update_config(payload: ConfigUpdate) -> PublicConfig:
             raise HTTPException(status_code=400, detail="aws_region cannot be empty.")
         runtime_state.set_region(region)
 
-    return get_config()
+    provider = runtime_state.get_provider()
+
+    if payload.model_id is not None:
+        if provider == "bedrock":
+            if payload.model_id not in allowed_model_ids():
+                raise HTTPException(
+                    status_code=400,
+                    detail="Unknown Bedrock model_id. Choose from /api/models.",
+                )
+            runtime_state.set_model_id(payload.model_id)
+        else:
+            runtime_state.set_local_model_id(payload.model_id)
+
+    if provider == "local" and not is_local_configured():
+        if payload.local_endpoint_url or payload.local_model_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Local provider requires both endpoint URL and model name.",
+            )
+
+    return _public_config()
 
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(request: ChatRequest) -> ChatResponse:
+    provider = runtime_state.get_provider()
+
+    if provider == "local":
+        if not is_local_configured():
+            raise HTTPException(
+                status_code=503,
+                detail="Configure local endpoint URL and model name in settings.",
+            )
+        model_id = request.model_id or runtime_state.get_local_model_id()
+        try:
+            content, used_model, usage = invoke_local(
+                messages=request.messages,
+                model_id=model_id,
+                max_tokens=request.max_tokens,
+                temperature=request.temperature,
+                system_prompt=request.system_prompt,
+            )
+        except LocalLLMError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        logger.info("Chat completed provider=local model=%s", used_model)
+        return ChatResponse(
+            content=content,
+            model_id=used_model,
+            provider="local",
+            usage=usage,
+        )
+
     if not is_aws_configured():
         raise HTTPException(
             status_code=503,
-            detail="AWS credentials not configured. Set AWS_ACCESS_KEY_ID and "
-            "AWS_SECRET_ACCESS_KEY in the backend environment, or use an IAM role.",
+            detail="AWS credentials not configured. Switch to Local LLM or set AWS credentials.",
         )
 
     model_id = request.model_id or runtime_state.get_model_id()
     if request.model_id and request.model_id not in allowed_model_ids():
-        raise HTTPException(status_code=400, detail="Unknown model_id.")
+        raise HTTPException(status_code=400, detail="Unknown Bedrock model_id.")
 
     try:
-        content, used_model, usage = invoke_chat(
+        content, used_model, usage = invoke_bedrock(
             messages=request.messages,
             model_id=model_id,
             max_tokens=request.max_tokens,
@@ -86,9 +178,14 @@ def chat(request: ChatRequest) -> ChatResponse:
 
     model_info = get_model_info(used_model)
     logger.info(
-        "Chat completed model=%s provider=%s",
+        "Chat completed provider=bedrock model=%s vendor=%s",
         used_model,
         model_info.provider if model_info else "unknown",
     )
 
-    return ChatResponse(content=content, model_id=used_model, usage=usage)
+    return ChatResponse(
+        content=content,
+        model_id=used_model,
+        provider="bedrock",
+        usage=usage,
+    )

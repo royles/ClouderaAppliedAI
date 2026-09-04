@@ -157,6 +157,31 @@ npm run dev
 
 Open http://localhost:5173
 
+## Switching Bedrock ↔ Local LLM
+
+Use the **AWS Bedrock** / **Local LLM** toggle in the UI, or call the API:
+
+```bash
+# Switch to local OpenAI-compatible endpoint (Ollama, vLLM, LM Studio, etc.)
+curl -X PUT http://localhost:8000/api/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "provider": "local",
+    "local_endpoint_url": "http://localhost:11434/v1",
+    "local_model_id": "llama3.2",
+    "local_api_token": "optional-bearer-token"
+  }'
+
+# Switch back to Bedrock
+curl -X PUT http://localhost:8000/api/config \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "bedrock", "model_id": "anthropic.claude-haiku-4-5-20251001-v1:0"}'
+```
+
+Local API tokens are stored **only on the backend** and are never returned by `GET /api/config`.
+
+Optional env vars: `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_API_TOKEN`, `LOCAL_LLM_MODEL`, `DEFAULT_PROVIDER`.
+
 ## API Endpoints
 
 | Endpoint | Method | Description |
@@ -172,7 +197,7 @@ Open http://localhost:5173
 ```bash
 curl -X PUT http://localhost:8000/api/config \
   -H "Content-Type: application/json" \
-  -d '{"model_id": "anthropic.claude-3-haiku-20240307-v1:0"}'
+  -d '{"model_id": "anthropic.claude-haiku-4-5-20251001-v1:0"}'
 ```
 
 ### Example: chat
