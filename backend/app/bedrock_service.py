@@ -58,6 +58,11 @@ def _get_client() -> Any:
     return session.client("bedrock-runtime")
 
 
+def _text_blocks(text: str) -> list[dict[str, str]]:
+    """Bedrock Claude models expect content as a list of blocks, not a raw string."""
+    return [{"type": "text", "text": text}]
+
+
 def _format_anthropic(
     messages: list[ChatMessage],
     max_tokens: int,
@@ -68,10 +73,12 @@ def _format_anthropic(
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": max_tokens,
         "temperature": temperature,
-        "messages": [{"role": m.role, "content": m.content} for m in messages],
+        "messages": [
+            {"role": m.role, "content": _text_blocks(m.content)} for m in messages
+        ],
     }
     if system_prompt:
-        body["system"] = system_prompt
+        body["system"] = _text_blocks(system_prompt)
     return body
 
 
