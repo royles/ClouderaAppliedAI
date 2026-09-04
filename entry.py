@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""
-Cloudera AI application entry point.
+"""Cloudera AI application entry point. Register as Application script: entry.py"""
 
-Register this script when creating a Cloudera AI Application:
-  Script: entry.py
+import sys
 
-It installs dependencies and starts the FastAPI backend plus Vite frontend.
-"""
 
-from start import main
+def _run() -> int:
+    from start import main
+
+    return main()
+
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # CAI may launch via ipykernel with: -f /tmp/jupyter/runtime/kernel-*.json
+    sys.argv = [sys.argv[0]]
+    raise SystemExit(_run())

@@ -221,7 +221,10 @@ def parse_args() -> argparse.Namespace:
         default=DEFAULT_FRONTEND_HOST,
         help=f"Frontend bind host (default: {DEFAULT_FRONTEND_HOST}).",
     )
-    return parser.parse_args()
+    args, unknown = parser.parse_known_args()
+    if unknown:
+        log(f"ignoring unknown arguments: {' '.join(unknown)}")
+    return args
 
 
 def is_cloudera_ai_runtime() -> bool:
