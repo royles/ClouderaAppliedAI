@@ -49,23 +49,51 @@ def venv_python() -> Path:
     return VENV_DIR / name
 
 
-def run_checked(cmd: list[str], cwd: Path) -> None:
+def pip_env() -> dict[str, str]:
+    """CAI sets PIP_USER=1 which breaks installs inside a venv."""
+    env = os.environ.copy()
+    env["PIP_USER"] = "0"
+    env["PYTHONNOUSERSITE"] = "1"
+    return env
+
+
+def run_checked(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
     log("$ " + " ".join(cmd))
-    subprocess.run(cmd, cwd=cwd, check=True)
+    merged = pip_env()
+    if env:
+        merged.update(env)
+    subprocess.run(cmd, cwd=cwd, check=True, env=merged)
+
+
+def backend_python() -> Path:
+    """On CAI use the project runtime Python; locally use the venv."""
+    if ON_CLOUDERA_AI:
+        return Path(sys.executable)
+    return venv_python()
 
 
 def install_dependencies(skip: bool) -> Path:
-    """Create venv, pip install, npm install."""
+    """Install pip + npm deps. Returns the Python executable for the API."""
     if skip:
-        return venv_python()
+        return backend_python()
 
-    if not VENV_DIR.exists():
-        log("creating backend/venv")
-        run_checked([sys.executable, "-m", "venv", str(VENV_DIR)], BACKEND_DIR)
-
-    python = venv_python()
-    log("installing Python packages")
-    run_checked([str(python), "-m", "pip", "install", "-r", "requirements.txt"], BACKEND_DIR)
+    if ON_CLOUDERA_AI:
+        python = Path(sys.executable)
+        log("installing Python packages into Cloudera AI runtime")
+        run_checked(
+            [str(python), "-m", "pip", "install", "-r", "requirements.txt"],
+            BACKEND_DIR,
+        )
+    else:
+        if not VENV_DIR.exists():
+            log("creating backend/venv")
+            run_checked([sys.executable, "-m", "venv", str(VENV_DIR)], BACKEND_DIR)
+        python = venv_python()
+        log("installing Python packages")
+        run_checked(
+            [str(python), "-m", "pip", "install", "-r", "requirements.txt"],
+            BACKEND_DIR,
+        )
 
     if shutil.which("npm") is None:
         raise RuntimeError("npm is not installed — use a runtime with Node.js")
