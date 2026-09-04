@@ -1,17 +1,14 @@
 #!/usr/bin/env python3
 """
-Start the Bedrock Playground backend and frontend.
+Bedrock Playground — start backend + frontend.
 
-Designed for Cloudera AI (CAI) Applications and local development.
+What this does (in order):
+  1. Install Python and npm dependencies (unless --skip-install)
+  2. Start FastAPI on 127.0.0.1:8000
+  3. Start Vite on 127.0.0.1:5173  (or CDSW_APP_PORT on Cloudera AI)
+  4. Vite proxies /api and /docs to the backend
 
-On Cloudera AI:
-  - Frontend (Vite)  -> 127.0.0.1:CDSW_APP_PORT   (platform app URL)
-  - Backend (FastAPI)-> 127.0.0.1:8000            (internal; proxied by Vite)
-  - Register entry.py or start.py as the Application script.
-
-Locally:
-  - Frontend -> http://127.0.0.1:5173
-  - Backend  -> http://127.0.0.1:8000
+Cloudera AI: register entry.py as the Application script.
 """
 
 from __future__ import annotations
@@ -23,373 +20,159 @@ import signal
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.request
 from pathlib import Path
+
+# --- paths -------------------------------------------------------------------
 
 ROOT = Path(__file__).resolve().parent
 BACKEND_DIR = ROOT / "backend"
 FRONTEND_DIR = ROOT / "frontend"
 VENV_DIR = BACKEND_DIR / "venv"
-DEFAULT_FRONTEND_HOST = "127.0.0.1"
-DEFAULT_BACKEND_HOST = "127.0.0.1"
-DEFAULT_BACKEND_PORT = 8000
-DEFAULT_FRONTEND_PORT = 5173
-# Fixed loopback port for API traffic between Vite and FastAPI on CML/CDSW.
-# CDSW_READONLY_PORT is for external readonly URLs and is not reliable for
-# in-container proxy connections (EADDRNOTAVAIL on 127.0.0.1).
-INTERNAL_API_PORT = 8000
 
+# --- networking (one place to read) ------------------------------------------
 
-def env_int(name: str, fallback: int) -> int:
-    value = os.environ.get(name)
-    if value:
-        return int(value)
-    return fallback
-
-
-def default_frontend_port() -> int:
-    """Use CDSW/CML app port when set by the platform."""
-    return env_int("CDSW_APP_PORT", DEFAULT_FRONTEND_PORT)
+HOST = "127.0.0.1"
+API_PORT = 8000
+FRONTEND_PORT = int(os.environ.get("CDSW_APP_PORT", "5173"))
+ON_CLOUDERA_AI = "CDSW_APP_PORT" in os.environ
+API_URL = f"http://{HOST}:{API_PORT}"
 
 
 def log(message: str) -> None:
     print(f"[start] {message}", flush=True)
 
 
-def run(
-    cmd: list[str],
-    cwd: Path,
-    *,
-    check: bool = True,
-    env: dict[str, str] | None = None,
-) -> subprocess.CompletedProcess[str]:
-    log(f"running: {' '.join(cmd)} (in {cwd})")
-    merged_env = os.environ.copy()
-    if env:
-        merged_env.update(env)
-    result = subprocess.run(
-        cmd,
-        cwd=cwd,
-        env=merged_env,
-        text=True,
-        check=False,
-    )
-    if check and result.returncode != 0:
-        raise RuntimeError(
-            f"Command failed ({result.returncode}): {' '.join(cmd)}"
-        )
-    return result
-
-
-def find_python() -> str:
-    if sys.version_info >= (3, 10):
-        return sys.executable
-    raise RuntimeError("Python 3.10+ is required to run this script.")
-
-
 def venv_python() -> Path:
-    if os.name == "nt":
-        return VENV_DIR / "Scripts" / "python.exe"
-    return VENV_DIR / "bin" / "python"
+    name = "Scripts/python.exe" if os.name == "nt" else "bin/python"
+    return VENV_DIR / name
 
 
-def ensure_backend_deps(python_exe: str, skip_install: bool) -> Path:
+def run_checked(cmd: list[str], cwd: Path) -> None:
+    log("$ " + " ".join(cmd))
+    subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def install_dependencies(skip: bool) -> Path:
+    """Create venv, pip install, npm install."""
+    if skip:
+        return venv_python()
+
     if not VENV_DIR.exists():
-        log("creating virtual environment at backend/venv")
-        run([python_exe, "-m", "venv", str(VENV_DIR)], cwd=BACKEND_DIR)
+        log("creating backend/venv")
+        run_checked([sys.executable, "-m", "venv", str(VENV_DIR)], BACKEND_DIR)
 
-    py = venv_python()
-    if not py.exists():
-        raise RuntimeError(f"Virtual environment python not found: {py}")
+    python = venv_python()
+    log("installing Python packages")
+    run_checked([str(python), "-m", "pip", "install", "-r", "requirements.txt"], BACKEND_DIR)
 
-    if skip_install:
-        return py
-
-    requirements = BACKEND_DIR / "requirements.txt"
-    marker = VENV_DIR / ".deps-installed"
-    needs_install = not marker.exists()
-    if marker.exists() and requirements.exists():
-        needs_install = requirements.stat().st_mtime > marker.stat().st_mtime
-
-    if needs_install:
-        log("installing Python dependencies")
-        run([str(py), "-m", "pip", "install", "--upgrade", "pip"], cwd=BACKEND_DIR)
-        run(
-            [str(py), "-m", "pip", "install", "-r", "requirements.txt"],
-            cwd=BACKEND_DIR,
-        )
-        marker.write_text(str(time.time()))
-    else:
-        log("Python dependencies up to date")
-
-    return py
-
-
-def ensure_frontend_deps(skip_install: bool) -> None:
     if shutil.which("npm") is None:
-        raise RuntimeError(
-            "npm is not installed. Install Node.js (https://nodejs.org) and retry."
-        )
+        raise RuntimeError("npm is not installed — use a runtime with Node.js")
 
-    if skip_install:
-        return
+    if not (FRONTEND_DIR / "node_modules").exists():
+        log("installing frontend packages")
+        run_checked(["npm", "install"], FRONTEND_DIR)
 
-    node_modules = FRONTEND_DIR / "node_modules"
-    package_json = FRONTEND_DIR / "package.json"
-    package_lock = FRONTEND_DIR / "package-lock.json"
-
-    needs_install = not node_modules.exists()
-    if node_modules.exists():
-        reference = package_lock if package_lock.exists() else package_json
-        if reference.exists():
-            needs_install = reference.stat().st_mtime > node_modules.stat().st_mtime
-
-    if needs_install:
-        log("installing frontend dependencies (npm install)")
-        run(["npm", "install"], cwd=FRONTEND_DIR)
-    else:
-        log("frontend dependencies up to date")
+    return python
 
 
-def spawn(
-    cmd: list[str],
-    cwd: Path,
-    env: dict[str, str] | None = None,
-) -> subprocess.Popen[bytes]:
-    merged_env = os.environ.copy()
-    if env:
-        merged_env.update(env)
-    log(f"starting: {' '.join(cmd)}")
-    return subprocess.Popen(
-        cmd,
-        cwd=cwd,
-        env=merged_env,
-        start_new_session=True,
-    )
+def start_process(cmd: list[str], cwd: Path, extra_env: dict[str, str] | None = None):
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
+    log("-> " + " ".join(cmd))
+    return subprocess.Popen(cmd, cwd=cwd, env=env, start_new_session=True)
 
 
-def stop_process(proc: subprocess.Popen[bytes] | None) -> None:
+def stop_process(proc: subprocess.Popen | None) -> None:
     if proc is None or proc.poll() is not None:
         return
     try:
         os.killpg(os.getpgid(proc.pid), signal.SIGTERM)
         proc.wait(timeout=10)
-    except ProcessLookupError:
-        pass
-    except subprocess.TimeoutExpired:
-        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
-        proc.wait(timeout=5)
+    except (ProcessLookupError, subprocess.TimeoutExpired):
+        try:
+            os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+        except ProcessLookupError:
+            pass
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        description="Install dependencies and start Bedrock Playground services.",
-    )
-    parser.add_argument(
-        "--backend-only",
-        action="store_true",
-        help="Start only the FastAPI backend.",
-    )
-    parser.add_argument(
-        "--frontend-only",
-        action="store_true",
-        help="Start only the Vite frontend.",
-    )
-    parser.add_argument(
-        "--skip-install",
-        action="store_true",
-        help="Skip dependency installation checks.",
-    )
-    parser.add_argument(
-        "--backend-port",
-        type=int,
-        default=None,
-        help="Backend port (default: CDSW_READONLY_PORT env var, else 8000).",
-    )
-    parser.add_argument(
-        "--backend-host",
-        default=DEFAULT_BACKEND_HOST,
-        help=f"Backend bind host (default: {DEFAULT_BACKEND_HOST}).",
-    )
-    parser.add_argument(
-        "--frontend-port",
-        type=int,
-        default=None,
-        help="Frontend dev server port (default: CDSW_APP_PORT env var, else 5173).",
-    )
-    parser.add_argument(
-        "--frontend-host",
-        default=DEFAULT_FRONTEND_HOST,
-        help=f"Frontend bind host (default: {DEFAULT_FRONTEND_HOST}).",
-    )
-    args, unknown = parser.parse_known_args()
-    if unknown:
-        log(f"ignoring unknown arguments: {' '.join(unknown)}")
-    return args
-
-
-def is_cloudera_ai_runtime() -> bool:
-    """True when running as a Cloudera AI / CML Application."""
-    return bool(os.environ.get("CDSW_APP_PORT"))
-
-
-# Backwards-compatible alias
-is_cml_runtime = is_cloudera_ai_runtime
-
-
-def log_runtime_config(
-    backend_port: int,
-    proxy_port: int,
-    frontend_port: int,
-    start_frontend: bool,
-) -> None:
-    if not is_cloudera_ai_runtime():
-        return
-
-    log("Cloudera AI runtime detected")
-    log(f"  CDSW_APP_PORT={os.environ.get('CDSW_APP_PORT', 'unset')} -> frontend")
-    log(f"  internal API port={backend_port} (Vite proxy -> {proxy_port})")
-    if os.environ.get("CDSW_READONLY_PORT"):
-        log(
-            f"  CDSW_READONLY_PORT={os.environ['CDSW_READONLY_PORT']} "
-            "(not used for in-container API proxy)"
-        )
-    if start_frontend and os.environ.get("CDSW_DOMAIN"):
-        log(f"  CDSW_DOMAIN={os.environ['CDSW_DOMAIN']}")
-
-
-def resolve_backend_port(args: argparse.Namespace, start_frontend: bool) -> int:
-    if args.backend_port is not None:
-        return args.backend_port
-    # When both services run on CML, keep API on a stable internal port.
-    if is_cml_runtime() and start_frontend:
-        return INTERNAL_API_PORT
-    return env_int("CDSW_READONLY_PORT", INTERNAL_API_PORT)
-
-
-def resolve_proxy_port(backend_port: int) -> int:
-    """Port Vite uses to reach the API (always loopback-safe)."""
-    if is_cml_runtime():
-        return INTERNAL_API_PORT
-    return backend_port
-
-
-def wait_for_backend(host: str, port: int, timeout: float = 60.0) -> None:
-    import urllib.error
-    import urllib.request
-
-    url = f"http://{host}:{port}/api/health"
+def wait_for_api(timeout: float = 60) -> None:
+    url = f"{API_URL}/api/health"
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
             with urllib.request.urlopen(url, timeout=2) as response:
                 if response.status == 200:
-                    log(f"backend ready at {url}")
+                    log(f"backend ready ({url})")
                     return
         except (urllib.error.URLError, TimeoutError, OSError):
             time.sleep(0.25)
-    raise RuntimeError(f"Backend did not become ready at {url} within {timeout}s")
+    raise RuntimeError(f"backend did not start within {timeout}s ({url})")
 
 
-def use_reload() -> bool:
-    # uvicorn --reload is unreliable on CML-managed ports.
-    return not is_cml_runtime()
-
-
-def resolve_frontend_port(args: argparse.Namespace) -> int:
-    if args.frontend_port is not None:
-        return args.frontend_port
-    return default_frontend_port()
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Start Bedrock Playground")
+    parser.add_argument("--skip-install", action="store_true", help="Skip pip/npm install")
+    args, unknown = parser.parse_known_args()
+    if unknown:
+        log("ignoring extra arguments: " + " ".join(unknown))
+    return args
 
 
 def main() -> int:
     args = parse_args()
-    start_backend = not args.frontend_only
-    start_frontend = not args.backend_only
-    backend_port = resolve_backend_port(args, start_frontend)
-    proxy_port = resolve_proxy_port(backend_port)
-    frontend_port = resolve_frontend_port(args)
 
-    if args.backend_only and args.frontend_only:
-        log("error: use only one of --backend-only or --frontend-only")
-        return 1
+    if ON_CLOUDERA_AI:
+        log(f"Cloudera AI detected — UI port {FRONTEND_PORT}, API port {API_PORT}")
+    else:
+        log(f"local dev — UI http://{HOST}:{FRONTEND_PORT}, API {API_URL}")
 
-    if is_cloudera_ai_runtime() and start_frontend and args.backend_port is None:
-        log_runtime_config(backend_port, proxy_port, frontend_port, start_frontend)
-    elif os.environ.get("CDSW_READONLY_PORT") and args.backend_port is None and not start_frontend:
-        log(f"using CDSW_READONLY_PORT={os.environ['CDSW_READONLY_PORT']} for backend")
-    if os.environ.get("CDSW_APP_PORT") and args.frontend_port is None:
-        log(f"using CDSW_APP_PORT={os.environ['CDSW_APP_PORT']} for frontend")
-
-    backend_proc: subprocess.Popen[bytes] | None = None
-    frontend_proc: subprocess.Popen[bytes] | None = None
-    proxy_target = f"http://{args.backend_host}:{proxy_port}"
+    api_proc = None
+    ui_proc = None
 
     try:
-        if start_backend:
-            py = ensure_backend_deps(find_python(), args.skip_install)
-            uvicorn_cmd = [
-                str(py),
-                "-m",
-                "uvicorn",
-                "app.main:app",
-                "--host",
-                args.backend_host,
-                "--port",
-                str(backend_port),
-            ]
-            if use_reload():
-                uvicorn_cmd.append("--reload")
-            backend_proc = spawn(uvicorn_cmd, cwd=BACKEND_DIR)
+        python = install_dependencies(args.skip_install)
 
-        if start_frontend:
-            if start_backend:
-                wait_for_backend(args.backend_host, proxy_port)
-            ensure_frontend_deps(args.skip_install)
-            frontend_env = {
-                "BACKEND_PROXY_TARGET": proxy_target,
-                "BACKEND_PROXY_PORT": str(proxy_port),
-            }
-            frontend_proc = spawn(
-                [
-                    "npm",
-                    "run",
-                    "dev",
-                    "--",
-                    "--host",
-                    args.frontend_host,
-                    "--port",
-                    str(frontend_port),
-                ],
-                cwd=FRONTEND_DIR,
-                env=frontend_env,
-            )
+        api_cmd = [
+            str(python), "-m", "uvicorn", "app.main:app",
+            "--host", HOST, "--port", str(API_PORT),
+        ]
+        if not ON_CLOUDERA_AI:
+            api_cmd.append("--reload")
 
-        if backend_proc:
-            log(
-                f"backend:  http://{args.backend_host}:{backend_port} (docs: /docs)"
-            )
-        if frontend_proc:
-            log(f"frontend: http://{args.frontend_host}:{frontend_port}")
-            if start_backend:
-                log(f"api proxy: {proxy_target} (/api, /docs)")
+        api_proc = start_process(api_cmd, BACKEND_DIR)
+        wait_for_api()
+
+        ui_proc = start_process(
+            ["npm", "run", "dev", "--", "--host", HOST, "--port", str(FRONTEND_PORT)],
+            FRONTEND_DIR,
+            extra_env={
+                "BACKEND_PROXY_TARGET": API_URL,
+                "BACKEND_PROXY_PORT": str(API_PORT),
+            },
+        )
+
+        log(f"running — open the app URL (UI :{FRONTEND_PORT}, swagger /docs)")
         log("press Ctrl+C to stop")
 
         while True:
-            if backend_proc and backend_proc.poll() is not None:
-                raise RuntimeError("Backend process exited unexpectedly.")
-            if frontend_proc and frontend_proc.poll() is not None:
-                raise RuntimeError("Frontend process exited unexpectedly.")
+            if api_proc.poll() is not None:
+                raise RuntimeError("backend exited unexpectedly")
+            if ui_proc.poll() is not None:
+                raise RuntimeError("frontend exited unexpectedly")
             time.sleep(0.5)
 
     except KeyboardInterrupt:
-        log("shutting down...")
+        log("stopping...")
         return 0
-    except RuntimeError as exc:
+    except (RuntimeError, subprocess.CalledProcessError) as exc:
         log(f"error: {exc}")
         return 1
     finally:
-        stop_process(backend_proc)
-        stop_process(frontend_proc)
+        stop_process(ui_proc)
+        stop_process(api_proc)
 
 
 if __name__ == "__main__":

@@ -47,14 +47,21 @@ On Cloudera Machine Learning / CDSW, the platform sets:
 Options:
 
 ```bash
-python start.py --backend-only      # API only
-python start.py --frontend-only     # UI only (proxies /api to backend if running)
-python start.py --skip-install      # skip pip/npm install checks
-python start.py --frontend-host 127.0.0.1 --frontend-port 8090
-python start.py --backend-port 9000
+python start.py --skip-install   # skip pip/npm install (faster restarts)
 ```
 
-Requires **Python 3.10+** and **Node.js/npm** on your machine.
+Requires **Python 3.10+** and **Node.js/npm**.
+
+### How start.py works
+
+The script is intentionally linear — four steps, no hidden magic:
+
+1. **Install** — `pip install` into `backend/venv`, `npm install` if `node_modules` is missing  
+2. **Backend** — FastAPI on `127.0.0.1:8000`  
+3. **Wait** — polls `/api/health` until the API is up  
+4. **Frontend** — Vite on `127.0.0.1:CDSW_APP_PORT` (or `5173` locally); proxies `/api` to port 8000  
+
+On Cloudera AI, only `CDSW_APP_PORT` matters for the public URL. The API always stays on internal port **8000**.
 
 ## Deploying on Cloudera AI (CAI)
 
