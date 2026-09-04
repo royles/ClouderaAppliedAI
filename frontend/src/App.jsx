@@ -4,6 +4,7 @@ import {
   fetchHealth,
   fetchModels,
   sendChat,
+  sendChatStream,
   updateConfig,
 } from "./api";
 import "./App.css";
@@ -129,31 +130,63 @@ export default function App() {
     }
   };
 
+  const appendAssistantToken = (text) => {
+    setMessages((prev) => {
+      const updated = [...prev];
+      const last = updated[updated.length - 1];
+      if (last?.role === "assistant") {
+        updated[updated.length - 1] = {
+          ...last,
+          content: last.content + text,
+        };
+      }
+      return updated;
+    });
+  };
+
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
 
     const userMessage = { role: "user", content: trimmed };
     const nextMessages = [...messages, userMessage];
-    setMessages(nextMessages);
+    const chatPayload = {
+      messages: nextMessages,
+      model_id: isBedrock ? config?.model_id : config?.local_model_id,
+      system_prompt: systemPrompt.trim() || undefined,
+    };
+
+    setMessages([...nextMessages, { role: "assistant", content: "" }]);
     setInput("");
     setLoading(true);
     setError(null);
 
+    let streamed = false;
+
     try {
-      const response = await sendChat({
-        messages: nextMessages,
-        model_id: isBedrock ? config?.model_id : config?.local_model_id,
-        system_prompt: systemPrompt.trim() || undefined,
+      await sendChatStream(chatPayload, {
+        onToken: (text) => {
+          streamed = true;
+          appendAssistantToken(text);
+        },
       });
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: response.content },
-      ]);
-    } catch (err) {
-      setError(err.message);
-      setMessages(messages);
-      setInput(trimmed);
+    } catch (streamErr) {
+      if (!streamed) {
+        try {
+          setMessages(nextMessages);
+          const response = await sendChat(chatPayload);
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: response.content },
+          ]);
+        } catch (err) {
+          setError(err.message);
+          setMessages(messages);
+          setInput(trimmed);
+        }
+      } else {
+        setError(streamErr.message);
+      }
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -336,15 +369,14 @@ export default function App() {
           {messages.map((msg, i) => (
             <div key={i} className={`message ${msg.role}`}>
               <span className="message-role">{msg.role}</span>
-              <div className="message-bubble">{msg.content}</div>
+              <div className="message-bubble">
+                {msg.content ||
+                  (loading && i === messages.length - 1 && msg.role === "assistant"
+                    ? <span className="loading-dots">Thinking</span>
+                    : "")}
+              </div>
             </div>
           ))}
-          {loading && (
-            <div className="message assistant">
-              <span className="message-role">assistant</span>
-              <div className="message-bubble loading-dots">Thinking</div>
-            </div>
-          )}
           <div ref={messagesEndRef} />
         </div>
 

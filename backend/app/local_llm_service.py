@@ -1,6 +1,8 @@
 """OpenAI-compatible local inference endpoints (Ollama, vLLM, LM Studio, etc.)."""
 
+import json
 import logging
+from collections.abc import Iterator
 from typing import Any
 from urllib.parse import urlparse
 
@@ -67,18 +69,9 @@ def invoke_chat(
         )
 
     resolved_model = model_id or runtime_state.get_local_model_id()
-    url = normalize_chat_completions_url(runtime_state.get_local_endpoint_url())
-    headers = {"Content-Type": "application/json"}
-    token = runtime_state.get_local_api_token()
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-
-    body: dict[str, Any] = {
-        "model": resolved_model,
-        "messages": _build_messages(messages, system_prompt),
-        "max_tokens": max_tokens,
-        "temperature": temperature,
-    }
+    url, headers, body = _local_request(
+        resolved_model, messages, max_tokens, temperature, system_prompt, stream=False
+    )
 
     try:
         with httpx.Client(timeout=120.0) as client:
@@ -103,3 +96,76 @@ def invoke_chat(
 
     usage = data.get("usage")
     return content, resolved_model, usage
+
+
+def _local_request(
+    resolved_model: str,
+    messages: list[ChatMessage],
+    max_tokens: int,
+    temperature: float,
+    system_prompt: str | None,
+    stream: bool,
+) -> tuple[str, dict[str, str], dict[str, Any]]:
+    url = normalize_chat_completions_url(runtime_state.get_local_endpoint_url())
+    headers = {"Content-Type": "application/json"}
+    token = runtime_state.get_local_api_token()
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    body: dict[str, Any] = {
+        "model": resolved_model,
+        "messages": _build_messages(messages, system_prompt),
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "stream": stream,
+    }
+    return url, headers, body
+
+
+def stream_chat(
+    messages: list[ChatMessage],
+    model_id: str | None = None,
+    max_tokens: int = 1024,
+    temperature: float = 0.7,
+    system_prompt: str | None = None,
+) -> Iterator[str]:
+    if not runtime_state.is_local_ready():
+        raise LocalLLMError(
+            "Local LLM is not configured. Set endpoint URL and model name.",
+            status_code=503,
+        )
+
+    resolved_model = model_id or runtime_state.get_local_model_id()
+    url, headers, body = _local_request(
+        resolved_model, messages, max_tokens, temperature, system_prompt, stream=True
+    )
+
+    try:
+        with httpx.Client(timeout=120.0) as client:
+            with client.stream("POST", url, json=body, headers=headers) as response:
+                if response.status_code >= 400:
+                    detail = response.read().decode()[:500]
+                    raise LocalLLMError(
+                        f"Local LLM error ({response.status_code}): {detail}",
+                        status_code=502,
+                    )
+
+                for line in response.iter_lines():
+                    if not line or not line.startswith("data:"):
+                        continue
+                    payload = line[5:].strip()
+                    if payload == "[DONE]":
+                        break
+                    try:
+                        data = json.loads(payload)
+                    except json.JSONDecodeError:
+                        continue
+                    choices = data.get("choices", [])
+                    if not choices:
+                        continue
+                    delta = choices[0].get("delta", {})
+                    content = delta.get("content")
+                    if content:
+                        yield content
+    except httpx.RequestError as exc:
+        logger.error("Local LLM stream error: %s", exc)
+        raise LocalLLMError(f"Could not reach local endpoint: {exc}", status_code=502) from exc

@@ -2,6 +2,7 @@
 
 import json
 import logging
+from collections.abc import Iterator
 from typing import Any
 
 import boto3
@@ -273,3 +274,88 @@ def invoke_chat(
     except Exception as exc:
         logger.error("Unexpected Bedrock error: %s", exc)
         raise BedrockError(f"Unexpected error: {exc}", status_code=500) from exc
+
+
+def _extract_stream_text(model_id: str, data: dict[str, Any]) -> str | None:
+    if _is_amazon_nova(model_id):
+        block = data.get("contentBlockDelta")
+        if block:
+            return block.get("delta", {}).get("text")
+        return None
+
+    if model_id.startswith("anthropic."):
+        if data.get("type") == "content_block_delta":
+            return data.get("delta", {}).get("text")
+        return None
+
+    if model_id.startswith("meta."):
+        return data.get("generation")
+
+    if model_id.startswith("mistral."):
+        outputs = data.get("outputs", [])
+        if outputs:
+            return outputs[0].get("text")
+        return None
+
+    if model_id.startswith("amazon.titan"):
+        return data.get("outputText")
+
+    return None
+
+
+def _supports_native_streaming(model_id: str) -> bool:
+    return (
+        _is_amazon_nova(model_id)
+        or model_id.startswith("anthropic.")
+        or model_id.startswith("meta.")
+        or model_id.startswith("mistral.")
+    )
+
+
+def stream_chat(
+    messages: list[ChatMessage],
+    model_id: str | None = None,
+    max_tokens: int = 1024,
+    temperature: float = 0.7,
+    system_prompt: str | None = None,
+) -> Iterator[str]:
+    """Yield text deltas from Bedrock streaming API."""
+    resolved_model = model_id or runtime_state.get_model_id()
+
+    if not _supports_native_streaming(resolved_model):
+        text, _, _ = invoke_chat(
+            messages, resolved_model, max_tokens, temperature, system_prompt
+        )
+        if text:
+            yield text
+        return
+
+    body = _build_request_body(
+        resolved_model, messages, max_tokens, temperature, system_prompt
+    )
+
+    try:
+        client = _get_client()
+        response = client.invoke_model_with_response_stream(
+            modelId=resolved_model,
+            body=json.dumps(body),
+            contentType="application/json",
+            accept="application/json",
+        )
+        for event in response.get("body", []):
+            chunk = event.get("chunk")
+            if not chunk:
+                continue
+            data = json.loads(chunk["bytes"].decode())
+            text = _extract_stream_text(resolved_model, data)
+            if text:
+                yield text
+    except ClientError as exc:
+        error_code = exc.response.get("Error", {}).get("Code", "Unknown")
+        error_msg = exc.response.get("Error", {}).get("Message", str(exc))
+        logger.error("Bedrock stream ClientError [%s]: %s", error_code, error_msg)
+        status = 403 if error_code in ("AccessDeniedException", "UnauthorizedException") else 502
+        raise BedrockError(f"Bedrock error ({error_code}): {error_msg}", status_code=status) from exc
+    except BotoCoreError as exc:
+        logger.error("BotoCoreError: %s", exc)
+        raise BedrockError(f"AWS connection error: {exc}", status_code=502) from exc

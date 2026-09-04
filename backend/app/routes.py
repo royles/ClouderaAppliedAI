@@ -1,11 +1,25 @@
 """FastAPI routes for the Bedrock playground."""
 
+import json
 import logging
+from collections.abc import Iterator
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 
-from app.bedrock_service import BedrockError, _credential_source, is_aws_configured, invoke_chat as invoke_bedrock
-from app.local_llm_service import LocalLLMError, is_local_configured, invoke_chat as invoke_local
+from app.bedrock_service import (
+    BedrockError,
+    _credential_source,
+    is_aws_configured,
+    invoke_chat as invoke_bedrock,
+    stream_chat as stream_bedrock,
+)
+from app.local_llm_service import (
+    LocalLLMError,
+    is_local_configured,
+    invoke_chat as invoke_local,
+    stream_chat as stream_local,
+)
 from app.models_catalog import allowed_model_ids, get_model_info, list_available_models
 from app.schemas import (
     ChatRequest,
@@ -188,4 +202,66 @@ def chat(request: ChatRequest) -> ChatResponse:
         model_id=used_model,
         provider="bedrock",
         usage=usage,
+    )
+
+
+def _sse_line(event_type: str, payload: dict) -> str:
+    data = json.dumps({"type": event_type, **payload})
+    return f"data: {data}\n\n"
+
+
+def _stream_chat_events(request: ChatRequest) -> Iterator[str]:
+    provider = runtime_state.get_provider()
+
+    if provider == "local":
+        if not is_local_configured():
+            yield _sse_line("error", {"detail": "Configure local endpoint URL and model name in settings."})
+            return
+        model_id = request.model_id or runtime_state.get_local_model_id()
+        stream_fn = stream_local
+        used_provider = "local"
+    else:
+        if not is_aws_configured():
+            yield _sse_line(
+                "error",
+                {"detail": "AWS credentials not configured. Switch to Local LLM or set AWS credentials."},
+            )
+            return
+        model_id = request.model_id or runtime_state.get_model_id()
+        if request.model_id and request.model_id not in allowed_model_ids():
+            yield _sse_line("error", {"detail": "Unknown Bedrock model_id."})
+            return
+        stream_fn = stream_bedrock
+        used_provider = "bedrock"
+
+    yield _sse_line("start", {"model_id": model_id, "provider": used_provider})
+
+    try:
+        for token in stream_fn(
+            messages=request.messages,
+            model_id=model_id,
+            max_tokens=request.max_tokens,
+            temperature=request.temperature,
+            system_prompt=request.system_prompt,
+        ):
+            if token:
+                yield _sse_line("token", {"text": token})
+    except (BedrockError, LocalLLMError) as exc:
+        yield _sse_line("error", {"detail": str(exc)})
+        return
+
+    logger.info("Chat stream completed provider=%s model=%s", used_provider, model_id)
+    yield _sse_line("done", {"model_id": model_id, "provider": used_provider})
+
+
+@router.post("/chat/stream")
+def chat_stream(request: ChatRequest) -> StreamingResponse:
+    return StreamingResponse(
+        _stream_chat_events(request),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )
