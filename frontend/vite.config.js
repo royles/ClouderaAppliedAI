@@ -1,18 +1,33 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
-// BACKEND_PROXY_TARGET is set by start.py. On CML, use internal port 8000 —
-// CDSW_READONLY_PORT is not reliable for loopback proxy connections.
+/**
+ * Cloudera AI (CAI) layout
+ * ------------------------
+ * - Frontend listens on 127.0.0.1:CDSW_APP_PORT (set by the platform).
+ * - Backend API runs on 127.0.0.1:8000 (internal loopback only).
+ * - start.py sets BACKEND_PROXY_TARGET before launching Vite.
+ *
+ * Do NOT proxy to CDSW_READONLY_PORT — that port is for external readonly
+ * URLs and is not reachable via loopback inside the workload.
+ */
+const isClouderaAI = Boolean(process.env.CDSW_APP_PORT);
+const internalApiPort = process.env.BACKEND_PROXY_PORT || "8000";
 const backendTarget =
-  process.env.BACKEND_PROXY_TARGET ||
-  `http://127.0.0.1:${process.env.BACKEND_PROXY_PORT || process.env.CDSW_READONLY_PORT || "8000"}`;
+  process.env.BACKEND_PROXY_TARGET || `http://127.0.0.1:${internalApiPort}`;
 const frontendPort = parseInt(process.env.CDSW_APP_PORT || "5173", 10);
+const frontendHost = process.env.CDSW_APP_HOST || "127.0.0.1";
 
-// CML/CDSW exposes the app on a public *.cloudera.site hostname; Vite blocks
-// unknown Host headers unless they are listed here.
 const allowedHosts = [".cloudera.site", ".cloudera.com", "localhost", "127.0.0.1"];
 if (process.env.CDSW_DOMAIN) {
   allowedHosts.push(process.env.CDSW_DOMAIN);
+}
+if (process.env.CDSW_PUBLIC_URL) {
+  try {
+    allowedHosts.push(new URL(process.env.CDSW_PUBLIC_URL).hostname);
+  } catch {
+    // ignore invalid URL
+  }
 }
 
 const proxyOptions = {
@@ -20,11 +35,18 @@ const proxyOptions = {
   changeOrigin: true,
 };
 
+if (isClouderaAI) {
+  console.log(
+    `[vite] Cloudera AI: frontend ${frontendHost}:${frontendPort}, api proxy -> ${backendTarget}`,
+  );
+}
+
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: process.env.CDSW_APP_HOST || "127.0.0.1",
+    host: frontendHost,
     port: frontendPort,
+    strictPort: isClouderaAI,
     allowedHosts,
     proxy: {
       "/api": proxyOptions,

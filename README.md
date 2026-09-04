@@ -56,6 +56,72 @@ python start.py --backend-port 9000
 
 Requires **Python 3.10+** and **Node.js/npm** on your machine.
 
+## Deploying on Cloudera AI (CAI)
+
+### Architecture on CAI
+
+```
+Browser  -->  CAI App URL (*.cloudera.site)
+                    |
+                    v
+         Vite @ 127.0.0.1:CDSW_APP_PORT
+              |              |
+              | /api,/docs   |
+              v              v
+         FastAPI @ 127.0.0.1:8000  -->  AWS Bedrock
+```
+
+The platform exposes only `CDSW_APP_PORT`. The FastAPI backend runs on an internal loopback port; Vite proxies `/api`, `/docs`, and `/openapi.json` to it.
+
+### 1. Project setup (Workbench session)
+
+Use a **Python 3** runtime that includes **Node.js/npm** (required for the React frontend).
+
+```bash
+pip install -r requirements.txt
+```
+
+Set AWS credentials as **project or application environment variables** (never commit them):
+
+| Variable | Description |
+|----------|-------------|
+| `AWS_ACCESS_KEY_ID` | AWS access key (or use instance/IAM role) |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key |
+| `AWS_REGION` | e.g. `us-east-1` |
+
+### 2. Create the Application
+
+In Cloudera AI → **Applications** → **New Application**:
+
+| Field | Value |
+|-------|-------|
+| **Script** | `entry.py` (or `start.py`) |
+| **Kernel** | Python 3 |
+
+`entry.py` is a thin wrapper that calls `start.py`. The start script will:
+
+1. Install Python deps into `backend/venv` if needed  
+2. Run `npm install` in `frontend/` if needed  
+3. Start FastAPI on `127.0.0.1:8000`  
+4. Start Vite on `127.0.0.1:$CDSW_APP_PORT`  
+5. Wait for the backend health check before opening the frontend  
+
+### 3. Access
+
+- **UI**: open the Application URL from the CAI dashboard  
+- **Swagger**: `{app-url}/docs` (proxied through Vite)  
+- **Health**: `{app-url}/api/health`  
+
+### CAI environment variables (set by platform)
+
+| Variable | Used for |
+|----------|----------|
+| `CDSW_APP_PORT` | Vite frontend bind port |
+| `CDSW_DOMAIN` | Added to Vite `allowedHosts` |
+| `CDSW_READONLY_PORT` | Not used when both services run (see note below) |
+
+`start.py` sets `BACKEND_PROXY_TARGET=http://127.0.0.1:8000` for Vite so the frontend and backend connect correctly inside the workload.
+
 ### Manual setup
 
 #### Backend

@@ -2,9 +2,16 @@
 """
 Start the Bedrock Playground backend and frontend.
 
-Ensures Python and npm dependencies are installed, then launches:
-  - FastAPI backend on http://127.0.0.1:{CDSW_READONLY_PORT or 8000}
-  - Vite frontend on http://127.0.0.1:{CDSW_APP_PORT or 5173}
+Designed for Cloudera AI (CAI) Applications and local development.
+
+On Cloudera AI:
+  - Frontend (Vite)  -> 127.0.0.1:CDSW_APP_PORT   (platform app URL)
+  - Backend (FastAPI)-> 127.0.0.1:8000            (internal; proxied by Vite)
+  - Register entry.py or start.py as the Application script.
+
+Locally:
+  - Frontend -> http://127.0.0.1:5173
+  - Backend  -> http://127.0.0.1:8000
 """
 
 from __future__ import annotations
@@ -217,8 +224,34 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def is_cml_runtime() -> bool:
+def is_cloudera_ai_runtime() -> bool:
+    """True when running as a Cloudera AI / CML Application."""
     return bool(os.environ.get("CDSW_APP_PORT"))
+
+
+# Backwards-compatible alias
+is_cml_runtime = is_cloudera_ai_runtime
+
+
+def log_runtime_config(
+    backend_port: int,
+    proxy_port: int,
+    frontend_port: int,
+    start_frontend: bool,
+) -> None:
+    if not is_cloudera_ai_runtime():
+        return
+
+    log("Cloudera AI runtime detected")
+    log(f"  CDSW_APP_PORT={os.environ.get('CDSW_APP_PORT', 'unset')} -> frontend")
+    log(f"  internal API port={backend_port} (Vite proxy -> {proxy_port})")
+    if os.environ.get("CDSW_READONLY_PORT"):
+        log(
+            f"  CDSW_READONLY_PORT={os.environ['CDSW_READONLY_PORT']} "
+            "(not used for in-container API proxy)"
+        )
+    if start_frontend and os.environ.get("CDSW_DOMAIN"):
+        log(f"  CDSW_DOMAIN={os.environ['CDSW_DOMAIN']}")
 
 
 def resolve_backend_port(args: argparse.Namespace, start_frontend: bool) -> int:
@@ -277,18 +310,16 @@ def main() -> int:
         log("error: use only one of --backend-only or --frontend-only")
         return 1
 
-    if is_cml_runtime() and start_frontend and args.backend_port is None:
-        log(
-            f"CML runtime: API on internal port {backend_port}, "
-            f"Vite proxies to {proxy_port} (CDSW_READONLY_PORT is not used for loopback)"
-        )
-    elif os.environ.get("CDSW_READONLY_PORT") and args.backend_port is None:
+    if is_cloudera_ai_runtime() and start_frontend and args.backend_port is None:
+        log_runtime_config(backend_port, proxy_port, frontend_port, start_frontend)
+    elif os.environ.get("CDSW_READONLY_PORT") and args.backend_port is None and not start_frontend:
         log(f"using CDSW_READONLY_PORT={os.environ['CDSW_READONLY_PORT']} for backend")
     if os.environ.get("CDSW_APP_PORT") and args.frontend_port is None:
         log(f"using CDSW_APP_PORT={os.environ['CDSW_APP_PORT']} for frontend")
 
     backend_proc: subprocess.Popen[bytes] | None = None
     frontend_proc: subprocess.Popen[bytes] | None = None
+    proxy_target = f"http://{args.backend_host}:{proxy_port}"
 
     try:
         if start_backend:
@@ -311,7 +342,6 @@ def main() -> int:
             if start_backend:
                 wait_for_backend(args.backend_host, proxy_port)
             ensure_frontend_deps(args.skip_install)
-            proxy_target = f"http://{args.backend_host}:{proxy_port}"
             frontend_env = {
                 "BACKEND_PROXY_TARGET": proxy_target,
                 "BACKEND_PROXY_PORT": str(proxy_port),
