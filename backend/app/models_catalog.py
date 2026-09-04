@@ -20,6 +20,21 @@ AVAILABLE_MODELS: list[ModelInfo] = [
         display_name="Claude 3.5 Sonnet",
     ),
     ModelInfo(
+        model_id="amazon.nova-lite-v1:0",
+        provider="Amazon",
+        display_name="Nova Lite",
+    ),
+    ModelInfo(
+        model_id="amazon.nova-micro-v1:0",
+        provider="Amazon",
+        display_name="Nova Micro",
+    ),
+    ModelInfo(
+        model_id="amazon.nova-pro-v1:0",
+        provider="Amazon",
+        display_name="Nova Pro",
+    ),
+    ModelInfo(
         model_id="amazon.titan-text-express-v1",
         provider="Amazon",
         display_name="Titan Text Express",

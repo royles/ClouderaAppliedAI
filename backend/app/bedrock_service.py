@@ -58,9 +58,19 @@ def _get_client() -> Any:
     return session.client("bedrock-runtime")
 
 
-def _text_blocks(text: str) -> list[dict[str, str]]:
-    """Bedrock Claude models expect content as a list of blocks, not a raw string."""
+def _anthropic_text_blocks(text: str) -> list[dict[str, str]]:
+    """Claude on Bedrock: content blocks include type + text."""
     return [{"type": "text", "text": text}]
+
+
+def _nova_text_blocks(text: str) -> list[dict[str, str]]:
+    """Amazon Nova: content blocks use text only (no type key)."""
+    return [{"text": text}]
+
+
+def _is_amazon_nova(model_id: str) -> bool:
+    lowered = model_id.lower()
+    return "amazon" in lowered and "nova" in lowered
 
 
 def _format_anthropic(
@@ -74,11 +84,33 @@ def _format_anthropic(
         "max_tokens": max_tokens,
         "temperature": temperature,
         "messages": [
-            {"role": m.role, "content": _text_blocks(m.content)} for m in messages
+            {"role": m.role, "content": _anthropic_text_blocks(m.content)} for m in messages
         ],
     }
     if system_prompt:
-        body["system"] = _text_blocks(system_prompt)
+        body["system"] = _anthropic_text_blocks(system_prompt)
+    return body
+
+
+def _format_amazon_nova(
+    messages: list[ChatMessage],
+    max_tokens: int,
+    temperature: float,
+    system_prompt: str | None,
+) -> dict[str, Any]:
+    body: dict[str, Any] = {
+        "schemaVersion": "messages-v1",
+        "messages": [
+            {"role": m.role, "content": _nova_text_blocks(m.content)} for m in messages
+        ],
+        "inferenceConfig": {
+            "maxTokens": max_tokens,
+            "temperature": temperature,
+            "topP": 0.9,
+        },
+    }
+    if system_prompt:
+        body["system"] = _nova_text_blocks(system_prompt)
     return body
 
 
@@ -148,6 +180,8 @@ def _build_request_body(
     temperature: float,
     system_prompt: str | None,
 ) -> dict[str, Any]:
+    if _is_amazon_nova(model_id):
+        return _format_amazon_nova(messages, max_tokens, temperature, system_prompt)
     if model_id.startswith("anthropic."):
         return _format_anthropic(messages, max_tokens, temperature, system_prompt)
     if model_id.startswith("amazon.titan"):
@@ -160,8 +194,21 @@ def _build_request_body(
     return _format_anthropic(messages, max_tokens, temperature, system_prompt)
 
 
+def _parse_nova_response(response_body: dict[str, Any]) -> tuple[str, dict | None]:
+    usage = response_body.get("usage")
+    output = response_body.get("output", {})
+    message = output.get("message", {})
+    content = message.get("content", [])
+    if content:
+        return content[0].get("text", ""), usage
+    return json.dumps(response_body), usage
+
+
 def _parse_response(model_id: str, response_body: dict[str, Any]) -> tuple[str, dict | None]:
     usage: dict | None = None
+
+    if _is_amazon_nova(model_id):
+        return _parse_nova_response(response_body)
 
     if model_id.startswith("anthropic."):
         content = response_body.get("content", [])
