@@ -50,8 +50,10 @@ def venv_python() -> Path:
 
 
 def pip_env() -> dict[str, str]:
-    """CAI sets PIP_USER=1 which breaks installs inside a venv."""
+    """CAI sets PIP_USER=1; that must be off when installing into a project venv."""
     env = os.environ.copy()
+    for key in ("PIP_USER", "PIP_USER_SITE"):
+        env.pop(key, None)
     env["PIP_USER"] = "0"
     env["PYTHONNOUSERSITE"] = "1"
     return env
@@ -65,35 +67,29 @@ def run_checked(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) ->
     subprocess.run(cmd, cwd=cwd, check=True, env=merged)
 
 
-def backend_python() -> Path:
-    """On CAI use the project runtime Python; locally use the venv."""
-    if ON_CLOUDERA_AI:
-        return Path(sys.executable)
-    return venv_python()
+def ensure_venv() -> Path:
+    """Project-local venv (writable on CAI; system Python site-packages are not)."""
+    if not VENV_DIR.exists():
+        log("creating backend/venv")
+        run_checked([sys.executable, "-m", "venv", str(VENV_DIR)], BACKEND_DIR)
+    python = venv_python()
+    if not python.exists():
+        raise RuntimeError(f"venv python not found at {python}")
+    return python
 
 
 def install_dependencies(skip: bool) -> Path:
-    """Install pip + npm deps. Returns the Python executable for the API."""
+    """Install pip + npm deps into backend/venv. Returns venv python."""
     if skip:
-        return backend_python()
+        return ensure_venv()
 
-    if ON_CLOUDERA_AI:
-        python = Path(sys.executable)
-        log("installing Python packages into Cloudera AI runtime")
-        run_checked(
-            [str(python), "-m", "pip", "install", "-r", "requirements.txt"],
-            BACKEND_DIR,
-        )
-    else:
-        if not VENV_DIR.exists():
-            log("creating backend/venv")
-            run_checked([sys.executable, "-m", "venv", str(VENV_DIR)], BACKEND_DIR)
-        python = venv_python()
-        log("installing Python packages")
-        run_checked(
-            [str(python), "-m", "pip", "install", "-r", "requirements.txt"],
-            BACKEND_DIR,
-        )
+    python = ensure_venv()
+    log("installing Python packages into backend/venv")
+    run_checked([str(python), "-m", "pip", "install", "--upgrade", "pip"], BACKEND_DIR)
+    run_checked(
+        [str(python), "-m", "pip", "install", "-r", "requirements.txt"],
+        BACKEND_DIR,
+    )
 
     if shutil.which("npm") is None:
         raise RuntimeError("npm is not installed — use a runtime with Node.js")

@@ -129,7 +129,7 @@ In Cloudera AI → **Applications** → **New Application**:
 
 `start.py` sets `BACKEND_PROXY_TARGET=http://127.0.0.1:8000` for Vite so the frontend and backend connect correctly inside the workload.
 
-On CAI, Python packages install into the **project runtime** (no `venv`) because the platform sets `PIP_USER=1`, which conflicts with virtualenv installs.
+On CAI, Python packages install into **`backend/venv`** in your project (the system Python at `/usr/local` is read-only). If a previous install failed, delete `backend/venv` and restart the Application.
 
 ### Manual setup
 
