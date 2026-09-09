@@ -75,6 +75,11 @@ class ModelInfo(BaseModel):
     display_name: str
 
 
+class BedrockCatalog(BaseModel):
+    regions: list[str]
+    models: list[ModelInfo]
+
+
 class ConfigUpdate(BaseModel):
     provider: ProviderType | None = None
     model_id: str | None = None
@@ -98,6 +103,7 @@ class PublicConfig(BaseModel):
     local_configured: bool
     local_token_configured: bool
     chat_ready: bool
+    bedrock_error: str | None = None
 
 
 class HealthResponse(BaseModel):
@@ -106,3 +112,4 @@ class HealthResponse(BaseModel):
     aws_configured: bool
     local_configured: bool
     chat_ready: bool
+    bedrock_error: str | None = None

@@ -20,8 +20,18 @@ from app.local_llm_service import (
     invoke_chat as invoke_local,
     stream_chat as stream_local,
 )
-from app.models_catalog import allowed_model_ids, get_model_info, list_available_models
+from app.models_catalog import (
+    CatalogError,
+    allowed_model_ids,
+    bedrock_catalog_status,
+    get_bedrock_models,
+    get_bedrock_regions,
+    get_model_info,
+    is_valid_region,
+    normalize_bedrock_selection,
+)
 from app.schemas import (
+    BedrockCatalog,
     ChatRequest,
     ChatResponse,
     ConfigUpdate,
@@ -35,37 +45,26 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api")
 
-# Bedrock regions exposed to the UI (keep in sync with supported deployments).
-BEDROCK_REGIONS = [
-    "global",
-    "eu",
-    "us",
-    "us-east-1",
-    "us-east-2",
-    "us-west-2",
-    "eu-west-1",
-    "eu-west-2",
-    "eu-central-1",
-    "eu-north-1",
-    "ap-south-1",
-    "ap-northeast-1",
-    "ap-northeast-2",
-    "ap-southeast-1",
-    "ap-southeast-2",
-    "ca-central-1",
-    "sa-east-1",
-]
+
+def _bedrock_error() -> str | None:
+    _, error = bedrock_catalog_status()
+    return error
 
 
 def _chat_ready() -> bool:
     provider = runtime_state.get_provider()
     if provider == "local":
         return is_local_configured()
-    return is_aws_configured()
+    if not is_aws_configured():
+        return False
+    ready, _ = bedrock_catalog_status()
+    return ready
 
 
 def _public_config() -> PublicConfig:
+    normalize_bedrock_selection()
     provider = runtime_state.get_provider()
+    bedrock_error = _bedrock_error() if provider == "bedrock" else None
     return PublicConfig(
         provider=provider,
         model_id=(
@@ -81,36 +80,55 @@ def _public_config() -> PublicConfig:
         local_configured=is_local_configured(),
         local_token_configured=runtime_state.has_local_token(),
         chat_ready=_chat_ready(),
+        bedrock_error=bedrock_error,
     )
+
+
+def _load_bedrock_catalog() -> BedrockCatalog:
+    try:
+        return BedrockCatalog(regions=get_bedrock_regions(), models=get_bedrock_models())
+    except CatalogError as exc:
+        raise HTTPException(status_code=503, detail=exc.message) from exc
 
 
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
+    provider = runtime_state.get_provider()
+    bedrock_error = _bedrock_error() if provider == "bedrock" else None
     return HealthResponse(
         status="ok",
-        provider=runtime_state.get_provider(),
+        provider=provider,
         aws_configured=is_aws_configured(),
         local_configured=is_local_configured(),
         chat_ready=_chat_ready(),
+        bedrock_error=bedrock_error,
     )
+
+
+@router.get("/bedrock/catalog", response_model=BedrockCatalog)
+def bedrock_catalog() -> BedrockCatalog:
+    return _load_bedrock_catalog()
 
 
 @router.get("/regions", response_model=list[str])
 def list_regions() -> list[str]:
-    return BEDROCK_REGIONS
+    return _load_bedrock_catalog().regions
 
 
 @router.get("/models", response_model=list[ModelInfo])
 def list_models() -> list[ModelInfo]:
     if runtime_state.get_provider() == "local":
+        model_id = runtime_state.get_local_model_id()
+        if not model_id:
+            raise HTTPException(status_code=503, detail="Local model is not configured.")
         return [
             ModelInfo(
-                model_id=runtime_state.get_local_model_id(),
+                model_id=model_id,
                 provider="Local",
-                display_name=f"Local: {runtime_state.get_local_model_id()}",
+                display_name=f"Local: {model_id}",
             )
         ]
-    return list_available_models()
+    return _load_bedrock_catalog().models
 
 
 @router.get("/config", response_model=PublicConfig)
@@ -141,6 +159,11 @@ def update_config(payload: ConfigUpdate) -> PublicConfig:
         region = payload.aws_region.strip()
         if not region:
             raise HTTPException(status_code=400, detail="aws_region cannot be empty.")
+        if runtime_state.get_provider() == "bedrock" and not is_valid_region(region):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown Bedrock region '{region}'. Choose from /api/bedrock/catalog.",
+            )
         runtime_state.set_region(region)
 
     provider = runtime_state.get_provider()
@@ -201,6 +224,13 @@ def chat(request: ChatRequest) -> ChatResponse:
             detail="AWS credentials not configured. Switch to Local LLM or set AWS credentials.",
         )
 
+    ready, catalog_error = bedrock_catalog_status()
+    if not ready:
+        raise HTTPException(
+            status_code=503,
+            detail=catalog_error or "Bedrock catalog is not configured.",
+        )
+
     model_id = request.model_id or runtime_state.get_model_id()
     if request.model_id and request.model_id not in allowed_model_ids():
         raise HTTPException(status_code=400, detail="Unknown Bedrock model_id.")
@@ -251,6 +281,13 @@ def _stream_chat_events(request: ChatRequest) -> Iterator[str]:
             yield _sse_line(
                 "error",
                 {"detail": "AWS credentials not configured. Switch to Local LLM or set AWS credentials."},
+            )
+            return
+        ready, catalog_error = bedrock_catalog_status()
+        if not ready:
+            yield _sse_line(
+                "error",
+                {"detail": catalog_error or "Bedrock catalog is not configured."},
             )
             return
         model_id = request.model_id or runtime_state.get_model_id()

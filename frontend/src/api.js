@@ -44,12 +44,18 @@ export async function fetchHealth() {
   return request("/health");
 }
 
-export async function fetchModels() {
-  return request("/models");
+export async function fetchBedrockCatalog() {
+  const catalog = await request("/bedrock/catalog");
+  if (!catalog?.regions?.length || !catalog?.models?.length) {
+    throw new Error(
+      "Bedrock catalog is incomplete. Both regions and models must be configured."
+    );
+  }
+  return catalog;
 }
 
-export async function fetchRegions() {
-  return request("/regions");
+export async function fetchModels() {
+  return request("/models");
 }
 
 export async function fetchConfig() {

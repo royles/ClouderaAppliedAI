@@ -1,18 +1,41 @@
-"""Curated Bedrock models for the playground (Active models only)."""
+"""Bedrock catalog: regions, models, and inference routing."""
 
-import logging
-from functools import lru_cache
-
-import boto3
-from botocore.exceptions import BotoCoreError, ClientError
-
-from app.bedrock_regions import resolve_bedrock_client_region, resolve_inference_model_id
 from app.schemas import ModelInfo
 from app.state import runtime_state
 
-logger = logging.getLogger(__name__)
+# Geo scopes shown in the region dropdown (not valid boto3 region names).
+GEO_SCOPES = frozenset({"global", "eu", "us", "au"})
 
-# Curated list — exclude EOL/Legacy IDs (see AWS Bedrock model lifecycle docs).
+# boto3 client region used for each geo scope.
+GEO_CLIENT_REGIONS: dict[str, str] = {
+    "global": "us-east-1",
+    "us": "us-east-1",
+    "eu": "eu-west-1",
+    "au": "ap-southeast-2",
+}
+
+# Region options exposed in the UI.
+BEDROCK_REGIONS: list[str] = [
+    "global",
+    "eu",
+    "us",
+    "us-east-1",
+    "us-east-2",
+    "us-west-2",
+    "eu-west-1",
+    "eu-west-2",
+    "eu-central-1",
+    "eu-north-1",
+    "ap-south-1",
+    "ap-northeast-1",
+    "ap-northeast-2",
+    "ap-southeast-1",
+    "ap-southeast-2",
+    "ca-central-1",
+    "sa-east-1",
+]
+
+# Curated Bedrock models for the playground.
 AVAILABLE_MODELS: list[ModelInfo] = [
     ModelInfo(
         model_id="anthropic.claude-sonnet-5",
@@ -29,58 +52,89 @@ AVAILABLE_MODELS: list[ModelInfo] = [
         provider="Anthropic",
         display_name="Claude Opus 5",
     ),
-   
 ]
 
-# Hard blocklist: models past EOL or in Legacy on Bedrock (Sep 2026 lifecycle).
-EOL_OR_LEGACY_MODEL_IDS = {
-    "anthropic.claude-3-haiku-20240307-v1:0",
-    "anthropic.claude-3-sonnet-20240229-v1:0",
-    "anthropic.claude-3-5-sonnet-20240620-v1:0",
-    "anthropic.claude-3-5-sonnet-20241022-v2:0",
-    "anthropic.claude-sonnet-4-20250514-v1:0",
-}
+
+class CatalogError(Exception):
+    """Raised when the Bedrock catalog is missing required configuration."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(message)
+        self.message = message
 
 
-@lru_cache(maxsize=8)
-def _active_bedrock_model_ids(region: str) -> frozenset[str] | None:
-    """Return ACTIVE on-demand model IDs from Bedrock, or None if lookup fails."""
-    try:
-        client = boto3.client("bedrock", region_name=resolve_bedrock_client_region(region))
-        response = client.list_foundation_models(byInferenceType="ON_DEMAND")
-        active = {
-            summary["modelId"]
-            for summary in response.get("modelSummaries", [])
-            if summary.get("modelLifecycle", {}).get("status") == "ACTIVE"
-        }
-        return frozenset(active) if active else None
-    except (ClientError, BotoCoreError, Exception) as exc:
-        logger.debug("Bedrock model lifecycle lookup failed: %s", exc)
-        return None
+def resolve_bedrock_client_region(ui_region: str) -> str:
+    """Return a real AWS region for boto3 bedrock-runtime clients."""
+    return GEO_CLIENT_REGIONS.get(ui_region, ui_region)
 
 
-def list_available_models() -> list[ModelInfo]:
-    """Curated models that are not EOL/Legacy, filtered by Bedrock when possible."""
-    region = runtime_state.get_region()
-    active_ids = _active_bedrock_model_ids(region)
+def resolve_inference_model_id(base_model_id: str, ui_region: str) -> str:
+    """
+    Return the model / inference-profile ID to pass to InvokeModel.
 
-    models: list[ModelInfo] = []
-    for model in AVAILABLE_MODELS:
-        if model.model_id in EOL_OR_LEGACY_MODEL_IDS:
-            continue
-        inference_id = resolve_inference_model_id(model.model_id, region)
-        if active_ids is not None and inference_id not in active_ids:
-            continue
-        models.append(model)
-    return models
+    Geo scopes require prefixed inference profile IDs such as
+    `global.anthropic.claude-sonnet-5`.
+    """
+    if any(base_model_id.startswith(f"{scope}.") for scope in GEO_SCOPES):
+        return base_model_id
+    if ui_region in GEO_SCOPES:
+        return f"{ui_region}.{base_model_id}"
+    return base_model_id
+
+
+def get_bedrock_regions() -> list[str]:
+    if not BEDROCK_REGIONS:
+        raise CatalogError(
+            "Bedrock region list is empty. Add entries to BEDROCK_REGIONS in models_catalog.py."
+        )
+    return list(BEDROCK_REGIONS)
+
+
+def get_bedrock_models() -> list[ModelInfo]:
+    if not AVAILABLE_MODELS:
+        raise CatalogError(
+            "Bedrock model list is empty. Add entries to AVAILABLE_MODELS in models_catalog.py."
+        )
+    return list(AVAILABLE_MODELS)
 
 
 def allowed_model_ids() -> set[str]:
-    return {m.model_id for m in list_available_models()}
+    return {model.model_id for model in AVAILABLE_MODELS}
+
+
+def is_valid_region(region: str) -> bool:
+    return region in BEDROCK_REGIONS
 
 
 def get_model_info(model_id: str) -> ModelInfo | None:
-    for model in list_available_models():
+    for model in AVAILABLE_MODELS:
         if model.model_id == model_id:
             return model
     return None
+
+
+def normalize_bedrock_selection() -> None:
+    """Align runtime region/model with catalog entries when possible."""
+    if BEDROCK_REGIONS and runtime_state.get_region() not in BEDROCK_REGIONS:
+        runtime_state.set_region(BEDROCK_REGIONS[0])
+    if AVAILABLE_MODELS and runtime_state.get_model_id() not in allowed_model_ids():
+        runtime_state.set_model_id(AVAILABLE_MODELS[0].model_id)
+
+
+def bedrock_catalog_status() -> tuple[bool, str | None]:
+    """
+    Return (ready, error_message).
+    Bedrock chat requires AWS credentials plus a non-empty, valid catalog selection.
+    """
+    if not BEDROCK_REGIONS:
+        return False, "No Bedrock regions configured."
+    if not AVAILABLE_MODELS:
+        return False, "No Bedrock models configured."
+
+    region = runtime_state.get_region()
+    model_id = runtime_state.get_model_id()
+    if region not in BEDROCK_REGIONS:
+        return False, f"Selected region '{region}' is not available."
+    if model_id not in allowed_model_ids():
+        return False, f"Selected model '{model_id}' is not available."
+    return True, None

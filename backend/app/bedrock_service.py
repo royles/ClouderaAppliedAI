@@ -9,7 +9,7 @@ from typing import Any
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
-from app.bedrock_regions import resolve_bedrock_client_region, resolve_inference_model_id
+from app.models_catalog import resolve_bedrock_client_region, resolve_inference_model_id
 from app.config import get_settings
 from app.schemas import ChatMessage, MessageAttachment
 from app.state import runtime_state

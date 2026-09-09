@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  fetchBedrockCatalog,
   fetchConfig,
   fetchHealth,
-  fetchModels,
-  fetchRegions,
   sendChat,
   sendChatStream,
   updateConfig,
@@ -65,11 +64,9 @@ export default function App() {
   const fileInputRef = useRef(null);
 
   const isBedrock = config?.provider !== "local";
-  const chatReady = config?.chat_ready ?? health?.chat_ready;
-  const regionOptions =
-    config?.aws_region && !regions.includes(config.aws_region)
-      ? [config.aws_region, ...regions]
-      : regions;
+  const bedrockCatalogOk = !isBedrock || (regions.length > 0 && models.length > 0);
+  const chatReady = (config?.chat_ready ?? health?.chat_ready) && bedrockCatalogOk;
+  const bedrockError = config?.bedrock_error ?? health?.bedrock_error;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -79,14 +76,11 @@ export default function App() {
     scrollToBottom();
   }, [messages, loading]);
 
-  const loadModels = useCallback(async () => {
-    const modelsData = await fetchModels();
-    setModels(modelsData);
-  }, []);
-
-  const loadRegions = useCallback(async () => {
-    const regionsData = await fetchRegions();
-    setRegions(regionsData);
+  const loadBedrockCatalog = useCallback(async () => {
+    const catalog = await fetchBedrockCatalog();
+    setRegions(catalog.regions);
+    setModels(catalog.models);
+    return catalog;
   }, []);
 
   const loadInitialData = useCallback(async () => {
@@ -101,11 +95,19 @@ export default function App() {
       setLocalModel(configData.local_model_id || "");
       setLocalToken("");
       setError(null);
-      await Promise.all([loadModels(), loadRegions()]);
+
+      if (configData.provider !== "local") {
+        await loadBedrockCatalog();
+      } else {
+        setRegions([]);
+        setModels([]);
+      }
     } catch (err) {
+      setRegions([]);
+      setModels([]);
       setError(err.message || "Failed to connect to the API.");
     }
-  }, [loadModels, loadRegions]);
+  }, [loadBedrockCatalog]);
 
   useEffect(() => {
     loadInitialData();
@@ -119,7 +121,9 @@ export default function App() {
     if (updates.clear_local_api_token) {
       setLocalToken("");
     }
-    await loadModels();
+    if (updated.provider !== "local") {
+      await loadBedrockCatalog();
+    }
     setError(null);
     return updated;
   };
@@ -128,6 +132,8 @@ export default function App() {
     try {
       await applyConfig({ provider });
       if (provider === "local") {
+        setRegions([]);
+        setModels([]);
         setShowLocalSettings(true);
       }
     } catch (err) {
@@ -300,7 +306,9 @@ export default function App() {
         </span>
       </div>
 
-      {error && <div className="error-banner">{error}</div>}
+      {(error || (isBedrock && bedrockError)) && (
+        <div className="error-banner">{error || bedrockError}</div>
+      )}
 
       <div className="provider-toggle">
         <button
@@ -329,24 +337,32 @@ export default function App() {
               onChange={(e) => handleModelChange(e.target.value)}
               disabled={!models.length}
             >
-              {models.map((m) => (
-                <option key={m.model_id} value={m.model_id}>
-                  {m.display_name} ({m.provider})
-                </option>
-              ))}
+              {models.length === 0 ? (
+                <option value="">No models configured</option>
+              ) : (
+                models.map((m) => (
+                  <option key={m.model_id} value={m.model_id}>
+                    {m.display_name} ({m.provider})
+                  </option>
+                ))
+              )}
             </select>
           </div>
           <div className="control-group">
             <label htmlFor="region-select">Region</label>
             <select
               id="region-select"
-              value={config?.aws_region ?? "us-east-1"}
+              value={config?.aws_region ?? ""}
               onChange={(e) => handleRegionChange(e.target.value)}
-              disabled={!regionOptions.length}
+              disabled={!regions.length}
             >
-              {regionOptions.map((r) => (
-                <option key={r} value={r}>{r}</option>
-              ))}
+              {regions.length === 0 ? (
+                <option value="">No regions configured</option>
+              ) : (
+                regions.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))
+              )}
             </select>
           </div>
         </div>
