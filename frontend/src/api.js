@@ -1,4 +1,4 @@
-const API_BASE = "/api";
+const API_BASE = `${import.meta.env.BASE_URL}api`.replace(/\/?$/, "");
 
 async function request(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
@@ -46,6 +46,10 @@ export async function fetchHealth() {
 
 export async function fetchModels() {
   return request("/models");
+}
+
+export async function fetchRegions() {
+  return request("/regions");
 }
 
 export async function fetchConfig() {

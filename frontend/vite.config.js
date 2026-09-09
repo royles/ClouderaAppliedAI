@@ -42,7 +42,13 @@ if (isClouderaAI) {
 }
 
 export default defineConfig({
+  // Relative asset URLs so CSS/JS load under Cloudera AI path prefixes.
+  base: "./",
   plugins: [react()],
+  build: {
+    // Avoid crossorigin on stylesheet links; some static hosts block them without CORS.
+    modulePreload: { polyfill: false },
+  },
   server: {
     host: frontendHost,
     port: frontendPort,

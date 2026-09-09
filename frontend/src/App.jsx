@@ -3,23 +3,16 @@ import {
   fetchConfig,
   fetchHealth,
   fetchModels,
+  fetchRegions,
   sendChat,
   sendChatStream,
   updateConfig,
 } from "./api";
 import "./App.css";
 
-const REGIONS = [
-  "us-east-1",
-  "us-west-2",
-  "eu-west-1",
-  "eu-central-1",
-  "ap-northeast-1",
-  "ap-southeast-1",
-];
-
 export default function App() {
   const [models, setModels] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [config, setConfig] = useState(null);
   const [health, setHealth] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -37,6 +30,10 @@ export default function App() {
 
   const isBedrock = config?.provider !== "local";
   const chatReady = config?.chat_ready ?? health?.chat_ready;
+  const regionOptions =
+    config?.aws_region && !regions.includes(config.aws_region)
+      ? [config.aws_region, ...regions]
+      : regions;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -51,6 +48,11 @@ export default function App() {
     setModels(modelsData);
   }, []);
 
+  const loadRegions = useCallback(async () => {
+    const regionsData = await fetchRegions();
+    setRegions(regionsData);
+  }, []);
+
   const loadInitialData = useCallback(async () => {
     try {
       const [configData, healthData] = await Promise.all([
@@ -63,11 +65,11 @@ export default function App() {
       setLocalModel(configData.local_model_id || "");
       setLocalToken("");
       setError(null);
-      await loadModels();
+      await Promise.all([loadModels(), loadRegions()]);
     } catch (err) {
       setError(err.message || "Failed to connect to the API.");
     }
-  }, [loadModels]);
+  }, [loadModels, loadRegions]);
 
   useEffect(() => {
     loadInitialData();
@@ -275,8 +277,9 @@ export default function App() {
               id="region-select"
               value={config?.aws_region ?? "us-east-1"}
               onChange={(e) => handleRegionChange(e.target.value)}
+              disabled={!regionOptions.length}
             >
-              {REGIONS.map((r) => (
+              {regionOptions.map((r) => (
                 <option key={r} value={r}>{r}</option>
               ))}
             </select>
