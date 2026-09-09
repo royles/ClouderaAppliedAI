@@ -19,9 +19,14 @@ AVAILABLE_MODELS: list[ModelInfo] = [
         display_name="Claude Sonnet 5",
     ),
     ModelInfo(
-        model_id="anthropic.claude-sonnet-4.8",
+        model_id="anthropic.claude-sonnet-4-6",
         provider="Anthropic",
-        display_name="Claude Sonnet 4.8",
+        display_name="Claude Sonnet 4.6",
+    ),
+    ModelInfo(
+        model_id="anthropic.claude-opus-5",
+        provider="Anthropic",
+        display_name="Claude Opus 5",
     ),
    
 ]
