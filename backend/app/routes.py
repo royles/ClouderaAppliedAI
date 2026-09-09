@@ -37,6 +37,9 @@ router = APIRouter(prefix="/api")
 
 # Bedrock regions exposed to the UI (keep in sync with supported deployments).
 BEDROCK_REGIONS = [
+    "global",
+    "eu",
+    "us",
     "us-east-1",
     "us-east-2",
     "us-west-2",
