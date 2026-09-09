@@ -1,5 +1,6 @@
 """AWS Bedrock integration. Credentials are never logged or returned to clients."""
 
+import base64
 import json
 import logging
 from collections.abc import Iterator
@@ -8,8 +9,9 @@ from typing import Any
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
+from app.bedrock_regions import resolve_bedrock_client_region, resolve_inference_model_id
 from app.config import get_settings
-from app.schemas import ChatMessage
+from app.schemas import ChatMessage, MessageAttachment
 from app.state import runtime_state
 
 logger = logging.getLogger(__name__)
@@ -36,16 +38,18 @@ def is_aws_configured() -> bool:
     if settings.has_explicit_credentials():
         return True
     try:
-        session = boto3.Session(region_name=runtime_state.get_region())
+        client_region = resolve_bedrock_client_region(runtime_state.get_region())
+        session = boto3.Session(region_name=client_region)
         credentials = session.get_credentials()
         return credentials is not None and credentials.access_key is not None
     except Exception:
         return False
 
 
-def _build_session() -> boto3.Session:
+def _build_session(client_region: str | None = None) -> boto3.Session:
     settings = get_settings()
-    kwargs: dict[str, Any] = {"region_name": runtime_state.get_region()}
+    region = client_region or resolve_bedrock_client_region(runtime_state.get_region())
+    kwargs: dict[str, Any] = {"region_name": region}
     if settings.has_explicit_credentials():
         kwargs["aws_access_key_id"] = settings.aws_access_key_id
         kwargs["aws_secret_access_key"] = settings.aws_secret_access_key
@@ -55,13 +59,46 @@ def _build_session() -> boto3.Session:
 
 
 def _get_client() -> Any:
-    session = _build_session()
-    return session.client("bedrock-runtime")
+    client_region = resolve_bedrock_client_region(runtime_state.get_region())
+    session = _build_session(client_region)
+    return session.client("bedrock-runtime", region_name=client_region)
 
 
-def _anthropic_text_blocks(text: str) -> list[dict[str, str]]:
+def _anthropic_text_blocks(text: str) -> list[dict[str, Any]]:
     """Claude on Bedrock: content blocks include type + text."""
     return [{"type": "text", "text": text}]
+
+
+def _anthropic_attachment_block(attachment: MessageAttachment) -> dict[str, Any]:
+    if attachment.media_type.startswith("image/"):
+        return {
+            "type": "image",
+            "source": {
+                "type": "base64",
+                "media_type": attachment.media_type,
+                "data": attachment.data,
+            },
+        }
+    if attachment.media_type == "application/pdf":
+        return {
+            "type": "document",
+            "source": {
+                "type": "base64",
+                "media_type": attachment.media_type,
+                "data": attachment.data,
+            },
+        }
+    text = base64.b64decode(attachment.data).decode("utf-8", errors="replace")
+    return {"type": "text", "text": f"[{attachment.filename}]\n{text}"}
+
+
+def _anthropic_message_blocks(message: ChatMessage) -> list[dict[str, Any]]:
+    blocks: list[dict[str, Any]] = []
+    if message.content.strip():
+        blocks.append({"type": "text", "text": message.content})
+    for attachment in message.attachments:
+        blocks.append(_anthropic_attachment_block(attachment))
+    return blocks or [{"type": "text", "text": "Please review the attached file(s)."}]
 
 
 def _nova_text_blocks(text: str) -> list[dict[str, str]]:
@@ -85,7 +122,7 @@ def _format_anthropic(
         "max_tokens": max_tokens,
         "temperature": temperature,
         "messages": [
-            {"role": m.role, "content": _anthropic_text_blocks(m.content)} for m in messages
+            {"role": m.role, "content": _anthropic_message_blocks(m)} for m in messages
         ],
     }
     if system_prompt:
@@ -246,22 +283,30 @@ def invoke_chat(
     Invoke Bedrock and return (content, model_id, usage).
     Raises BedrockError on failure.
     """
-    resolved_model = model_id or runtime_state.get_model_id()
+    catalog_model = model_id or runtime_state.get_model_id()
+    ui_region = runtime_state.get_region()
+    inference_model = resolve_inference_model_id(catalog_model, ui_region)
     body = _build_request_body(
-        resolved_model, messages, max_tokens, temperature, system_prompt
+        catalog_model, messages, max_tokens, temperature, system_prompt
     )
 
     try:
         client = _get_client()
+        logger.info(
+            "Bedrock invoke region=%s inference_model=%s catalog_model=%s",
+            resolve_bedrock_client_region(ui_region),
+            inference_model,
+            catalog_model,
+        )
         response = client.invoke_model(
-            modelId=resolved_model,
+            modelId=inference_model,
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
         )
         response_body = json.loads(response["body"].read())
-        text, usage = _parse_response(resolved_model, response_body)
-        return text, resolved_model, usage
+        text, usage = _parse_response(catalog_model, response_body)
+        return text, catalog_model, usage
     except ClientError as exc:
         error_code = exc.response.get("Error", {}).get("Code", "Unknown")
         error_msg = exc.response.get("Error", {}).get("Message", str(exc))
@@ -320,24 +365,32 @@ def stream_chat(
     system_prompt: str | None = None,
 ) -> Iterator[str]:
     """Yield text deltas from Bedrock streaming API."""
-    resolved_model = model_id or runtime_state.get_model_id()
+    catalog_model = model_id or runtime_state.get_model_id()
+    ui_region = runtime_state.get_region()
+    inference_model = resolve_inference_model_id(catalog_model, ui_region)
 
-    if not _supports_native_streaming(resolved_model):
+    if not _supports_native_streaming(catalog_model):
         text, _, _ = invoke_chat(
-            messages, resolved_model, max_tokens, temperature, system_prompt
+            messages, catalog_model, max_tokens, temperature, system_prompt
         )
         if text:
             yield text
         return
 
     body = _build_request_body(
-        resolved_model, messages, max_tokens, temperature, system_prompt
+        catalog_model, messages, max_tokens, temperature, system_prompt
     )
 
     try:
         client = _get_client()
+        logger.info(
+            "Bedrock stream region=%s inference_model=%s catalog_model=%s",
+            resolve_bedrock_client_region(ui_region),
+            inference_model,
+            catalog_model,
+        )
         response = client.invoke_model_with_response_stream(
-            modelId=resolved_model,
+            modelId=inference_model,
             body=json.dumps(body),
             contentType="application/json",
             accept="application/json",
@@ -347,7 +400,7 @@ def stream_chat(
             if not chunk:
                 continue
             data = json.loads(chunk["bytes"].decode())
-            text = _extract_stream_text(resolved_model, data)
+            text = _extract_stream_text(catalog_model, data)
             if text:
                 yield text
     except ClientError as exc:

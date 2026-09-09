@@ -6,6 +6,7 @@ from functools import lru_cache
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
+from app.bedrock_regions import resolve_bedrock_client_region, resolve_inference_model_id
 from app.schemas import ModelInfo
 from app.state import runtime_state
 
@@ -45,7 +46,7 @@ EOL_OR_LEGACY_MODEL_IDS = {
 def _active_bedrock_model_ids(region: str) -> frozenset[str] | None:
     """Return ACTIVE on-demand model IDs from Bedrock, or None if lookup fails."""
     try:
-        client = boto3.client("bedrock", region_name=region)
+        client = boto3.client("bedrock", region_name=resolve_bedrock_client_region(region))
         response = client.list_foundation_models(byInferenceType="ON_DEMAND")
         active = {
             summary["modelId"]
@@ -67,7 +68,8 @@ def list_available_models() -> list[ModelInfo]:
     for model in AVAILABLE_MODELS:
         if model.model_id in EOL_OR_LEGACY_MODEL_IDS:
             continue
-        if active_ids is not None and model.model_id not in active_ids:
+        inference_id = resolve_inference_model_id(model.model_id, region)
+        if active_ids is not None and inference_id not in active_ids:
             continue
         models.append(model)
     return models

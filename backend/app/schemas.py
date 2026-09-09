@@ -2,15 +2,56 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 ProviderType = Literal["bedrock", "local"]
 
+ALLOWED_ATTACHMENT_TYPES = frozenset({
+    "image/jpeg",
+    "image/png",
+    "image/gif",
+    "image/webp",
+    "application/pdf",
+    "text/plain",
+})
+
+MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
+MAX_ATTACHMENTS_PER_MESSAGE = 5
+
+
+class MessageAttachment(BaseModel):
+    filename: str = Field(..., min_length=1, max_length=255)
+    media_type: str = Field(..., min_length=1, max_length=100)
+    data: str = Field(..., min_length=1, description="Base64-encoded file bytes")
+
+    @model_validator(mode="after")
+    def validate_attachment(self) -> "MessageAttachment":
+        if self.media_type not in ALLOWED_ATTACHMENT_TYPES:
+            allowed = ", ".join(sorted(ALLOWED_ATTACHMENT_TYPES))
+            raise ValueError(f"Unsupported attachment type. Allowed: {allowed}")
+        # Rough decoded size check without loading huge payloads twice.
+        if len(self.data) > (MAX_ATTACHMENT_BYTES * 4) // 3 + 4:
+            raise ValueError(
+                f"Attachment too large (max {MAX_ATTACHMENT_BYTES // (1024 * 1024)} MB)."
+            )
+        return self
+
 
 class ChatMessage(BaseModel):
     role: Literal["user", "assistant"] = "user"
-    content: str = Field(..., min_length=1, max_length=32000)
+    content: str = Field(default="", max_length=32000)
+    attachments: list[MessageAttachment] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def content_or_attachments(self) -> "ChatMessage":
+        if not self.content.strip() and not self.attachments:
+            raise ValueError("Message must include text or at least one attachment.")
+        if len(self.attachments) > MAX_ATTACHMENTS_PER_MESSAGE:
+            raise ValueError(
+                f"At most {MAX_ATTACHMENTS_PER_MESSAGE} attachments per message."
+            )
+        return self
 
 
 class ChatRequest(BaseModel):

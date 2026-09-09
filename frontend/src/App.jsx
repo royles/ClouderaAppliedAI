@@ -10,6 +10,40 @@ import {
 } from "./api";
 import "./App.css";
 
+const ALLOWED_ATTACHMENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "application/pdf",
+  "text/plain",
+];
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_ATTACHMENTS = 5;
+
+async function fileToAttachment(file) {
+  if (!ALLOWED_ATTACHMENT_TYPES.includes(file.type)) {
+    throw new Error(`Unsupported file type: ${file.type || file.name}`);
+  }
+  if (file.size > MAX_ATTACHMENT_BYTES) {
+    throw new Error("File too large (max 5 MB).");
+  }
+  const data = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      resolve(result.split(",")[1]);
+    };
+    reader.onerror = () => reject(new Error("Failed to read file."));
+    reader.readAsDataURL(file);
+  });
+  return {
+    filename: file.name,
+    media_type: file.type,
+    data,
+  };
+}
+
 export default function App() {
   const [models, setModels] = useState([]);
   const [regions, setRegions] = useState([]);
@@ -25,8 +59,10 @@ export default function App() {
   const [localToken, setLocalToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [pendingAttachments, setPendingAttachments] = useState([]);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const isBedrock = config?.provider !== "local";
   const chatReady = config?.chat_ready ?? health?.chat_ready;
@@ -146,11 +182,38 @@ export default function App() {
     });
   };
 
+  const handleAttachFiles = async (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    if (!files.length) return;
+
+    try {
+      const remaining = MAX_ATTACHMENTS - pendingAttachments.length;
+      if (remaining <= 0) {
+        throw new Error(`At most ${MAX_ATTACHMENTS} attachments per message.`);
+      }
+      const selected = files.slice(0, remaining);
+      const encoded = await Promise.all(selected.map(fileToAttachment));
+      setPendingAttachments((prev) => [...prev, ...encoded]);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const removePendingAttachment = (index) => {
+    setPendingAttachments((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSend = async () => {
     const trimmed = input.trim();
-    if (!trimmed || loading) return;
+    if ((!trimmed && !pendingAttachments.length) || loading) return;
 
-    const userMessage = { role: "user", content: trimmed };
+    const userMessage = {
+      role: "user",
+      content: trimmed,
+      attachments: pendingAttachments,
+    };
     const nextMessages = [...messages, userMessage];
     const chatPayload = {
       messages: nextMessages,
@@ -160,6 +223,7 @@ export default function App() {
 
     setMessages([...nextMessages, { role: "assistant", content: "" }]);
     setInput("");
+    setPendingAttachments([]);
     setLoading(true);
     setError(null);
 
@@ -185,6 +249,7 @@ export default function App() {
           setError(err.message);
           setMessages(messages);
           setInput(trimmed);
+          setPendingAttachments(userMessage.attachments);
         }
       } else {
         setError(streamErr.message);
@@ -373,6 +438,26 @@ export default function App() {
             <div key={i} className={`message ${msg.role}`}>
               <span className="message-role">{msg.role}</span>
               <div className="message-bubble">
+                {msg.attachments?.length > 0 && (
+                  <div className="message-attachments">
+                    {msg.attachments.map((att, j) => (
+                      att.media_type?.startsWith("image/")
+                        ? (
+                          <img
+                            key={j}
+                            className="message-image"
+                            src={`data:${att.media_type};base64,${att.data}`}
+                            alt={att.filename}
+                          />
+                        )
+                        : (
+                          <span key={j} className="attachment-chip">
+                            {att.filename}
+                          </span>
+                        )
+                    ))}
+                  </div>
+                )}
                 {msg.content ||
                   (loading && i === messages.length - 1 && msg.role === "assistant"
                     ? <span className="loading-dots">Thinking</span>
@@ -400,7 +485,49 @@ export default function App() {
               rows={2}
             />
           )}
+          {pendingAttachments.length > 0 && (
+            <div className="pending-attachments">
+              {pendingAttachments.map((att, i) => (
+                <div key={i} className="pending-attachment">
+                  {att.media_type.startsWith("image/") ? (
+                    <img
+                      className="pending-thumb"
+                      src={`data:${att.media_type};base64,${att.data}`}
+                      alt={att.filename}
+                    />
+                  ) : (
+                    <span className="attachment-chip">{att.filename}</span>
+                  )}
+                  <button
+                    type="button"
+                    className="remove-attachment"
+                    onClick={() => removePendingAttachment(i)}
+                    aria-label={`Remove ${att.filename}`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="input-row">
+            <input
+              ref={fileInputRef}
+              type="file"
+              className="file-input"
+              accept={ALLOWED_ATTACHMENT_TYPES.join(",")}
+              multiple
+              onChange={handleAttachFiles}
+            />
+            <button
+              type="button"
+              className="attach-btn"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading || !chatReady || pendingAttachments.length >= MAX_ATTACHMENTS}
+              title="Attach image or document"
+            >
+              Attach
+            </button>
             <textarea
               ref={inputRef}
               className="prompt-input"
@@ -419,7 +546,7 @@ export default function App() {
               type="button"
               className="send-btn"
               onClick={handleSend}
-              disabled={loading || !input.trim() || !chatReady}
+              disabled={loading || (!input.trim() && !pendingAttachments.length) || !chatReady}
             >
               {loading ? "…" : "Send"}
             </button>

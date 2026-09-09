@@ -1,5 +1,6 @@
 """OpenAI-compatible local inference endpoints (Ollama, vLLM, LM Studio, etc.)."""
 
+import base64
 import json
 import logging
 from collections.abc import Iterator
@@ -44,14 +45,43 @@ def normalize_chat_completions_url(endpoint: str) -> str:
     return f"{url}/v1/chat/completions"
 
 
+def _openai_message_content(message: ChatMessage) -> str | list[dict[str, Any]]:
+    if not message.attachments:
+        return message.content
+
+    parts: list[dict[str, Any]] = []
+    if message.content.strip():
+        parts.append({"type": "text", "text": message.content})
+    for attachment in message.attachments:
+        if attachment.media_type.startswith("image/"):
+            parts.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:{attachment.media_type};base64,{attachment.data}",
+                },
+            })
+        elif attachment.media_type == "text/plain":
+            text = base64.b64decode(attachment.data).decode("utf-8", errors="replace")
+            parts.append({
+                "type": "text",
+                "text": f"[{attachment.filename}]\n{text}",
+            })
+        else:
+            parts.append({
+                "type": "text",
+                "text": f"[Attached file: {attachment.filename} ({attachment.media_type})]",
+            })
+    return parts or message.content
+
+
 def _build_messages(
     messages: list[ChatMessage],
     system_prompt: str | None,
-) -> list[dict[str, str]]:
-    payload: list[dict[str, str]] = []
+) -> list[dict[str, Any]]:
+    payload: list[dict[str, Any]] = []
     if system_prompt:
         payload.append({"role": "system", "content": system_prompt})
-    payload.extend({"role": m.role, "content": m.content} for m in messages)
+    payload.extend({"role": m.role, "content": _openai_message_content(m)} for m in messages)
     return payload
 
 
