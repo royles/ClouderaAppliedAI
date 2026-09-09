@@ -34,9 +34,19 @@ AVAILABLE_MODELS: list[ModelInfo] = [
         display_name="Claude Sonnet 4.6",
     ),
     ModelInfo(
-        model_id="anthropic.claude-opus-5",
+        model_id="anthropic.claude-opus-4-8",
         provider="Anthropic",
         display_name="Claude Opus 5",
+    ),
+    ModelInfo(
+        model_id="openai.gpt-5.5",
+        provider="openai",
+        display_name="GPT 5.5",
+    ),
+    ModelInfo(
+        model_id="amazon.titan-embed-text-v1",
+        provider="Amazon",
+        display_name="Titan Embed Text",
     ),
 ]
 
