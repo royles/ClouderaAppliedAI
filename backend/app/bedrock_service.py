@@ -111,20 +111,44 @@ def _is_amazon_nova(model_id: str) -> bool:
     return "amazon" in lowered and "nova" in lowered
 
 
+def _normalize_model_id(model_id: str) -> str:
+    """Strip geo inference prefixes for capability checks."""
+    for prefix in ("global.", "eu.", "us.", "au."):
+        if model_id.startswith(prefix):
+            return model_id[len(prefix) :]
+    return model_id
+
+
+def _anthropic_disallows_sampling(model_id: str) -> bool:
+    """Claude 5+ models reject explicit temperature/top_p/top_k on Bedrock."""
+    lowered = _normalize_model_id(model_id).lower()
+    return any(
+        marker in lowered
+        for marker in (
+            "claude-sonnet-5",
+            "claude-opus-5",
+            "claude-opus-4-7",
+            "claude-opus-4-8",
+        )
+    )
+
+
 def _format_anthropic(
     messages: list[ChatMessage],
     max_tokens: int,
     temperature: float,
     system_prompt: str | None,
+    model_id: str,
 ) -> dict[str, Any]:
     body: dict[str, Any] = {
         "anthropic_version": "bedrock-2023-05-31",
         "max_tokens": max_tokens,
-        "temperature": temperature,
         "messages": [
             {"role": m.role, "content": _anthropic_message_blocks(m)} for m in messages
         ],
     }
+    if not _anthropic_disallows_sampling(model_id):
+        body["temperature"] = temperature
     if system_prompt:
         body["system"] = _anthropic_text_blocks(system_prompt)
     return body
@@ -221,7 +245,9 @@ def _build_request_body(
     if _is_amazon_nova(model_id):
         return _format_amazon_nova(messages, max_tokens, temperature, system_prompt)
     if model_id.startswith("anthropic."):
-        return _format_anthropic(messages, max_tokens, temperature, system_prompt)
+        return _format_anthropic(
+            messages, max_tokens, temperature, system_prompt, model_id
+        )
     if model_id.startswith("amazon.titan"):
         return _format_amazon_titan(messages, max_tokens, temperature)
     if model_id.startswith("meta."):
@@ -229,7 +255,9 @@ def _build_request_body(
     if model_id.startswith("mistral."):
         return _format_mistral(messages, max_tokens, temperature)
     # Fallback: try Anthropic format for unknown models.
-    return _format_anthropic(messages, max_tokens, temperature, system_prompt)
+    return _format_anthropic(
+        messages, max_tokens, temperature, system_prompt, model_id
+    )
 
 
 def _parse_nova_response(response_body: dict[str, Any]) -> tuple[str, dict | None]:
@@ -250,7 +278,12 @@ def _parse_response(model_id: str, response_body: dict[str, Any]) -> tuple[str, 
 
     if model_id.startswith("anthropic."):
         content = response_body.get("content", [])
-        text = content[0].get("text", "") if content else ""
+        text_parts = [
+            block.get("text", "")
+            for block in content
+            if block.get("type") == "text" and block.get("text")
+        ]
+        text = "".join(text_parts)
         if "usage" in response_body:
             usage = response_body["usage"]
         return text, usage
