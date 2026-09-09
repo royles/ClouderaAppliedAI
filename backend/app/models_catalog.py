@@ -14,60 +14,16 @@ logger = logging.getLogger(__name__)
 # Curated list — exclude EOL/Legacy IDs (see AWS Bedrock model lifecycle docs).
 AVAILABLE_MODELS: list[ModelInfo] = [
     ModelInfo(
-        model_id="anthropic.claude-haiku-4-5-20251001-v1:0",
+        model_id="anthropic.claude-sonnet-5",
         provider="Anthropic",
-        display_name="Claude Haiku 4.5",
+        display_name="Claude Sonnet 5",
     ),
     ModelInfo(
-        model_id="anthropic.claude-sonnet-4-5-20250929-v1:0",
+        model_id="anthropic.claude-sonnet-4.8",
         provider="Anthropic",
-        display_name="Claude Sonnet 4.5",
+        display_name="Claude Sonnet 4.8",
     ),
-    ModelInfo(
-        model_id="amazon.nova-lite-v1:0",
-        provider="Amazon",
-        display_name="Nova Lite",
-    ),
-    ModelInfo(
-        model_id="amazon.nova-micro-v1:0",
-        provider="Amazon",
-        display_name="Nova Micro",
-    ),
-    ModelInfo(
-        model_id="amazon.nova-pro-v1:0",
-        provider="Amazon",
-        display_name="Nova Pro",
-    ),
-    ModelInfo(
-        model_id="amazon.titan-text-express-v1",
-        provider="Amazon",
-        display_name="Titan Text Express",
-    ),
-    ModelInfo(
-        model_id="amazon.titan-text-lite-v1",
-        provider="Amazon",
-        display_name="Titan Text Lite",
-    ),
-    ModelInfo(
-        model_id="meta.llama3-8b-instruct-v1:0",
-        provider="Meta",
-        display_name="Llama 3 8B Instruct",
-    ),
-    ModelInfo(
-        model_id="meta.llama3-70b-instruct-v1:0",
-        provider="Meta",
-        display_name="Llama 3 70B Instruct",
-    ),
-    ModelInfo(
-        model_id="mistral.mistral-7b-instruct-v0:2",
-        provider="Mistral",
-        display_name="Mistral 7B Instruct",
-    ),
-    ModelInfo(
-        model_id="mistral.mixtral-8x7b-instruct-v0:1",
-        provider="Mistral",
-        display_name="Mixtral 8x7B Instruct",
-    ),
+   
 ]
 
 # Hard blocklist: models past EOL or in Legacy on Bedrock (Sep 2026 lifecycle).
