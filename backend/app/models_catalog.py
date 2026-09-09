@@ -36,20 +36,14 @@ AVAILABLE_MODELS: list[ModelInfo] = [
     ModelInfo(
         model_id="anthropic.claude-opus-4-8",
         provider="Anthropic",
-        display_name="Claude Opus 5",
+        display_name="Claude Opus 4.8",
     ),
     ModelInfo(
-        model_id="openai.gpt-5.5",
-        provider="openai",
-        display_name="GPT 5.5",
-    ),
-    ModelInfo(
-        model_id="amazon.titan-embed-text-v1",
+        model_id="amazon.titan-embed-text-v2:0",
         provider="Amazon",
         display_name="Titan Embed Text",
     ),
 ]
-
 
 class CatalogError(Exception):
     """Raised when the Bedrock catalog is missing required configuration."""
