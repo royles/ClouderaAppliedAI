@@ -38,11 +38,6 @@ AVAILABLE_MODELS: list[ModelInfo] = [
         provider="Anthropic",
         display_name="Claude Opus 4.8",
     ),
-    ModelInfo(
-        model_id="amazon.titan-embed-text-v2:0",
-        provider="Amazon",
-        display_name="Titan Embed Text",
-    ),
 ]
 
 class CatalogError(Exception):
