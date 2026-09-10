@@ -19,6 +19,7 @@ BEDROCK_REGIONS: list[str] = [
     "global",
     "eu",
     "us",
+    "us-east-1",
 ]
 
 # Curated Bedrock models for the playground.
