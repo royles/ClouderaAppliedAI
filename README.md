@@ -5,7 +5,7 @@ A lightweight playground for experimenting with AWS Bedrock models. The React fr
 ## Architecture
 
 ```
-┌─────────────────┐      /api/*       ┌──────────────────┐      boto3       ┌─────────────┐
+┌─────────────────┐      /api/*       ┌──────────────────┐      boto3     ┌─────────────┐
 │  React (Vite)   │ ────────────────► │  FastAPI Backend │ ─────────────► │ AWS Bedrock │
 │  localhost:5173 │                   │  localhost:8000  │                │             │
 └─────────────────┘                   └──────────────────┘                └─────────────┘
@@ -15,6 +15,8 @@ A lightweight playground for experimenting with AWS Bedrock models. The React fr
                                     (secrets never in frontend)
 ```
 
+
+
 ## Security
 
 - **AWS credentials** are read only by the backend from environment variables or the default IAM credential chain (e.g. EC2/ECS instance role).
@@ -23,7 +25,11 @@ A lightweight playground for experimenting with AWS Bedrock models. The React fr
 - In production, prefer IAM roles over long-lived access keys.
 - CORS is restricted to configured origins (`CORS_ORIGINS`).
 
+
+
 ## Quick Start
+
+
 
 ### One command (recommended)
 
@@ -34,11 +40,12 @@ cp backend/.env.example backend/.env   # optional: add AWS credentials
 python start.py
 ```
 
-- Frontend: http://127.0.0.1:5173 (or `CDSW_APP_PORT` on CML/CDSW)  
-- Backend API: http://127.0.0.1:8000 (or `CDSW_READONLY_PORT` on CML/CDSW)  
-- Swagger: http://127.0.0.1:{backend port}/docs  
+- Frontend: [http://127.0.0.1:5173](http://127.0.0.1:5173) (or `CDSW_APP_PORT` on CML/CDSW)  
+- Backend API: [http://127.0.0.1:8000](http://127.0.0.1:8000) (or `CDSW_READONLY_PORT` on CML/CDSW)  
+- Swagger: [http://127.0.0.1:{backend](http://127.0.0.1:{backend) port}/docs
 
 On Cloudera Machine Learning / CDSW, the platform sets:
+
 - `CDSW_APP_PORT` → Vite frontend on `127.0.0.1`
 - API traffic uses internal port **8000** between Vite and FastAPI (loopback-safe)
 
@@ -56,16 +63,20 @@ Requires **Python 3.10+** and **Node.js/npm**.
 
 **On Cloudera AI** (no npm):
 
-1. **Install** — `pip install` into `backend/venv`  
-2. **Serve** — FastAPI on `CDSW_APP_PORT` serves `/api` and the built UI from `frontend/dist`  
+1. **Install** — `pip install` into `backend/venv`
+2. **Serve** — FastAPI on `CDSW_APP_PORT` serves `/api` and the built UI from `frontend/dist`
 
 **Local dev** (with npm):
 
-1. **Install** — pip + npm  
-2. **Backend** — FastAPI on `127.0.0.1:8000`  
+1. **Install** — pip + npm
+2. **Backend** — FastAPI on `127.0.0.1:8000`
 3. **Frontend** — Vite on `127.0.0.1:5173` (proxies `/api` to port 8000)
 
+
+
 ## Deploying on Cloudera AI (CAI)
+
+
 
 ### Architecture on CAI
 
@@ -91,25 +102,31 @@ pip install -r requirements.txt   # optional; start.py also installs into backen
 
 Set AWS credentials as **project or application environment variables** (never commit them):
 
-| Variable | Description |
-|----------|-------------|
-| `AWS_ACCESS_KEY_ID` | AWS access key (or use instance/IAM role) |
-| `AWS_SECRET_ACCESS_KEY` | AWS secret key |
-| `AWS_REGION` | e.g. `us-east-1` |
+
+| Variable                | Description                               |
+| ----------------------- | ----------------------------------------- |
+| `AWS_ACCESS_KEY_ID`     | AWS access key (or use instance/IAM role) |
+| `AWS_SECRET_ACCESS_KEY` | AWS secret key                            |
+| `AWS_REGION`            | e.g. `us-east-1`                          |
+
+
+
 
 ### 2. Create the Application
 
 In Cloudera AI → **Applications** → **New Application**:
 
-| Field | Value |
-|-------|-------|
+
+| Field      | Value                      |
+| ---------- | -------------------------- |
 | **Script** | `entry.py` (or `start.py`) |
-| **Kernel** | Python 3 |
+| **Kernel** | Python 3                   |
+
 
 `entry.py` is a thin wrapper that calls `start.py`. On CAI the script will:
 
-1. Install Python deps into `backend/venv`  
-2. Start FastAPI on `127.0.0.1:$CDSW_APP_PORT` (API + static UI from `frontend/dist`)  
+1. Install Python deps into `backend/venv`
+2. Start FastAPI on `127.0.0.1:$CDSW_APP_PORT` (API + static UI from `frontend/dist`)
 
 To rebuild the UI after frontend changes (on a machine with Node.js):
 
@@ -123,18 +140,24 @@ Commit the updated `frontend/dist` folder.
 
 - **UI**: open the Application URL from the CAI dashboard  
 - **Swagger**: `{app-url}/docs`  
-- **Health**: `{app-url}/api/health`  
+- **Health**: `{app-url}/api/health`
+
+
 
 ### CAI environment variables (set by platform)
 
-| Variable | Used for |
-|----------|----------|
-| `CDSW_APP_PORT` | FastAPI bind port (API + UI) |
-| `CDSW_DOMAIN` | Used by Vite in local dev only |
 
-On CAI, `start.py` does **not** use npm. Python packages install into **`backend/venv`**. If a previous install failed, delete `backend/venv` and restart.
+| Variable        | Used for                       |
+| --------------- | ------------------------------ |
+| `CDSW_APP_PORT` | FastAPI bind port (API + UI)   |
+| `CDSW_DOMAIN`   | Used by Vite in local dev only |
+
+
+On CAI, `start.py` does **not** use npm. Python packages install into `backend/venv`. If a previous install failed, delete `backend/venv` and restart.
 
 ### Manual setup
+
+
 
 #### Backend
 
@@ -147,6 +170,8 @@ cp .env.example .env         # Add your AWS credentials
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+
+
 #### Frontend
 
 ```bash
@@ -155,7 +180,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173
+Open [http://localhost:5173](http://localhost:5173)
 
 ## Switching Bedrock ↔ Local LLM
 
@@ -184,13 +209,17 @@ Optional env vars: `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_API_TOKEN`, `LOCAL_LLM_MODEL
 
 ## API Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/health` | GET | API and AWS credential status |
-| `/api/models` | GET | List available Bedrock models |
-| `/api/config` | GET | Current model and region (no secrets) |
-| `/api/config` | PUT | Update model or region |
-| `/api/chat` | POST | Send chat messages to Bedrock |
+
+| Endpoint      | Method | Description                           |
+| ------------- | ------ | ------------------------------------- |
+| `/api/health` | GET    | API and AWS credential status         |
+| `/api/models` | GET    | List available Bedrock models         |
+| `/api/config` | GET    | Current model and region (no secrets) |
+| `/api/config` | PUT    | Update model or region                |
+| `/api/chat`   | POST   | Send chat messages to Bedrock         |
+
+
+
 
 ### Example: update model
 
@@ -200,6 +229,8 @@ curl -X PUT http://localhost:8000/api/config \
   -d '{"model_id": "anthropic.claude-haiku-4-5-20251001-v1:0"}'
 ```
 
+
+
 ### Example: chat
 
 ```bash
@@ -208,18 +239,24 @@ curl -X POST http://localhost:8000/api/chat \
   -d '{"messages": [{"role": "user", "content": "Hello!"}]}'
 ```
 
+
+
 ## Configuration
 
 Environment variables (backend only):
 
-| Variable | Description |
-|----------|-------------|
-| `AWS_ACCESS_KEY_ID` | Optional — use IAM role if unset |
-| `AWS_SECRET_ACCESS_KEY` | Optional |
-| `AWS_SESSION_TOKEN` | Optional — for temporary credentials |
-| `AWS_REGION` | Default AWS region |
-| `DEFAULT_MODEL_ID` | Initial Bedrock model |
-| `CORS_ORIGINS` | Allowed frontend origins |
+
+| Variable                | Description                          |
+| ----------------------- | ------------------------------------ |
+| `AWS_ACCESS_KEY_ID`     | Optional — use IAM role if unset     |
+| `AWS_SECRET_ACCESS_KEY` | Optional                             |
+| `AWS_SESSION_TOKEN`     | Optional — for temporary credentials |
+| `AWS_REGION`            | Default AWS region                   |
+| `DEFAULT_MODEL_ID`      | Initial Bedrock model                |
+| `CORS_ORIGINS`          | Allowed frontend origins             |
+
+
+
 
 ## Supported Models
 
