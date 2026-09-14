@@ -118,14 +118,15 @@ def ensure_venv() -> Path:
 
 
 def install_python(skip: bool) -> Path:
-    """Ensure venv exists and install backend/requirements.txt unless skipped."""
+    """Ensure venv exists and install root requirements.txt unless skipped."""
     if skip:
         return ensure_venv()
 
     python = ensure_venv()
-    log("installing Python packages into backend/venv")
+    requirements = ROOT / "requirements.txt"
+    log(f"installing Python packages from {requirements.name} into backend/venv")
     run_checked([str(python), "-m", "pip", "install", "--upgrade", "pip"], BACKEND_DIR)
-    run_checked([str(python), "-m", "pip", "install", "-r", "requirements.txt"], BACKEND_DIR)
+    run_checked([str(python), "-m", "pip", "install", "-r", str(requirements)], ROOT)
     return python
 
 
