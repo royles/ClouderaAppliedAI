@@ -16,12 +16,25 @@ const ALLOWED_ATTACHMENT_TYPES = [
   "image/webp",
   "application/pdf",
   "text/plain",
+  "text/csv",
+  "application/csv",
 ];
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 const MAX_ATTACHMENTS = 5;
 
+function resolveMediaType(file) {
+  if (ALLOWED_ATTACHMENT_TYPES.includes(file.type)) {
+    return file.type;
+  }
+  if (file.name.toLowerCase().endsWith(".csv")) {
+    return "text/csv";
+  }
+  return file.type;
+}
+
 async function fileToAttachment(file) {
-  if (!ALLOWED_ATTACHMENT_TYPES.includes(file.type)) {
+  const mediaType = resolveMediaType(file);
+  if (!ALLOWED_ATTACHMENT_TYPES.includes(mediaType)) {
     throw new Error(`Unsupported file type: ${file.type || file.name}`);
   }
   if (file.size > MAX_ATTACHMENT_BYTES) {
@@ -38,7 +51,7 @@ async function fileToAttachment(file) {
   });
   return {
     filename: file.name,
-    media_type: file.type,
+    media_type: mediaType,
     data,
   };
 }
@@ -531,7 +544,7 @@ export default function App() {
               ref={fileInputRef}
               type="file"
               className="file-input"
-              accept={ALLOWED_ATTACHMENT_TYPES.join(",")}
+              accept={[...ALLOWED_ATTACHMENT_TYPES, ".csv"].join(",")}
               multiple
               onChange={handleAttachFiles}
             />
@@ -540,7 +553,7 @@ export default function App() {
               className="attach-btn"
               onClick={() => fileInputRef.current?.click()}
               disabled={loading || !chatReady || pendingAttachments.length >= MAX_ATTACHMENTS}
-              title="Attach image or document"
+              title="Attach image, document, or CSV"
             >
               Attach
             </button>

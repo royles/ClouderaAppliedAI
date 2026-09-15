@@ -60,7 +60,7 @@ def _openai_message_content(message: ChatMessage) -> str | list[dict[str, Any]]:
                     "url": f"data:{attachment.media_type};base64,{attachment.data}",
                 },
             })
-        elif attachment.media_type == "text/plain":
+        elif attachment.media_type in {"text/plain", "text/csv", "application/csv"}:
             text = base64.b64decode(attachment.data).decode("utf-8", errors="replace")
             parts.append({
                 "type": "text",

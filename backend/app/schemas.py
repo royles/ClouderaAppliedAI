@@ -14,6 +14,8 @@ ALLOWED_ATTACHMENT_TYPES = frozenset({
     "image/webp",
     "application/pdf",
     "text/plain",
+    "text/csv",
+    "application/csv",
 })
 
 MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
