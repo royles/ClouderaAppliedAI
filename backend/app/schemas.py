@@ -47,6 +47,8 @@ class ChatMessage(BaseModel):
 
     @model_validator(mode="after")
     def content_or_attachments(self) -> "ChatMessage":
+        if self.role == "assistant":
+            return self
         if not self.content.strip() and not self.attachments:
             raise ValueError("Message must include text or at least one attachment.")
         if len(self.attachments) > MAX_ATTACHMENTS_PER_MESSAGE:

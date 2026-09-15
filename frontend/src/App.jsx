@@ -233,7 +233,11 @@ export default function App() {
       content: trimmed,
       attachments: pendingAttachments,
     };
-    const nextMessages = [...messages, userMessage];
+    // Drop in-progress UI placeholders (e.g. empty streaming assistant bubbles).
+    const history = messages.filter(
+      (m) => m.content?.trim() || (m.attachments?.length ?? 0) > 0,
+    );
+    const nextMessages = [...history, userMessage];
     const chatPayload = {
       messages: nextMessages,
       model_id: isBedrock ? config?.model_id : config?.local_model_id,
