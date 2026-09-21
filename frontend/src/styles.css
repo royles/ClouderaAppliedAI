@@ -207,6 +207,25 @@ select.control {
 .table-wrap {
   width: 100%;
   overflow-x: auto;
+  position: relative;
+}
+
+.table-wrap.table-loading .table {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.table-loading-label {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  margin: 0;
+  z-index: 1;
+  font-size: 0.85rem;
+  background: #fff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .table {
@@ -302,10 +321,6 @@ select.control {
   width: 100%;
 }
 
-.toolbar .search {
-  flex: 1 1 220px;
-  max-width: 420px;
-}
 
 .tab {
   border: 1px solid #c5d0dc;

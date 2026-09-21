@@ -133,17 +133,22 @@ export default function DashboardPage() {
         </p>
         {overview && (
           <div className="stat-grid">
-            {overview.domains.map((d) => {
-              const selected = segment === d.filter_key;
+            {(overview.domains ?? []).map((d) => {
+              const filterKey = d.filter_key ?? "customers_all";
+              const selected = segment === filterKey;
               return (
                 <button
-                  key={d.filter_key}
+                  key={filterKey + d.domain}
                   type="button"
                   className={`stat-card stat-card-btn${selected ? " stat-card-selected" : ""}`}
-                  onClick={() => onCardClick(d)}
+                  onClick={() =>
+                    onCardClick({ ...d, filter_key: filterKey } as DomainCount)
+                  }
                   title={d.description || d.domain}
                 >
-                  <div className="stat-value">{d.row_count.toLocaleString()}</div>
+                  <div className="stat-value">
+                    {(d.row_count ?? 0).toLocaleString()}
+                  </div>
                   <div className="stat-label">{d.domain}</div>
                 </button>
               );
@@ -201,11 +206,11 @@ export default function DashboardPage() {
           </div>
         </div>
         {error && <p className="error">{error}</p>}
-        {tableLoading ? (
-          <p className="muted">Updating table…</p>
-        ) : (
-          <div className="table-wrap">
-            <table className="table table-interactive">
+        <div className={`table-wrap${tableLoading ? " table-loading" : ""}`}>
+          {tableLoading && (
+            <p className="table-loading-label muted">Updating table…</p>
+          )}
+          <table className="table table-interactive">
               <thead>
                 <tr>
                   {showRank && <th>#</th>}
@@ -246,19 +251,18 @@ export default function DashboardPage() {
                         </Link>
                       </td>
                       <td>{maskCustomerId(c.customer_id)}</td>
-                      <td>{maskCity(c.city_name)}</td>
+                      <td>{formatCity(c.city_name)}</td>
                       <td>{maskEmail(c.email)}</td>
                       <td>{maskPhone(c.mobile_no)}</td>
-                      <td>{c.policy_count}</td>
-                      <td>{c.investment_count}</td>
-                      <td>{maskDate(c.last_login?.slice(0, 10))}</td>
+                      <td>{c.policy_count ?? 0}</td>
+                      <td>{c.investment_count ?? 0}</td>
+                      <td>{formatLastLogin(c.last_login)}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
-          </div>
-        )}
+        </div>
       </section>
     </>
   );

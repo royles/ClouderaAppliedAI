@@ -7,6 +7,7 @@ export function maskName(name: string | null | undefined): string {
   if (parts.length === 1) return parts[0];
   const firstName = parts[0];
   const surname = parts[parts.length - 1];
+  if (!surname?.length) return firstName;
   return `${firstName} ${surname[0]}.`;
 }
 

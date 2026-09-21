@@ -77,7 +77,9 @@ export default function CustomerDetailPage() {
       </p>
       <section className="panel">
         <h1>{maskName(profile.customer_name)}</h1>
-        <p className="muted small">Personal fields are masked in this demo UI.</p>
+        <p className="muted small">
+          Name shows first name and surname initial; city and last login are shown in full.
+        </p>
         <div className="detail-grid">
           <div>
             <span className="label">Customer ID</span>
@@ -106,7 +108,7 @@ export default function CustomerDetailPage() {
           <div>
             <span className="label">Address</span>
             <div>
-              {[maskStreet(profile.street_name), maskCity(profile.city_name)]
+              {[maskStreet(profile.street_name), formatCity(profile.city_name)]
                 .filter((x) => x !== "—")
                 .join(", ") || "—"}
             </div>
@@ -114,6 +116,10 @@ export default function CustomerDetailPage() {
           <div>
             <span className="label">Communication</span>
             <div>{profile.communication_dsc ?? "—"}</div>
+          </div>
+          <div>
+            <span className="label">Last login</span>
+            <div>{formatLastLogin(profile.last_login)}</div>
           </div>
         </div>
       </section>

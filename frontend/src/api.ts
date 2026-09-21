@@ -71,13 +71,21 @@ export type CustomerDetail = {
   }>;
 };
 
+import { apiUrl } from "./apiBase";
+
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(path);
+  const res = await fetch(apiUrl(path));
+  const text = await res.text();
   if (!res.ok) {
-    const text = await res.text();
     throw new Error(text || res.statusText);
   }
-  return res.json() as Promise<T>;
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(
+      `API returned non-JSON (often a stale UI bundle or wrong path). ${text.slice(0, 120)}`,
+    );
+  }
 }
 
 export const fetchOverview = () => getJson<Overview>("/api/overview");
