@@ -88,6 +88,11 @@ COALESCE(
 """.strip()
 
 
+def customer_book_at_period_sql() -> tuple[str, int]:
+    """Total book (investments + coverage) at an exact snapshot period."""
+    return f"({_INVESTMENT_AT_PERIOD} + {_COVERAGE_AT_PERIOD})", 2
+
+
 def customer_value_at_period_sql(metric: str) -> tuple[str, int]:
     """SQL expression for one customer at a snapshot period; returns (sql, param_count)."""
     m = normalize_value_metric(metric)
@@ -95,7 +100,16 @@ def customer_value_at_period_sql(metric: str) -> tuple[str, int]:
         return _INVESTMENT_AT_PERIOD, 1
     if m == "coverage":
         return _COVERAGE_AT_PERIOD, 1
-    return f"({_INVESTMENT_AT_PERIOD} + {_COVERAGE_AT_PERIOD})", 2
+    if m == "at_risk":
+        # Book at period × current churn score (matches portfolio churn horizon math).
+        book_sql, param_count = customer_book_at_period_sql()
+        return f"(({book_sql}) * COALESCE(ch.CHURN_PROBABILITY, 0))", param_count
+    return customer_book_at_period_sql()
+
+
+def customer_at_risk_at_period_sql() -> tuple[str, int]:
+    """Value at churn risk for one customer at a snapshot (requires churn join)."""
+    return customer_value_at_period_sql("at_risk")
 
 
 def _customer_scope_sql(segment: str, customer_id: int | None) -> tuple[str, list[object]]:

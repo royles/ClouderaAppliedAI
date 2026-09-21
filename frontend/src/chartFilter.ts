@@ -15,7 +15,7 @@ export function chartMetricLabel(metric: ChartValueMetric): string {
     case "coverage":
       return "coverage & savings";
     case "at_risk":
-      return "value at churn risk";
+      return "value at churn risk (book × churn probability at snapshot)";
     default:
       return "total book value";
   }

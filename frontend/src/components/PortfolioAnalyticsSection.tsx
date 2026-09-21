@@ -45,6 +45,7 @@ export default function PortfolioAnalyticsSection({
             asOf: selection.period,
             metric,
             page: 1,
+            sortBy: metric === "at_risk" ? "customer_value" : undefined,
           })}`,
         );
       },

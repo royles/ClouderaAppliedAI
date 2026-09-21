@@ -191,17 +191,22 @@ def list_customers(
     value_metric = normalize_value_metric(metric)
     period = (as_of or "").strip()
     use_snapshot = bool(period)
+    period_params: list[object] = []
     if use_snapshot:
         value_expr, period_param_count = customer_value_at_period_sql(value_metric)
         period_params = [period] * period_param_count
-        where_sql += f" AND ({value_expr}) > 0"
-        params.extend(period_params)
         if value_metric == "at_risk":
-            if churn_scores_available:
-                where_sql += " AND COALESCE(ch.CHURN_PROBABILITY, 0) > 0"
-            else:
+            if not churn_scores_available:
                 where_sql += " AND 1 = 0"
-        customer_value_sql = f"ROUND({value_expr}, 2)"
+                customer_value_sql = "0.0"
+            else:
+                where_sql += f" AND ({value_expr}) > 0"
+                params.extend(period_params)
+                customer_value_sql = f"ROUND({value_expr}, 2)"
+        else:
+            where_sql += f" AND ({value_expr}) > 0"
+            params.extend(period_params)
+            customer_value_sql = f"ROUND({value_expr}, 2)"
         count_params = list(params)
     else:
         customer_value_sql = f"ROUND({CUSTOMER_VALUE_SQL}, 2)"
@@ -251,7 +256,7 @@ def list_customers(
         WHERE {where_sql}
     """
     list_params = list(params)
-    if use_snapshot:
+    if use_snapshot and "?" in customer_value_sql:
         list_params.extend(period_params)
     sql += (
         f" ORDER BY {order_clause(sort_key, order_key, churn_scores_available=churn_scores_available)} "
