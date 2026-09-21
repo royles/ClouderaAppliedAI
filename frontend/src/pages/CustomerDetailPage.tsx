@@ -17,7 +17,6 @@ import {
   formatLastLogin,
   maskDate,
   displayCustomerName,
-  maskPhone,
   maskStreet,
 } from "../pii";
 
@@ -206,10 +205,18 @@ export default function CustomerDetailPage() {
           )}
           <CustomerValueChart
             className="customer-detail-value-chart"
-            title="Lifetime value trajectory"
-            subtitle="Monthly investment accumulation plus coverage and savings snapshots."
+            title="Value & churn risk"
+            subtitle="Actual monthly value from warehouse snapshots; dashed line shows expected value declining to zero at the predicted lapse month from the churn model."
             points={valueHistory}
             loading={valueHistoryLoading}
+            churn={
+              detail.churn?.churn_probability != null
+                ? {
+                    probability: detail.churn.churn_probability,
+                    tier: detail.churn.churn_risk_tier,
+                  }
+                : null
+            }
           />
         </div>
         {detail.churn?.scored_at && (

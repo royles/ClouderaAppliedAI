@@ -582,6 +582,37 @@ select.control {
   height: 100%;
 }
 
+.value-chart-kpi-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.value-chart-churn-kpi {
+  text-align: right;
+  padding-top: 0.35rem;
+  border-top: 1px solid #e6ebf0;
+}
+
+.chart-churn-lapse-marker {
+  stroke: #c0392b;
+  stroke-width: 1.25;
+  stroke-dasharray: 4 3;
+  opacity: 0.75;
+}
+
+.chart-point-lapse {
+  fill: #c0392b;
+}
+
+.chart-point-lapse-ring {
+  fill: none;
+  stroke: #c0392b;
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+
 .customer-detail-churn-meta,
 .customer-detail-privacy {
   margin: 0.85rem 0 0;

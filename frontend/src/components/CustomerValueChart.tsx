@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
 import { ValueHistoryPoint } from "../api";
+import {
+  buildCustomerValueWithChurnForecast,
+  CustomerChurnInput,
+  ExtendedValuePoint,
+} from "../customerValueChurnForecast";
 
 type Props = {
   title: string;
@@ -8,6 +13,8 @@ type Props = {
   loading?: boolean;
   refreshing?: boolean;
   className?: string;
+  /** When set, extends the chart with a lapse scenario (value → 0 at predicted churn). */
+  churn?: CustomerChurnInput | null;
 };
 
 function formatPeriodLabel(period: string) {
@@ -36,7 +43,7 @@ function formatTooltipMoney(n: number) {
 }
 
 function linePath(
-  values: number[],
+  values: (number | null)[],
   width: number,
   height: number,
   padX: number,
@@ -47,13 +54,19 @@ function linePath(
   if (values.length === 0) return "";
   const span = maxY - minY || 1;
   const stepX = values.length > 1 ? (width - padX * 2) / (values.length - 1) : 0;
-  return values
-    .map((v, i) => {
-      const x = padX + i * stepX;
-      const y = padY + (height - padY * 2) * (1 - (v - minY) / span);
-      return `${i === 0 ? "M" : "L"}${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  let d = "";
+  let open = false;
+  values.forEach((v, i) => {
+    if (v == null) {
+      open = false;
+      return;
+    }
+    const x = padX + i * stepX;
+    const y = padY + (height - padY * 2) * (1 - (v - minY) / span);
+    d += `${open ? " L" : " M"}${x.toFixed(1)},${y.toFixed(1)}`;
+    open = true;
+  });
+  return d.trim();
 }
 
 function pointCoords(
@@ -81,6 +94,7 @@ export default function CustomerValueChart({
   loading,
   refreshing,
   className,
+  churn,
 }: Props) {
   const wrapClass = [
     "value-chart-wrap",
@@ -97,20 +111,60 @@ export default function CustomerValueChart({
   const padY = 22;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
+  const forecastBundle = useMemo(
+    () => buildCustomerValueWithChurnForecast(points, churn),
+    [points, churn],
+  );
+
   const chartMetrics = useMemo(() => {
-    if (points.length === 0) return null;
-    const totals = points.map((p) => p.total_value);
-    const investments = points.map((p) => p.investment_value);
-    const coverage = points.map((p) => p.coverage_value);
-    const allY = [...totals, ...investments, ...coverage];
-    const minY = Math.min(...allY) * 0.95;
-    const maxY = Math.max(...allY) * 1.05;
+    if (!forecastBundle || forecastBundle.points.length === 0) return null;
+    const displayPoints = forecastBundle.points;
+    const historyLen = points.length;
+    const totals = displayPoints.map((p) => p.total_value);
+    const investments = displayPoints.map((p) =>
+      p.kind === "actual" ? p.investment_value : null,
+    );
+    const coverage = displayPoints.map((p) =>
+      p.kind === "actual" ? p.coverage_value : null,
+    );
+    const actualTotals = displayPoints.map((p, i) =>
+      i < historyLen ? p.total_value : null,
+    );
+    const forecastTotals = displayPoints.map((p, i) => {
+      if (i < historyLen - 1) return null;
+      if (p.kind === "actual" && i === historyLen - 1) return p.total_value;
+      if (p.kind === "forecast") return p.total_value;
+      return null;
+    });
+    const numericY = totals.filter((v) => v != null) as number[];
+    const minY = forecastBundle.monthsToChurn > 0 ? 0 : Math.min(...numericY) * 0.95;
+    const maxY = Math.max(...numericY) * 1.05;
     const first = points[0].total_value;
-    const last = points[points.length - 1].total_value;
+    const last = forecastBundle.lastActualValue;
     const delta = last - first;
     const deltaPct = first > 0 ? (delta / first) * 100 : 0;
-    return { totals, investments, coverage, minY, maxY, first, last, delta, deltaPct };
-  }, [points]);
+    const lapseIndex = displayPoints.findIndex((p) => p.is_predicted_lapse);
+    return {
+      displayPoints,
+      historyLen,
+      totals,
+      investments,
+      coverage,
+      actualTotals,
+      forecastTotals,
+      minY,
+      maxY,
+      first,
+      last,
+      delta,
+      deltaPct,
+      lapseIndex,
+      monthsToChurn: forecastBundle.monthsToChurn,
+      predictedLapsePeriod: forecastBundle.predictedLapsePeriod,
+      valueAtRisk: forecastBundle.valueAtRisk,
+      churnProbability: churn?.probability ?? null,
+    };
+  }, [forecastBundle, points.length, churn?.probability]);
 
   if (loading) {
     return (
@@ -121,7 +175,7 @@ export default function CustomerValueChart({
     );
   }
 
-  if (!chartMetrics || points.length === 0) {
+  if (!chartMetrics || chartMetrics.displayPoints.length === 0) {
     return (
       <div className={wrapClass}>
         <h2 className="subsection-title">{title}</h2>
@@ -130,9 +184,26 @@ export default function CustomerValueChart({
     );
   }
 
-  const { totals, investments, coverage, minY, maxY, last, delta, deltaPct } =
-    chartMetrics;
-  const active = activeIndex != null ? points[activeIndex] : null;
+  const {
+    displayPoints,
+    investments,
+    coverage,
+    actualTotals,
+    forecastTotals,
+    minY,
+    maxY,
+    last,
+    delta,
+    deltaPct,
+    lapseIndex,
+    monthsToChurn,
+    predictedLapsePeriod,
+    valueAtRisk,
+    churnProbability,
+  } = chartMetrics;
+  const active =
+    activeIndex != null ? (displayPoints[activeIndex] as ExtendedValuePoint) : null;
+  const showChurnForecast = monthsToChurn > 0 && churnProbability != null;
 
   return (
     <div className={wrapClass}>
@@ -144,23 +215,48 @@ export default function CustomerValueChart({
           <h2 className="subsection-title">{title}</h2>
           {subtitle && <p className="muted small">{subtitle}</p>}
         </div>
-        <div className="value-chart-kpi">
-          <span className="label">Latest total</span>
-          <strong>{formatAxisMoney(last)}</strong>
-          <span className={`small ${delta >= 0 ? "delta-up" : "delta-down"}`}>
-            {delta >= 0 ? "+" : ""}
-            {formatAxisMoney(delta)} ({deltaPct >= 0 ? "+" : ""}
-            {deltaPct.toFixed(1)}%) vs start
-          </span>
+        <div className="value-chart-kpi value-chart-kpi-stack">
+          <div>
+            <span className="label">Latest total</span>
+            <strong>{formatAxisMoney(last)}</strong>
+            <span className={`small ${delta >= 0 ? "delta-up" : "delta-down"}`}>
+              {delta >= 0 ? "+" : ""}
+              {formatAxisMoney(delta)} ({deltaPct >= 0 ? "+" : ""}
+              {deltaPct.toFixed(1)}%) vs start
+            </span>
+          </div>
+          {showChurnForecast && (
+            <div className="value-chart-churn-kpi">
+              <span className="label">12m lapse risk</span>
+              <strong>{(churnProbability * 100).toFixed(1)}%</strong>
+              <span className="muted small">
+                At-risk {formatTooltipMoney(valueAtRisk)} · Predicted lapse{" "}
+                {predictedLapsePeriod
+                  ? formatPeriodLabel(predictedLapsePeriod)
+                  : "—"}{" "}
+                ({monthsToChurn} mo)
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
       {active && (
         <div className="chart-tooltip" role="status">
-          <strong>{formatPeriodLabel(active.period)}</strong>
+          <strong>
+            {formatPeriodLabel(active.period)}
+            {active.kind === "forecast" ? " (projected)" : ""}
+          </strong>
           <span>Total {formatTooltipMoney(active.total_value)}</span>
-          <span>Investments {formatTooltipMoney(active.investment_value)}</span>
-          <span>Coverage {formatTooltipMoney(active.coverage_value)}</span>
+          {active.kind === "actual" && (
+            <>
+              <span>Investments {formatTooltipMoney(active.investment_value)}</span>
+              <span>Coverage {formatTooltipMoney(active.coverage_value)}</span>
+            </>
+          )}
+          {active.is_predicted_lapse && (
+            <span className="warn-stat">Predicted lapse — value at ₪0</span>
+          )}
         </div>
       )}
 
@@ -170,7 +266,11 @@ export default function CustomerValueChart({
           viewBox={`0 0 ${width} ${height}`}
           preserveAspectRatio="xMidYMid meet"
           role="img"
-          aria-label="Customer value over time"
+          aria-label={
+            showChurnForecast
+              ? "Customer value over time with churn lapse forecast"
+              : "Customer value over time"
+          }
           onMouseLeave={() => setActiveIndex(null)}
         >
           <line
@@ -202,15 +302,40 @@ export default function CustomerValueChart({
             fill="none"
           />
           <path
-            d={linePath(totals, width, height, padX, padY, minY, maxY)}
+            d={linePath(actualTotals, width, height, padX, padY, minY, maxY)}
             className="chart-line chart-line-total"
             fill="none"
           />
-          {points.map((p, i) => {
+          {showChurnForecast && (
+            <path
+              d={linePath(forecastTotals, width, height, padX, padY, minY, maxY)}
+              className="chart-line chart-line-forecast chart-line-total"
+              fill="none"
+            />
+          )}
+          {showChurnForecast && lapseIndex >= 0 && (
+            (() => {
+              const stepX =
+                displayPoints.length > 1
+                  ? (width - padX * 2) / (displayPoints.length - 1)
+                  : 0;
+              const x = padX + lapseIndex * stepX;
+              return (
+                <line
+                  x1={x}
+                  y1={padY}
+                  x2={x}
+                  y2={height - padY}
+                  className="chart-churn-lapse-marker"
+                />
+              );
+            })()
+          )}
+          {displayPoints.map((p, i) => {
             const { x, y } = pointCoords(
               i,
               p.total_value,
-              points.length,
+              displayPoints.length,
               width,
               height,
               padX,
@@ -218,8 +343,9 @@ export default function CustomerValueChart({
               minY,
               maxY,
             );
+            const isForecast = p.kind === "forecast";
             return (
-              <g key={p.period}>
+              <g key={`${p.period}-${p.kind}`}>
                 <circle
                   cx={x}
                   cy={y}
@@ -231,12 +357,24 @@ export default function CustomerValueChart({
                   aria-label={`${formatPeriodLabel(p.period)} total ${formatTooltipMoney(p.total_value)}`}
                 />
                 {activeIndex === i && (
-                  <circle cx={x} cy={y} r={3.5} className="chart-point-active" />
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={3.5}
+                    className={
+                      p.is_predicted_lapse
+                        ? "chart-point-lapse"
+                        : "chart-point-active"
+                    }
+                  />
+                )}
+                {p.is_predicted_lapse && (
+                  <circle cx={x} cy={y} r={4.5} className="chart-point-lapse-ring" />
                 )}
                 <text
                   x={x}
                   y={height - 6}
-                  className="chart-x-label"
+                  className={`chart-x-label${isForecast ? " chart-x-forecast" : ""}`}
                   textAnchor="middle"
                 >
                   {formatPeriodLabel(p.period)}
@@ -249,8 +387,13 @@ export default function CustomerValueChart({
 
       <ul className="chart-legend">
         <li>
-          <span className="swatch swatch-total" /> Total customer value
+          <span className="swatch swatch-total" /> Total customer value (actual)
         </li>
+        {showChurnForecast && (
+          <li>
+            <span className="swatch swatch-forecast" /> Lapse scenario (value → ₪0)
+          </li>
+        )}
         <li>
           <span className="swatch swatch-investment" /> Investment accumulation
         </li>
