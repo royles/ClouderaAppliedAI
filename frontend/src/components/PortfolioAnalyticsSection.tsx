@@ -78,6 +78,12 @@ export default function PortfolioAnalyticsSection({
   );
 
   const progress = (key: string) => targets[key] ?? null;
+  const cohortScoped = segment !== "customers_all";
+  const cohortCaption = cohortLabel
+    ? `Filtered by “${cohortLabel}”`
+    : cohortScoped
+      ? "Filtered cohort"
+      : "Full active customer book";
 
   return (
     <div className="portfolio-analytics in-panel">
@@ -85,8 +91,8 @@ export default function PortfolioAnalyticsSection({
         <div>
           <h2 className="subsection-title">Book growth &amp; churn outlook</h2>
           <p className="muted small">
-            {cohortLabel
-              ? `Cohort: ${cohortLabel} — portfolio KPIs and retention-aware forecast.`
+            {cohortScoped
+              ? `${cohortCaption} — KPIs and charts reload when you change the overview cards above.`
               : "Portfolio KPIs with industry-aligned churn forecast on total customer value."}
           </p>
         </div>
@@ -216,6 +222,7 @@ export default function PortfolioAnalyticsSection({
       <div className="portfolio-objectives-head">
         <h2 className="subsection-title">Strategic objective trends</h2>
         <p className="muted small">
+          {cohortScoped ? `${cohortCaption} · ` : ""}
           {data?.objectives_note ??
             "Trends mapped to long-term savings growth, insurance premium momentum, and customer engagement."}
         </p>

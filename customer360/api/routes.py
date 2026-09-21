@@ -126,11 +126,22 @@ def _objectives_ready(payload: dict) -> bool:
     return isinstance(trends, list) and len(trends) > 0
 
 
-def _attach_book_objectives_if_needed(
+def _finalize_portfolio_objectives(
     enriched: dict,
     conn: sqlite3.Connection,
 ) -> None:
+    """Ensure objective series match the response segment (cached rows may be book-wide)."""
+    seg = normalize_segment(enriched.get("segment"))
+    enriched["segment"] = seg
+    if seg != "customers_all":
+        enriched.update(
+            fetch_objective_trends(conn, segment=seg, prefer_materialized=False),
+        )
+        return
     if _objectives_ready(enriched):
+        from customer360.api.portfolio_objectives import objectives_note_for_segment
+
+        enriched["objectives_note"] = objectives_note_for_segment(seg)
         return
     from customer360.book_objectives_cache import load_book_objective_trends
 
@@ -138,7 +149,7 @@ def _attach_book_objectives_if_needed(
     if materialized is not None:
         enriched.update(materialized)
         return
-    enriched.update(fetch_objective_trends(conn, prefer_materialized=False))
+    enriched.update(fetch_objective_trends(conn, segment=seg, prefer_materialized=False))
 
 
 def _persist_portfolio_analytics_cache(
@@ -169,7 +180,7 @@ def _portfolio_analytics_response(
 ) -> PortfolioAnalyticsResponse:
     enriched = dict(payload)
     if conn is not None:
-        _attach_book_objectives_if_needed(enriched, conn)
+        _finalize_portfolio_objectives(enriched, conn)
     if not enriched.get("kpi_targets"):
         enriched["kpi_targets"] = build_kpi_targets(
             enriched.get("kpis", {}),

@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date
 
+from customer360.api.portfolio_objectives import BOOK_WIDE_SEGMENT
 from customer360.api.segments import SEGMENT_WHERE, normalize_segment
 from customer360.api.value_history import CUSTOMER_VALUE_SQL, fetch_value_history
 from customer360.business_kpi_targets import build_kpi_targets
@@ -210,7 +211,11 @@ def fetch_portfolio_analytics(
     )
     investment_returns = _build_investment_returns(value_points)
 
-    objectives = fetch_objective_trends(conn)
+    objectives = fetch_objective_trends(
+        conn,
+        segment=seg,
+        prefer_materialized=(seg == BOOK_WIDE_SEGMENT),
+    )
 
     return {
         "segment": seg,

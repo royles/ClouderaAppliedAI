@@ -8,13 +8,25 @@ from customer360.api.segments import SEGMENT_WHERE, normalize_segment
 
 BOOK_WIDE_SEGMENT = "customers_all"
 
-OBJECTIVES_NOTE = (
+OBJECTIVES_NOTE_BOOK = (
     "Objective charts mirror Migdal Insurance & Finance strategic themes: "
     "long-term savings and AUM growth (pension & provident), retention of active "
     "policy relationships and premium momentum in general insurance, and digital "
-    "customer engagement. These three trends always reflect the full active customer "
-    "book (all current customers), not the overview card filter above."
+    "customer engagement. Trends reflect the full active customer book."
 )
+
+OBJECTIVES_NOTE_COHORT = (
+    "Strategic objective trends below use the same overview card filter as the book "
+    "charts and KPIs above. Clear the card selection to return to full-book objectives."
+)
+
+# Back-compat alias for materialized cache readers.
+OBJECTIVES_NOTE = OBJECTIVES_NOTE_BOOK
+
+
+def objectives_note_for_segment(segment: str | None) -> str:
+    seg = normalize_segment(segment)
+    return OBJECTIVES_NOTE_BOOK if seg == BOOK_WIDE_SEGMENT else OBJECTIVES_NOTE_COHORT
 
 
 def _scope(segment: str | None) -> tuple[str, list[object]]:
@@ -213,16 +225,18 @@ def fetch_objective_trends(
     segment: str | None = BOOK_WIDE_SEGMENT,
     prefer_materialized: bool = True,
 ) -> dict:
-    """Book-wide strategic trends (defaults to all active customers)."""
+    """Strategic trends for the requested customer segment."""
     seg = normalize_segment(segment or BOOK_WIDE_SEGMENT)
     if prefer_materialized and seg == BOOK_WIDE_SEGMENT:
         from customer360.book_objectives_cache import load_book_objective_trends
 
         cached = load_book_objective_trends(conn)
         if cached is not None:
-            return cached
+            out = dict(cached)
+            out["objectives_note"] = objectives_note_for_segment(seg)
+            return out
     return {
-        "objectives_note": OBJECTIVES_NOTE,
+        "objectives_note": objectives_note_for_segment(seg),
         "savings_aum_trend": fetch_savings_aum_trend(conn, segment=seg),
         "premium_momentum_trend": fetch_premium_momentum_trend(conn, segment=seg),
         "engagement_trend": fetch_engagement_trend(conn, segment=seg),

@@ -130,6 +130,7 @@ export default function DashboardPage() {
           helperText="Click a card to filter analytics. Click again to clear."
         />
         <PortfolioAnalyticsSection
+          key={segment}
           data={portfolioAnalytics}
           loading={portfolioLoading && !portfolioAnalytics}
           refreshing={portfolioLoading && portfolioAnalytics != null}
