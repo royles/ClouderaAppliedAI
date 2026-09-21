@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { BUSINESS_BASE, CUSTOMER_BASE } from "../appRoutes";
+import { CUSTOMER_BASE } from "../appRoutes";
 import Breadcrumbs from "../components/Breadcrumbs";
-import { rememberRecentCustomer } from "./CustomerHubPage";
+import { rememberRecentCustomer } from "../recentCustomers";
 import {
   CustomerDetail,
   fetchCustomer,
@@ -52,10 +52,18 @@ export default function CustomerDetailPage() {
   const { customerId } = useParams();
   const location = useLocation();
   const id = Number(customerId);
-  const businessBack =
+  const listBack =
     typeof location.state?.businessReturn === "string"
       ? location.state.businessReturn
-      : BUSINESS_BASE;
+      : CUSTOMER_BASE;
+  const backFromCustomerList = listBack.startsWith(CUSTOMER_BASE);
+  const hubBackLabel = backFromCustomerList ? "The customer" : "The business";
+  const hubBackLinkText = backFromCustomerList
+    ? "← Back to customers"
+    : "← Back to the business";
+  const secondaryHubLinkText = backFromCustomerList
+    ? "Back to customer list"
+    : "Portfolio in the business";
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("policies");
@@ -117,7 +125,7 @@ export default function CustomerDetailPage() {
     return (
       <section className="panel">
         <p className="error">{error}</p>
-        <Link to={businessBack}>← Back to the business</Link>
+        <Link to={listBack}>{hubBackLinkText}</Link>
       </section>
     );
   }
@@ -126,8 +134,7 @@ export default function CustomerDetailPage() {
       <>
         <Breadcrumbs
           items={[
-            { label: "The business", to: businessBack },
-            { label: "The customer", to: CUSTOMER_BASE },
+            { label: hubBackLabel, to: listBack },
             { label: "Loading…" },
           ]}
         />
@@ -165,15 +172,18 @@ export default function CustomerDetailPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "The business", to: businessBack },
-          { label: "The customer", to: CUSTOMER_BASE },
+          { label: hubBackLabel, to: listBack },
           { label: displayCustomerName(profile.customer_name) },
         ]}
       />
       <p className="muted small customer-area-links">
-        <Link to={businessBack}>Portfolio in the business</Link>
-        {" · "}
-        <Link to={CUSTOMER_BASE}>Customer home</Link>
+        <Link to={listBack}>{secondaryHubLinkText}</Link>
+        {!backFromCustomerList && (
+          <>
+            {" · "}
+            <Link to={CUSTOMER_BASE}>Customer home</Link>
+          </>
+        )}
       </p>
       <section className="panel">
         <h1>{displayCustomerName(profile.customer_name)}</h1>
