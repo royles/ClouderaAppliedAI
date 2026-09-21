@@ -9,6 +9,24 @@ export function formatPeriodLabel(period: string) {
   return period;
 }
 
+/** X-axis labels for long monthly history (show endpoints, Jan/Jul, and light thinning). */
+export function shouldShowHistoryLabel(
+  period: string,
+  index: number,
+  count: number,
+): boolean {
+  if (count <= 1) return true;
+  if (index === 0 || index === count - 1) return true;
+  const month =
+    period.length >= 7 ? Number.parseInt(period.slice(5, 7), 10) : Number.NaN;
+  if (month === 1 || month === 7) return true;
+  if (count > 18) {
+    const step = Math.max(3, Math.ceil(count / 10));
+    return index % step === 0;
+  }
+  return index % Math.max(1, Math.floor(count / 6)) === 0;
+}
+
 export function formatAxisMoney(n: number) {
   if (n >= 1_000_000) return `₪${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `₪${(n / 1_000).toFixed(0)}K`;
@@ -54,7 +72,10 @@ export type SeriesVisualKey =
   | "obj-premium"
   | "obj-policies"
   | "obj-engagement"
-  | "obj-digital";
+  | "obj-digital"
+  | "book-baseline-total"
+  | "churn-baseline-book"
+  | "return-baseline-balance";
 
 export const SERIES_VISUAL: Record<
   SeriesVisualKey,
@@ -81,6 +102,24 @@ export const SERIES_VISUAL: Record<
   "obj-policies": { stroke: "#1e6b34", strokeWidth: 1.5, strokeDasharray: "5 3" },
   "obj-engagement": { stroke: "#0f3d5e", strokeWidth: 2 },
   "obj-digital": { stroke: "#c47a0a", strokeWidth: 1.5, strokeDasharray: "4 3" },
+  "book-baseline-total": {
+    stroke: "#94a3b8",
+    strokeWidth: 2.25,
+    strokeDasharray: "7 5",
+    opacity: 0.85,
+  },
+  "churn-baseline-book": {
+    stroke: "#94a3b8",
+    strokeWidth: 2.25,
+    strokeDasharray: "7 5",
+    opacity: 0.85,
+  },
+  "return-baseline-balance": {
+    stroke: "#94a3b8",
+    strokeWidth: 2,
+    strokeDasharray: "7 5",
+    opacity: 0.85,
+  },
 };
 
 export function linePath(

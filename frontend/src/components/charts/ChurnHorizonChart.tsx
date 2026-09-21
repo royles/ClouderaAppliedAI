@@ -5,6 +5,7 @@ import AnalyticsLineChart, { moneyTooltip } from "./AnalyticsLineChart";
 
 type Props = {
   series: ChurnForecastPoint[];
+  baselineSeries?: ChurnForecastPoint[];
   loading?: boolean;
   interactive?: boolean;
   onPeriodSelect?: (selection: ChartPeriodSelection) => void;
@@ -12,6 +13,7 @@ type Props = {
 
 export default function ChurnHorizonChart({
   series,
+  baselineSeries,
   loading,
   interactive,
   onPeriodSelect,
@@ -33,50 +35,90 @@ export default function ChurnHorizonChart({
     bookForecast[forecastStart - 1] = series[forecastStart - 1].total_book_value;
   }
 
-  const points = series.map((p) => ({
-    period: p.period,
-    kind: p.kind,
-    tooltipLines: [
-      moneyTooltip("Total book", p.total_book_value),
+  const baselineBookActual = useMemo(() => {
+    if (!baselineSeries?.length) return null;
+    const periods = series.map((p) => p.period);
+    const baselineByPeriod = new Map(
+      baselineSeries.map((p) => [p.period, p.total_book_value]),
+    );
+    const baselineTotals = periods.map((period) => baselineByPeriod.get(period) ?? null);
+    return baselineTotals.map((v, i) =>
+      forecastStart >= 0 && i >= forecastStart ? null : v,
+    );
+  }, [baselineSeries, series, forecastStart]);
+
+  const baselineByPeriod = useMemo(
+    () => new Map(baselineSeries?.map((p) => [p.period, p.total_book_value]) ?? []),
+    [baselineSeries],
+  );
+
+  const points = series.map((p) => {
+    const lines = [
+      moneyTooltip("Cohort total book", p.total_book_value),
       moneyTooltip("Expected retained", p.expected_retained_value),
       moneyTooltip("Value at risk", p.value_at_risk),
       `Retention ${((p.implied_retention_rate ?? 0) * 100).toFixed(1)}%`,
-    ],
-  }));
+    ];
+    const ref = baselineByPeriod.get(p.period);
+    if (ref != null) {
+      lines.push(moneyTooltip("Full book (reference)", ref));
+    }
+    return {
+      period: p.period,
+      kind: p.kind,
+      tooltipLines: lines,
+    };
+  });
+
+  const chartSeries = [
+    ...(baselineBookActual
+      ? [
+          {
+            id: "baseline-book",
+            visualKey: "churn-baseline-book" as const,
+            label: "Full book (reference)",
+            values: baselineBookActual,
+          },
+        ]
+      : []),
+    {
+      id: "book",
+      visualKey: "churn-book-actual" as const,
+      label: baselineBookActual ? "Cohort book (actual)" : "Total book (actual)",
+      values: bookActual,
+    },
+    {
+      id: "retained",
+      visualKey: "churn-retained" as const,
+      label: "Expected retained value",
+      values: series.map((p) => p.expected_retained_value),
+    },
+    {
+      id: "risk",
+      visualKey: "churn-at-risk" as const,
+      label: "Value at churn risk",
+      values: series.map((p) => p.value_at_risk),
+    },
+    {
+      id: "book-f",
+      visualKey: "churn-book-forecast" as const,
+      label: "Projected book (forecast)",
+      values: bookForecast,
+    },
+  ];
 
   return (
     <AnalyticsLineChart
       title="Churn horizon"
-      subtitle="Retained vs at-risk value; dashed blue = survival forecast of total book."
+      subtitle={
+        baselineBookActual
+          ? "Cohort retained/risk vs full-book reference (dashed gray) and survival forecast."
+          : "Retained vs at-risk value; dashed blue = survival forecast of total book."
+      }
       points={points}
       loading={loading}
       forecastDividerIndex={forecastStart}
-      series={[
-        {
-          id: "book",
-          visualKey: "churn-book-actual",
-          label: "Total book (actual)",
-          values: bookActual,
-        },
-        {
-          id: "retained",
-          visualKey: "churn-retained",
-          label: "Expected retained value",
-          values: series.map((p) => p.expected_retained_value),
-        },
-        {
-          id: "risk",
-          visualKey: "churn-at-risk",
-          label: "Value at churn risk",
-          values: series.map((p) => p.value_at_risk),
-        },
-        {
-          id: "book-f",
-          visualKey: "churn-book-forecast",
-          label: "Projected book (forecast)",
-          values: bookForecast,
-        },
-      ]}
+      series={chartSeries}
       emptyMessage="No churn horizon data for this cohort."
       interactive={interactive}
       onPeriodSelect={onPeriodSelect}

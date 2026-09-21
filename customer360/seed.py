@@ -138,6 +138,38 @@ def month_id(d: date) -> int:
     return d.year * 100 + d.month
 
 
+# Book analytics window: ~5 years of monthly snapshots (Jan 2021 → Sep 2025).
+BOOK_HISTORY_START = date(2021, 1, 1)
+BOOK_AS_OF_DATE = date(2025, 9, 15)
+
+
+def iter_history_months(
+    start: date = BOOK_HISTORY_START,
+    end: date | None = None,
+) -> list[date]:
+    """First day of each month from start through end (inclusive)."""
+    end_month = end or date(BOOK_AS_OF_DATE.year, BOOK_AS_OF_DATE.month, 1)
+    months: list[date] = []
+    year, month = start.year, start.month
+    while (year, month) <= (end_month.year, end_month.month):
+        months.append(date(year, month, 1))
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+    return months
+
+
+def parse_policy_start(pol: dict) -> date:
+    raw = str(pol.get("POLICY_START_DATE") or "")[:10]
+    y, m, d = (int(raw[0:4]), int(raw[5:7]), int(raw[8:10])) if len(raw) >= 10 else (2021, 1, 1)
+    return date(y, m, min(d, last_day_of_month(y, m).day))
+
+
+def snapshot_on_or_after_policy_start(policy_start: date, snap: date) -> bool:
+    return (snap.year, snap.month) >= (policy_start.year, policy_start.month)
+
+
 def generate_israeli_id(rng: random.Random) -> int:
     """Generate a plausible 9-digit ID (not checksum-validated)."""
     base = rng.randint(100_000_000, 399_999_999)
@@ -260,6 +292,9 @@ def build_policies(customers: list[dict]) -> list[dict]:
     policy_seq = 100000
 
     active_customers = [c for c in customers if c["CURRENT_IND"] == 1]
+    history_months = iter_history_months()
+    max_start_idx = max(0, len(history_months) - 1)
+
     for cust in active_customers:
         segment = cust.get("_segment", "engaged")
         if segment == "engaged":
@@ -270,6 +305,7 @@ def build_policies(customers: list[dict]) -> list[dict]:
             n_policies = RNG.randint(1, 2)
 
         has_active = False
+        prev_start: date | None = None
         for policy_idx in range(n_policies):
             policy_seq += 1
             ptype_code, ptype_desc = RNG.choice(POLICY_TYPES)
@@ -284,8 +320,29 @@ def build_policies(customers: list[dict]) -> list[dict]:
                 status_code, status_desc = RNG.choice(POLICY_STATUS_ACTIVE)
                 is_active = 1
                 has_active = True
-            start = date(RNG.randint(2005, 2022), RNG.randint(1, 12), RNG.randint(1, 28))
-            end = date(2099, 12, 31) if is_active else date(RNG.randint(2020, 2025), RNG.randint(1, 12), 28)
+            if policy_idx == 0:
+                start_idx = RNG.randint(0, max_start_idx)
+                sm = history_months[start_idx]
+                start = date(sm.year, sm.month, RNG.randint(1, 28))
+            else:
+                assert prev_start is not None
+                gap = RNG.randint(4, 20)
+                start = prev_start + timedelta(days=gap * 30)
+                if start > BOOK_AS_OF_DATE:
+                    start = BOOK_AS_OF_DATE.replace(day=RNG.randint(1, 15))
+            prev_start = start
+            end = (
+                date(2099, 12, 31)
+                if is_active
+                else min(
+                    BOOK_AS_OF_DATE,
+                    date(
+                        RNG.randint(start.year, BOOK_AS_OF_DATE.year),
+                        RNG.randint(1, 12),
+                        28,
+                    ),
+                )
+            )
             collective = 1 if ptype_code in (401, 402) and RNG.random() < 0.4 else 0
             employer_num, employer_desc = (None, None)
             if collective:
@@ -423,13 +480,18 @@ def build_policy_investment_tracks(policies: list[dict], months: list[date]) -> 
         tracks = RNG.sample(fund_choices, k=min(len(fund_choices), RNG.randint(1, 2)))
         policy_key = int("".join(c for c in pol["POLICY_KEY"] if c.isdigit())[-8:])
 
-        rewards = RNG.uniform(80000, 450000)
-        comp = RNG.uniform(20000, 180000)
+        pstart = parse_policy_start(pol)
+        rewards = RNG.uniform(15_000, 45_000)
+        comp = RNG.uniform(5_000, 25_000)
+        months_live = 0
 
         for snap in months:
-            growth = 1 + RNG.uniform(-0.02, 0.035)
+            if not snapshot_on_or_after_policy_start(pstart, snap):
+                continue
+            months_live += 1
+            growth = 1 + RNG.uniform(-0.015, 0.04)
             rewards *= growth
-            comp *= 1 + RNG.uniform(-0.015, 0.025)
+            comp *= 1 + RNG.uniform(-0.01, 0.028)
             total = rewards + comp
             ytd_r = round(RNG.uniform(-5000, 25000), 2)
             ytd_t = round(ytd_r + RNG.uniform(-3000, 15000), 2)
@@ -494,7 +556,10 @@ def build_policy_status_snapshots(policies: list[dict], months: list[date]) -> l
 
     for pol in life_health:
         base_sum = RNG.uniform(200_000, 2_500_000)
-        for snap in months[-3:]:
+        pstart = parse_policy_start(pol)
+        for snap in months:
+            if not snapshot_on_or_after_policy_start(pstart, snap):
+                continue
             snap_d = last_day_of_month(snap.year, snap.month)
             premium = pol["BRUTO_MONTHLY_PREMIUM"] or 0
             surrender = round(base_sum * RNG.uniform(0.05, 0.35), 2)
@@ -553,7 +618,12 @@ def init_database(
     if n != customer_count:
         print(f"Note: customer_count clamped to {n} (max {MAX_SEED_CUSTOMERS})", flush=True)
 
-    months = [date(2025, m, 1) for m in range(1, 10)]
+    months = iter_history_months()
+    print(
+        f"History window: {months[0].strftime('%Y-%m')} → "
+        f"{months[-1].strftime('%Y-%m')} ({len(months)} monthly snapshots)",
+        flush=True,
+    )
 
     print(f"Generating {n} representative customers…", flush=True)
     customers = build_customers(n)
@@ -604,6 +674,16 @@ def init_database(
         print("Precomputing customer list metrics and overview counts…", flush=True)
         refresh_customer_metrics(conn)
         refresh_overview_counts(conn)
+        from customer360.churn.scoring import try_train_and_score_churn
+
+        if try_train_and_score_churn(db_path):
+            print("Churn model scored and APP_CUSTOMER_CHURN_SCORES populated.", flush=True)
+        else:
+            print(
+                "Churn scoring skipped (install ML deps or run train job); "
+                "retention KPIs stay blank until scores exist.",
+                flush=True,
+            )
         print("Caching portfolio analytics (all segments)…", flush=True)
         refresh_portfolio_analytics_cache(conn)
         from customer360.api.warehouse_admin import refresh_warehouse_manifest

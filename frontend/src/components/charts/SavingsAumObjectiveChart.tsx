@@ -13,7 +13,6 @@ export default function SavingsAumObjectiveChart({ series, loading }: Props) {
     kind: "actual" as const,
     tooltipLines: [
       moneyTooltip("Accumulation (AUM)", p.accumulation_total),
-      `${formatTooltipCount(p.active_savers)} active savers`,
       `${formatTooltipCount(p.savings_policies)} savings policies`,
     ],
   }));
@@ -29,7 +28,7 @@ export default function SavingsAumObjectiveChart({ series, loading }: Props) {
         {
           id: "aum",
           visualKey: "obj-aum",
-          label: "Accumulation",
+          label: "Accumulation (AUM)",
           values: series.map((p) => p.accumulation_total),
           axis: "primary",
           valueFormat: "money",

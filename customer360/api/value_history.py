@@ -6,6 +6,7 @@ import sqlite3
 
 from customer360.api.policy_status_sql import POLICY_STATUS_COVERAGE_EXPR
 from customer360.api.segments import SEGMENT_WHERE, normalize_segment
+from customer360.churn.effective_risk import effective_churn_probability_sql
 
 # Latest investment snapshot + latest policy status snapshot.
 CUSTOMER_VALUE_SQL = f"""
@@ -95,7 +96,8 @@ def customer_value_at_period_sql(metric: str) -> tuple[str, int]:
         return _COVERAGE_AT_PERIOD, 1
     if m == "at_risk":
         book_sql, param_count = customer_book_at_period_sql()
-        return f"(({book_sql}) * COALESCE(ch.CHURN_PROBABILITY, 0))", param_count
+        prob = effective_churn_probability_sql("ch")
+        return f"(({book_sql}) * ({prob}))", param_count
     return customer_book_at_period_sql()
 
 

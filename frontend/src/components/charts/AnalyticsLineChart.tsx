@@ -8,6 +8,7 @@ import {
   formatAxisMoney,
   formatAxisPct,
   formatPeriodLabel,
+  shouldShowHistoryLabel,
   formatTooltipMoney,
   linePath,
   seriesHasPoints,
@@ -78,7 +79,7 @@ function isPeriodSelectable(meta: ChartPointMeta): boolean {
   return meta.kind !== "forecast";
 }
 
-function LegendSwatch({ visualKey }: { visualKey: ChartSeries["visualKey"] }) {
+export function LegendSwatch({ visualKey }: { visualKey: ChartSeries["visualKey"] }) {
   const v = SERIES_VISUAL[visualKey];
   return (
     <svg
@@ -337,10 +338,7 @@ export default function AnalyticsLineChart({
           )}
           {points.map((p, i) => {
             const x = xForIndex(i, points.length, width, padX);
-            const showLabel =
-              i === 0 ||
-              i === points.length - 1 ||
-              i % Math.max(1, Math.floor(points.length / 6)) === 0;
+            const showLabel = shouldShowHistoryLabel(p.period, i, points.length);
             const isActive = activeIndex === i;
             return (
               <g key={`${p.period}-${i}`}>
@@ -384,12 +382,23 @@ export default function AnalyticsLineChart({
         </ChartFloatingTooltip>
       )}
       <ul className="chart-legend chart-legend-compact">
-        {visibleSeries.map((s) => (
-          <li key={s.id}>
-            <LegendSwatch visualKey={s.visualKey} />
-            {s.label}
-          </li>
-        ))}
+        {visibleSeries.map((s) => {
+          const axisHint =
+            usesDualAxis && (s.axis ?? "primary") === "secondary"
+              ? " · right axis"
+              : usesDualAxis
+                ? " · left axis"
+                : "";
+          return (
+            <li key={s.id}>
+              <LegendSwatch visualKey={s.visualKey} />
+              {s.label}
+              {axisHint ? (
+                <span className="chart-legend-axis-hint">{axisHint}</span>
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

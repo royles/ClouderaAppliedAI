@@ -1,6 +1,12 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
+import { formatPeriodLabel } from "./charts/analyticsChartUtils";
 import { useNavigate } from "react-router-dom";
-import { CustomerSegment, KpiTargetProgress, PortfolioAnalytics } from "../api";
+import {
+  CustomerSegment,
+  KpiTargetProgress,
+  PortfolioAnalytics,
+  PortfolioKpis,
+} from "../api";
 import { CUSTOMER_BASE } from "../appRoutes";
 import { ChartValueMetric } from "../chartFilter";
 import { cohortSearchString } from "../cohortQuery";
@@ -11,10 +17,13 @@ import EngagementObjectiveChart from "./charts/EngagementObjectiveChart";
 import InvestmentReturnsChart from "./charts/InvestmentReturnsChart";
 import PremiumMomentumChart from "./charts/PremiumMomentumChart";
 import SavingsAumObjectiveChart from "./charts/SavingsAumObjectiveChart";
+import CohortVsBookBanner from "./CohortVsBookBanner";
 import PortfolioKpiCard from "./PortfolioKpiCard";
+import { formatShareOfBook } from "../cohortBaseline";
 
 type Props = {
   data: PortfolioAnalytics | null;
+  bookBaseline: PortfolioAnalytics | null;
   loading: boolean;
   refreshing: boolean;
   cohortLabel?: string | null;
@@ -25,6 +34,18 @@ type Props = {
 function formatPct(rate: number | null | undefined, digits = 1) {
   if (rate == null || Number.isNaN(rate)) return "—";
   return `${(rate * 100).toFixed(digits)}%`;
+}
+
+function retentionKpiSub(kpis: PortfolioKpis | undefined): string | undefined {
+  if (!kpis) return undefined;
+  const w = kpis.weighted_churn_probability;
+  if (w == null || Number.isNaN(w)) {
+    return "Run churn scoring to estimate portfolio lapse rate.";
+  }
+  const high = kpis.high_risk_customers ?? 0;
+  const med = kpis.medium_risk_customers ?? 0;
+  const low = kpis.low_risk_customers ?? 0;
+  return `Book-weighted 12m lapse ${(w * 100).toFixed(2)}% · HIGH ${high} · MED ${med} · LOW ${low}`;
 }
 
 function formatTargetLabel(key: string, progress: KpiTargetProgress): string {
@@ -49,6 +70,7 @@ function formatTargetLabel(key: string, progress: KpiTargetProgress): string {
 
 export default function PortfolioAnalyticsSection({
   data,
+  bookBaseline,
   loading,
   refreshing,
   cohortLabel,
@@ -85,8 +107,32 @@ export default function PortfolioAnalyticsSection({
       ? "Filtered cohort"
       : "Full active customer book";
 
+  const historyPeriodRange = useMemo(() => {
+    const pts = data?.value_points ?? [];
+    if (pts.length === 0) return null;
+    const first = formatPeriodLabel(pts[0].period);
+    const last = formatPeriodLabel(pts[pts.length - 1].period);
+    return `${first} – ${last} (${pts.length} months)`;
+  }, [data?.value_points]);
+
+  const chartScopeKey = `${segment}:${data?.segment ?? "none"}:${data?.value_points?.length ?? 0}:${data?.value_points?.[0]?.period ?? ""}`;
+  const showBookCompare = cohortScoped && bookBaseline != null && data != null;
+  const baselineHistory = showBookCompare ? bookBaseline.value_points : undefined;
+  const baselineChurn = showBookCompare ? bookBaseline.churn_forecast : undefined;
+  const baselineInvestments = showBookCompare ? bookBaseline.investment_returns : undefined;
+
   return (
-    <div className="portfolio-analytics in-panel">
+    <div
+      className={`portfolio-analytics in-panel${cohortScoped ? " portfolio-analytics-filtered" : ""}`}
+      key={chartScopeKey}
+    >
+      {showBookCompare && (
+        <CohortVsBookBanner
+          cohortLabel={cohortLabel ?? "Filtered cohort"}
+          cohort={data}
+          book={bookBaseline}
+        />
+      )}
       <div className="panel-head value-chart-head">
         <div>
           <h2 className="subsection-title">Book growth &amp; churn outlook</h2>
@@ -94,6 +140,12 @@ export default function PortfolioAnalyticsSection({
             {cohortScoped
               ? `${cohortCaption} — KPIs and charts reload when you change the overview cards above.`
               : "Portfolio KPIs with industry-aligned churn forecast on total customer value."}
+            {historyPeriodRange && (
+              <>
+                {" "}
+                Book history: {historyPeriodRange}.
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -102,6 +154,12 @@ export default function PortfolioAnalyticsSection({
         <PortfolioKpiCard
           label="Total book value"
           value={formatMoneyIls(kpis?.total_book_value)}
+          sub={
+            showBookCompare && kpis && bookBaseline.kpis
+              ? formatShareOfBook(kpis.total_book_value, bookBaseline.kpis.total_book_value) ??
+                undefined
+              : undefined
+          }
           progress={progress("total_book_value")}
           targetLabel={
             progress("total_book_value")
@@ -112,7 +170,8 @@ export default function PortfolioAnalyticsSection({
         />
         <PortfolioKpiCard
           label="12m retention (forecast)"
-          value={formatPct(kpis?.annual_retention_rate_forecast)}
+          value={formatPct(kpis?.annual_retention_rate_forecast, 2)}
+          sub={retentionKpiSub(kpis)}
           progress={progress("annual_retention_rate_forecast")}
           targetLabel={
             progress("annual_retention_rate_forecast")
@@ -127,6 +186,11 @@ export default function PortfolioAnalyticsSection({
         <PortfolioKpiCard
           label="Value at churn risk"
           value={formatMoneyIls(kpis?.value_at_risk_12m)}
+          sub={
+            kpis?.weighted_churn_probability != null
+              ? `Σ customer value × lapse probability (tier-weighted when ML score missing)`
+              : undefined
+          }
           progress={progress("value_at_risk_12m")}
           targetLabel={
             progress("value_at_risk_12m")
@@ -199,18 +263,21 @@ export default function PortfolioAnalyticsSection({
       >
         <BookValueChart
           history={data?.value_points ?? []}
+          baselineHistory={baselineHistory}
           loading={chartLoading}
           interactive={chartInteractive}
           onPeriodSelect={goToCustomerList("total")}
         />
         <InvestmentReturnsChart
           series={data?.investment_returns ?? []}
+          baselineSeries={baselineInvestments}
           loading={chartLoading}
           interactive={chartInteractive}
           onPeriodSelect={goToCustomerList("investment")}
         />
         <ChurnHorizonChart
           series={data?.churn_forecast ?? []}
+          baselineSeries={baselineChurn}
           loading={chartLoading}
           interactive={chartInteractive}
           onPeriodSelect={goToCustomerList("at_risk")}

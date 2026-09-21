@@ -12,7 +12,7 @@ export default function PremiumMomentumChart({ series, loading }: Props) {
     period: p.period,
     kind: "actual" as const,
     tooltipLines: [
-      moneyTooltip("Monthly premium base", p.monthly_premium_total),
+      moneyTooltip("Monthly premium", p.monthly_premium_total),
       `${formatTooltipCount(p.active_policy_count)} active policies`,
     ],
   }));

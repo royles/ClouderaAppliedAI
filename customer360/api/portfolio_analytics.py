@@ -11,14 +11,18 @@ from customer360.api.segments import SEGMENT_WHERE, normalize_segment
 from customer360.api.value_history import CUSTOMER_VALUE_SQL, fetch_value_history
 from customer360.business_kpi_targets import build_kpi_targets
 from customer360.api.portfolio_objectives import fetch_objective_trends
+from customer360.churn.effective_risk import BOOK_DEFAULT_CHURN_RATE, effective_churn_probability_sql
+from customer360.churn.scoring import churn_scores_populated, churn_table_exists
 
 METHODOLOGY_NOTE = (
-    "Churn-aware metrics treat ML scores as 12-month lapse probability (common for "
-    "P&C/Life retention planning). Value-at-risk is book-weighted (high-value "
-    "accounts drive portfolio exposure). Forward months apply monthly survival "
-    "S(t)=(1−m)^t with m from the annual weighted churn rate (capped at 25%). "
+    "Churn-aware metrics use ML scores when present; otherwise LOW/MEDIUM/HIGH tiers "
+    "map to 5% / 15% / 40% 12-month lapse estimates. Value-at-risk is book-weighted "
+    "(customer value × estimated lapse probability). Forward months apply monthly "
+    "survival S(t)=(1−m)^t with m from the portfolio weighted churn rate (capped at 25%). "
     "Historical risk applies current scores to past book totals for trend context."
 )
+
+_CHURN_PROB_EXPR = effective_churn_probability_sql("ch")
 
 
 def _segment_where(segment: str | None) -> tuple[str, list[object]]:
@@ -37,17 +41,67 @@ def _customer_metrics_ready(conn: sqlite3.Connection) -> bool:
 
 
 def _churn_table_exists(conn: sqlite3.Connection) -> bool:
-    row = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_CHURN_SCORES'"
-    ).fetchone()
-    return row is not None
+    return churn_table_exists(conn)
+
+
+def _finalize_churn_kpis(
+    *,
+    churn_ready: bool,
+    scores_ready: bool,
+    weighted_churn: float,
+    high_risk_customers: int,
+    medium_risk_customers: int,
+) -> tuple[float | None, float | None]:
+    """
+    Retention = 1 − book-weighted estimated 12-month lapse rate.
+    Returns (weighted_churn, annual_retention) or (None, None) when unscored.
+    """
+    if not churn_ready or not scores_ready:
+        return None, None
+
+    w = max(0.0, float(weighted_churn))
+    if w <= 0 and (high_risk_customers + medium_risk_customers) > 0:
+        # Scores present but lapse weight collapsed (e.g. stale cache / zero ML output).
+        w = BOOK_DEFAULT_CHURN_RATE
+    retention = round(1.0 - w, 4)
+    return round(w, 4), retention
 
 
 def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
     where_sql, params = _segment_where(segment)
-    churn_join = ""
-    if _churn_table_exists(conn):
+    churn_ready = _churn_table_exists(conn)
+    scores_ready = churn_scores_populated(conn) if churn_ready else False
+    if churn_ready:
         churn_join = "LEFT JOIN APP_CUSTOMER_CHURN_SCORES ch ON ch.CUSTOMER_ID = s.CUSTOMER_ID"
+        value_at_risk_sql = f"COALESCE(SUM(s.customer_value * ({_CHURN_PROB_EXPR})), 0)"
+        weighted_churn_sql = f"""
+            COALESCE(
+                SUM(s.customer_value * ({_CHURN_PROB_EXPR}))
+                / NULLIF(SUM(s.customer_value), 0),
+                0
+            )
+        """
+        high_risk_customers_sql = (
+            "COALESCE(SUM(CASE WHEN UPPER(ch.CHURN_RISK_TIER) = 'HIGH' THEN 1 ELSE 0 END), 0)"
+        )
+        medium_risk_customers_sql = (
+            "COALESCE(SUM(CASE WHEN UPPER(ch.CHURN_RISK_TIER) = 'MEDIUM' THEN 1 ELSE 0 END), 0)"
+        )
+        low_risk_customers_sql = (
+            "COALESCE(SUM(CASE WHEN UPPER(ch.CHURN_RISK_TIER) = 'LOW' THEN 1 ELSE 0 END), 0)"
+        )
+        high_risk_book_sql = (
+            "COALESCE(SUM(CASE WHEN UPPER(ch.CHURN_RISK_TIER) = 'HIGH' "
+            "THEN s.customer_value ELSE 0 END), 0)"
+        )
+    else:
+        churn_join = ""
+        value_at_risk_sql = "0"
+        weighted_churn_sql = "0"
+        high_risk_customers_sql = "0"
+        medium_risk_customers_sql = "0"
+        low_risk_customers_sql = "0"
+        high_risk_book_sql = "0"
 
     if _customer_metrics_ready(conn):
         scoped_sql = f"""
@@ -83,17 +137,12 @@ def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
             COALESCE(SUM(s.customer_value), 0) AS total_book_value,
             COALESCE(AVG(s.customer_value), 0) AS avg_customer_value,
             COALESCE(AVG(s.policy_count), 0) AS avg_policies_per_customer,
-            COALESCE(SUM(s.customer_value * COALESCE(ch.CHURN_PROBABILITY, 0)), 0)
-                AS value_at_risk_12m,
-            COALESCE(
-                SUM(s.customer_value * COALESCE(ch.CHURN_PROBABILITY, 0))
-                / NULLIF(SUM(s.customer_value), 0),
-                0
-            ) AS weighted_churn_probability,
-            COALESCE(SUM(CASE WHEN ch.CHURN_RISK_TIER = 'HIGH' THEN 1 ELSE 0 END), 0)
-                AS high_risk_customers,
-            COALESCE(SUM(CASE WHEN ch.CHURN_RISK_TIER = 'HIGH' THEN s.customer_value ELSE 0 END), 0)
-                AS high_risk_book_value
+            {value_at_risk_sql} AS value_at_risk_12m,
+            {weighted_churn_sql} AS weighted_churn_probability,
+            {high_risk_customers_sql} AS high_risk_customers,
+            {medium_risk_customers_sql} AS medium_risk_customers,
+            {low_risk_customers_sql} AS low_risk_customers,
+            {high_risk_book_sql} AS high_risk_book_value
         FROM scoped s
         {churn_join}
         """,
@@ -101,9 +150,17 @@ def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
     ).fetchone()
 
     total_book = float(row["total_book_value"] or 0)
-    weighted_churn = float(row["weighted_churn_probability"] or 0)
+    weighted_raw = float(row["weighted_churn_probability"] or 0)
     high_risk_book = float(row["high_risk_book_value"] or 0)
-    retention = None if not _churn_table_exists(conn) else round(1.0 - weighted_churn, 4)
+    high_risk_customers = int(row["high_risk_customers"] or 0)
+    medium_risk_customers = int(row["medium_risk_customers"] or 0)
+    weighted_churn, retention = _finalize_churn_kpis(
+        churn_ready=churn_ready,
+        scores_ready=scores_ready,
+        weighted_churn=weighted_raw,
+        high_risk_customers=high_risk_customers,
+        medium_risk_customers=medium_risk_customers,
+    )
     total_policies, active_policies = policy_totals_for_segment(conn, segment)
 
     return {
@@ -113,10 +170,12 @@ def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
         "total_book_value": round(total_book, 2),
         "avg_customer_value": round(float(row["avg_customer_value"] or 0), 2),
         "avg_policies_per_customer": round(float(row["avg_policies_per_customer"] or 0), 2),
-        "weighted_churn_probability": round(weighted_churn, 4) if _churn_table_exists(conn) else None,
+        "weighted_churn_probability": weighted_churn,
         "annual_retention_rate_forecast": retention,
         "value_at_risk_12m": round(float(row["value_at_risk_12m"] or 0), 2),
-        "high_risk_customers": int(row["high_risk_customers"] or 0),
+        "high_risk_customers": high_risk_customers,
+        "medium_risk_customers": medium_risk_customers,
+        "low_risk_customers": int(row["low_risk_customers"] or 0),
         "high_risk_book_pct": round(100.0 * high_risk_book / total_book, 1) if total_book > 0 else 0.0,
     }
 
@@ -257,3 +316,30 @@ def fetch_portfolio_analytics(
         "objectives_segment": seg,
         **objectives,
     }
+
+
+def apply_live_churn_metrics(conn: sqlite3.Connection, payload: dict) -> dict:
+    """Recompute churn KPIs and horizon from current scores (cached charts may be stale)."""
+    seg = normalize_segment(payload.get("segment"))
+    value_points = payload.get("value_points") or []
+    kpis = _fetch_kpis(conn, seg)
+
+    if len(value_points) >= 2:
+        first = float(value_points[0]["total_value"])
+        last = float(value_points[-1]["total_value"])
+        if first > 0:
+            kpis["book_growth_pct"] = round(100.0 * (last - first) / first, 1)
+    elif isinstance(payload.get("kpis"), dict):
+        kpis["book_growth_pct"] = payload["kpis"].get("book_growth_pct")
+
+    churn_forecast = _build_churn_forecast(
+        value_points,
+        weighted_churn=kpis.get("weighted_churn_probability"),
+        annual_retention=kpis.get("annual_retention_rate_forecast"),
+    )
+    out = dict(payload)
+    out["segment"] = seg
+    out["kpis"] = kpis
+    out["churn_forecast"] = churn_forecast
+    out["methodology_note"] = METHODOLOGY_NOTE
+    return out

@@ -119,7 +119,10 @@ def refresh_portfolio_analytics_cache(conn: sqlite3.Connection) -> int:
 def refresh_all_api_caches(conn: sqlite3.Connection) -> dict[str, int | str]:
     """Rebuild list metrics, overview cards, and portfolio analytics caches."""
     from customer360.api.warehouse_admin import refresh_warehouse_manifest
+    from customer360.churn.scoring import try_train_and_score_churn
+    from customer360.paths import default_db_path
 
+    churn_scored = try_train_and_score_churn(default_db_path())
     customers = refresh_customer_metrics(conn)
     refresh_overview_counts(conn)
     segments = refresh_portfolio_analytics_cache(conn)
@@ -127,6 +130,7 @@ def refresh_all_api_caches(conn: sqlite3.Connection) -> dict[str, int | str]:
     return {
         "customer_metrics_rows": customers,
         "portfolio_segments_cached": segments,
+        "churn_model_scored": int(churn_scored),
         "refreshed_at": datetime.now(timezone.utc).isoformat(),
     }
 

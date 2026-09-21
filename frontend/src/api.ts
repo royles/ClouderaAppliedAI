@@ -267,6 +267,8 @@ export type PortfolioKpis = {
   annual_retention_rate_forecast?: number | null;
   value_at_risk_12m: number;
   high_risk_customers: number;
+  medium_risk_customers?: number;
+  low_risk_customers?: number;
   high_risk_book_pct: number;
   book_growth_pct?: number | null;
 };

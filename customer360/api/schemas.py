@@ -54,6 +54,8 @@ class PortfolioKpis(BaseModel):
     annual_retention_rate_forecast: float | None = None
     value_at_risk_12m: float = 0
     high_risk_customers: int = 0
+    medium_risk_customers: int = 0
+    low_risk_customers: int = 0
     high_risk_book_pct: float = 0
     book_growth_pct: float | None = None
 

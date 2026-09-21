@@ -12,9 +12,8 @@ export default function EngagementObjectiveChart({ series, loading }: Props) {
     period: p.period,
     kind: "actual" as const,
     tooltipLines: [
-      `${formatTooltipCount(p.interaction_events)} total interactions`,
+      `${formatTooltipCount(p.interaction_events)} all interactions`,
       `${formatTooltipCount(p.digital_touchpoints)} digital touchpoints`,
-      `${formatTooltipCount(p.review_events)} reviews`,
     ],
   }));
 

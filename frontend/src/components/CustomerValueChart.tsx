@@ -6,6 +6,7 @@ import {
   CustomerChurnInput,
   ExtendedValuePoint,
 } from "../customerValueChurnForecast";
+import { LegendSwatch } from "./charts/AnalyticsLineChart";
 import ChartFloatingTooltip from "./charts/ChartFloatingTooltip";
 import {
   chartPointerFromSvgEvent,
@@ -509,20 +510,20 @@ export default function CustomerValueChart({
         </ChartFloatingTooltip>
       )}
 
-      <ul className="chart-legend">
+      <ul className="chart-legend chart-legend-compact">
         <li>
-          <span className="swatch swatch-total" /> Total customer value (actual)
+          <LegendSwatch visualKey="book-total" /> Total customer value (actual)
         </li>
         {showChurnForecast && forecastLegendLabel && (
           <li>
-            <span className="swatch swatch-forecast" /> {forecastLegendLabel}
+            <LegendSwatch visualKey="churn-book-forecast" /> {forecastLegendLabel}
           </li>
         )}
         <li>
-          <span className="swatch swatch-investment" /> Investment accumulation
+          <LegendSwatch visualKey="book-investment" /> Investment accumulation
         </li>
         <li>
-          <span className="swatch swatch-coverage" /> Coverage & savings (policy status)
+          <LegendSwatch visualKey="book-coverage" /> Coverage &amp; savings (policy status)
         </li>
       </ul>
     </div>

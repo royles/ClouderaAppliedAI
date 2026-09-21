@@ -139,9 +139,9 @@ def build_interaction_events(
         for _ in range(base_events):
             event_id += 1
             if rng.random() < recent_bias:
-                days_ago = rng.randint(1, 45)
+                days_ago = rng.randint(1, 120)
             else:
-                days_ago = rng.randint(46, 150)
+                days_ago = rng.randint(121, 365 * 5)
             event_ts = REFERENCE - timedelta(days=days_ago, hours=rng.randint(0, 10))
 
             roll = rng.random()

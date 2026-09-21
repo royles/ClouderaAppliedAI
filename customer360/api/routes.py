@@ -189,6 +189,9 @@ def _portfolio_analytics_response(
 ) -> PortfolioAnalyticsResponse:
     enriched = dict(payload)
     if conn is not None:
+        from customer360.api.portfolio_analytics import apply_live_churn_metrics
+
+        enriched = apply_live_churn_metrics(conn, enriched)
         kpis = enriched.get("kpis")
         if isinstance(kpis, dict) and "total_policies" not in kpis:
             total_policies, active_policies = policy_totals_for_segment(

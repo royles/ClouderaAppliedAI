@@ -35,6 +35,12 @@ export default function DashboardPage() {
   const prefetchStartedRef = useRef(false);
   const segmentRef = useRef(segment);
   segmentRef.current = segment;
+  const [bookBaseline, setBookBaseline] = useState<PortfolioAnalytics | null>(null);
+
+  const syncBookBaselineFromCache = useCallback(() => {
+    const all = portfolioCacheRef.current.get("customers_all");
+    if (all) setBookBaseline(all);
+  }, []);
 
   const activeDomain = useMemo((): DomainCount | null => {
     if (segment === "customers_all" || !overview?.domains) return null;
@@ -70,13 +76,14 @@ export default function DashboardPage() {
 
   const applySegmentFromCache = useCallback((seg: CustomerSegment) => {
     const cached = portfolioCacheRef.current.get(seg);
-    if (cached) {
-      setPortfolioAnalytics(cached);
+    if (cached && cached.segment === seg) {
+      setPortfolioAnalytics({ ...cached, value_points: [...cached.value_points] });
       setPortfolioLoading(false);
+      syncBookBaselineFromCache();
       return true;
     }
     return false;
-  }, []);
+  }, [syncBookBaselineFromCache]);
 
   useEffect(() => {
     if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
@@ -89,6 +96,7 @@ export default function DashboardPage() {
         const data = await fetchPortfolioAnalytics(segment);
         if (cancelled) return;
         portfolioCacheRef.current.set(segment, data);
+        syncBookBaselineFromCache();
         if (segmentRef.current === segment) {
           setPortfolioAnalytics(data);
         }
@@ -106,7 +114,7 @@ export default function DashboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [segment, overviewLoading, location.pathname, applySegmentFromCache]);
+  }, [segment, overviewLoading, location.pathname, applySegmentFromCache, syncBookBaselineFromCache]);
 
   useEffect(() => {
     if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
@@ -117,6 +125,7 @@ export default function DashboardPage() {
       try {
         const cache = await prefetchPortfolioAnalytics(PORTFOLIO_PREFETCH_SEGMENTS);
         portfolioCacheRef.current = cache;
+        syncBookBaselineFromCache();
         const active = segmentRef.current;
         if (cache.has(active)) {
           setPortfolioAnalytics(cache.get(active)!);
@@ -126,10 +135,26 @@ export default function DashboardPage() {
         /* segment effect falls back to single-segment fetch */
       }
     })();
+  }, [overviewLoading, location.pathname, syncBookBaselineFromCache]);
+
+  useEffect(() => {
+    if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
+    if (portfolioCacheRef.current.has("customers_all")) return;
+    let cancelled = false;
+    void fetchPortfolioAnalytics("customers_all").then((data) => {
+      if (cancelled) return;
+      portfolioCacheRef.current.set("customers_all", data);
+      setBookBaseline(data);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [overviewLoading, location.pathname]);
 
   const setSegment = (next: CustomerSegment) => {
-    applySegmentFromCache(next);
+    if (!applySegmentFromCache(next)) {
+      setPortfolioLoading(true);
+    }
     setSearchParams((prev) => patchBusinessSegment(prev, next), { replace: true });
   };
 
@@ -162,6 +187,7 @@ export default function DashboardPage() {
         />
         <PortfolioAnalyticsSection
           data={portfolioAnalytics}
+          bookBaseline={bookBaseline}
           loading={portfolioLoading && !portfolioAnalytics}
           refreshing={portfolioLoading && portfolioAnalytics != null}
           cohortLabel={activeDomain?.domain ?? null}
