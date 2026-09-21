@@ -27,7 +27,9 @@ from customer360.api.schemas import (
     PolicyRow,
     SimulateSendRequest,
     SimulateSendResponse,
+    ValueHistoryResponse,
 )
+from customer360.api.value_history import fetch_value_history
 from customer360.actions.draft import build_action_draft, classify_recommendation, simulate_send
 from customer360.interactions.summary import load_interaction_bundle
 from customer360.bedrock.config import get_bedrock_settings
@@ -81,6 +83,19 @@ def bedrock_status() -> BedrockStatusResponse:
         model_id=settings.model_id,
         region=settings.bedrock_region,
     )
+
+
+@router.get("/value-history", response_model=ValueHistoryResponse)
+def portfolio_value_history(
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+    segment: str | None = Query(
+        None,
+        description="Same segment keys as customer list / overview cards",
+    ),
+) -> ValueHistoryResponse:
+    seg = normalize_segment(segment)
+    points = fetch_value_history(conn, segment=seg)
+    return ValueHistoryResponse(points=points, segment=seg)
 
 
 @router.get("/overview", response_model=OverviewResponse)
@@ -270,6 +285,21 @@ def customer_detail(
         interactions=[InteractionEventRow(**e) for e in interaction_bundle["events"]],
         interaction_summary=InteractionSummary(**interaction_bundle["summary"]),
     )
+
+
+@router.get("/customers/{customer_id}/value-history", response_model=ValueHistoryResponse)
+def customer_value_history(
+    customer_id: int,
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+) -> ValueHistoryResponse:
+    row = conn.execute(
+        "SELECT 1 FROM DWH_DIM_CUSTOMERS_UNIQUE WHERE CURRENT_IND = 1 AND CUSTOMER_ID = ?",
+        (customer_id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    points = fetch_value_history(conn, customer_id=customer_id)
+    return ValueHistoryResponse(points=points, customer_id=customer_id)
 
 
 def _insight_action_meta(text: str) -> dict:

@@ -22,6 +22,19 @@ class OverviewResponse(BaseModel):
     database_path: str
 
 
+class ValueHistoryPoint(BaseModel):
+    period: str
+    investment_value: float = 0
+    coverage_value: float = 0
+    total_value: float = 0
+
+
+class ValueHistoryResponse(BaseModel):
+    points: list[ValueHistoryPoint] = Field(default_factory=list)
+    segment: str | None = None
+    customer_id: int | None = None
+
+
 class CustomerSummary(BaseModel):
     customer_id: int
     customer_key: str

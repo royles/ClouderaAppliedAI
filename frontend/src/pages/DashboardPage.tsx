@@ -7,10 +7,13 @@ import {
   DomainCount,
   fetchCustomers,
   fetchOverview,
+  fetchPortfolioValueHistory,
   Overview,
   SortOrder,
+  ValueHistoryPoint,
 } from "../api";
 import ChurnBadge from "../ChurnBadge";
+import CustomerValueChart from "../components/CustomerValueChart";
 import {
   formatCity,
   formatLastLogin,
@@ -31,6 +34,8 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
+  const [valueHistory, setValueHistory] = useState<ValueHistoryPoint[]>([]);
+  const [valueHistoryLoading, setValueHistoryLoading] = useState(true);
 
   const loadCustomers = useCallback(
     async (
@@ -89,6 +94,24 @@ export default function DashboardPage() {
     }, 300);
     return () => window.clearTimeout(handle);
   }, [search, segment, sortBy, sortOrder, loadCustomers]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setValueHistoryLoading(true);
+      try {
+        const data = await fetchPortfolioValueHistory(segment);
+        if (!cancelled) setValueHistory(data.points ?? []);
+      } catch {
+        if (!cancelled) setValueHistory([]);
+      } finally {
+        if (!cancelled) setValueHistoryLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [segment]);
 
   const onCardClick = (domain: DomainCount) => {
     const key = domain.filter_key as CustomerSegment;
@@ -159,6 +182,16 @@ export default function DashboardPage() {
             })}
           </div>
         )}
+        <CustomerValueChart
+          title="Accumulated customer value over time"
+          subtitle={
+            activeDomain
+              ? `Filtered cohort: ${activeDomain.domain} — investment tracks plus coverage/savings snapshots (ILS).`
+              : "Book-wide monthly history — investment accumulation and insurance status values (ILS)."
+          }
+          points={valueHistory}
+          loading={valueHistoryLoading}
+        />
       </section>
 
       <section className="panel">

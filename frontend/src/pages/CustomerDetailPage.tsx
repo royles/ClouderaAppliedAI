@@ -1,8 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { CustomerDetail, fetchCustomer } from "../api";
+import {
+  CustomerDetail,
+  fetchCustomer,
+  fetchCustomerValueHistory,
+  ValueHistoryPoint,
+} from "../api";
 import ChurnBadge from "../ChurnBadge";
 import CustomerInsightsPanel from "../components/CustomerInsightsPanel";
+import CustomerValueChart from "../components/CustomerValueChart";
 import {
   formatCity,
   formatLastLogin,
@@ -39,6 +45,8 @@ export default function CustomerDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("policies");
   const [activePolicy, setActivePolicy] = useState<number | null>(null);
+  const [valueHistory, setValueHistory] = useState<ValueHistoryPoint[]>([]);
+  const [valueHistoryLoading, setValueHistoryLoading] = useState(true);
 
   useEffect(() => {
     if (!Number.isFinite(id)) {
@@ -54,6 +62,25 @@ export default function CustomerDetailPage() {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Customer not found");
         }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    if (!Number.isFinite(id)) return;
+    let cancelled = false;
+    (async () => {
+      setValueHistoryLoading(true);
+      try {
+        const data = await fetchCustomerValueHistory(id);
+        if (!cancelled) setValueHistory(data.points ?? []);
+      } catch {
+        if (!cancelled) setValueHistory([]);
+      } finally {
+        if (!cancelled) setValueHistoryLoading(false);
       }
     })();
     return () => {
@@ -145,6 +172,15 @@ export default function CustomerDetailPage() {
             <div>{formatLastLogin(profile.last_login)}</div>
           </div>
         </div>
+      </section>
+
+      <section className="panel">
+        <CustomerValueChart
+          title="Lifetime value trajectory"
+          subtitle="Monthly investment accumulation plus coverage and savings snapshots for this customer."
+          points={valueHistory}
+          loading={valueHistoryLoading}
+        />
       </section>
 
       <CustomerInsightsPanel

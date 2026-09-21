@@ -18,6 +18,19 @@ export type Overview = {
   database_path: string;
 };
 
+export type ValueHistoryPoint = {
+  period: string;
+  investment_value: number;
+  coverage_value: number;
+  total_value: number;
+};
+
+export type ValueHistory = {
+  points: ValueHistoryPoint[];
+  segment?: string | null;
+  customer_id?: number | null;
+};
+
 export type CustomerSummary = {
   customer_id: number;
   customer_key: string;
@@ -134,6 +147,18 @@ export type BedrockStatus = {
 export const fetchBedrockStatus = () => getJson<BedrockStatus>("/api/bedrock/status");
 
 export const fetchOverview = () => getJson<Overview>("/api/overview");
+
+export const fetchPortfolioValueHistory = (segment?: CustomerSegment | null) => {
+  const params = new URLSearchParams();
+  if (segment && segment !== "customers_all") {
+    params.set("segment", segment);
+  }
+  const qs = params.toString();
+  return getJson<ValueHistory>(`/api/value-history${qs ? `?${qs}` : ""}`);
+};
+
+export const fetchCustomerValueHistory = (customerId: number) =>
+  getJson<ValueHistory>(`/api/customers/${customerId}/value-history`);
 
 export const fetchCustomers = (options?: {
   q?: string;
