@@ -141,7 +141,7 @@ def list_customers(
     ),
     sort_by: str | None = Query(
         None,
-        description="Sort key: customer_value (default), churn_risk, name, policy_count, or investment_count",
+        description="Sort key: churn_risk (default), customer_value, name, policy_count, or investment_count",
     ),
     sort_order: str | None = Query(
         None,

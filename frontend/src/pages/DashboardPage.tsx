@@ -40,7 +40,7 @@ function patchDashboardParams(
   };
   if ("segment" in patch) apply("segment", patch.segment ?? null, "customers_all");
   if ("q" in patch) apply("q", patch.q ?? null);
-  if ("sortBy" in patch) apply("sort", patch.sortBy ?? null, "customer_value");
+  if ("sortBy" in patch) apply("sort", patch.sortBy ?? null, "churn_risk");
   if ("sortOrder" in patch) apply("order", patch.sortOrder ?? null, "desc");
   if ("page" in patch) {
     const p = patch.page;
@@ -375,8 +375,8 @@ export default function DashboardPage() {
                 value={sortBy}
                 onChange={(e) => setRankBy(e.target.value as CustomerSortBy)}
               >
+                <option value="churn_risk">Churn, then value</option>
                 <option value="customer_value">Value, then churn</option>
-                <option value="churn_risk">Churn risk</option>
                 <option value="name">Name (A–Z)</option>
                 <option value="policy_count">Policy count</option>
                 <option value="investment_count">Investment tracks</option>

@@ -14,7 +14,7 @@ SORT_SQL: dict[str, str] = {
     "customer_value": "customer_value",
 }
 
-DEFAULT_SORT_BY = "customer_value"
+DEFAULT_SORT_BY = "churn_risk"
 
 
 def normalize_sort_by(value: str | None) -> str:
@@ -50,16 +50,17 @@ def order_clause(sort_by: str, sort_order: str, *, churn_scores_available: bool 
         return f"customer_value {direction}, c.CUSTOMER_NAME ASC"
 
     if sort_by == "churn_risk":
+        value_tiebreak = "customer_value DESC, c.CUSTOMER_NAME ASC"
         if sort_order == "desc":
             return (
                 "CASE ch.CHURN_RISK_TIER "
                 "WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END ASC, "
-                "ch.CHURN_PROBABILITY DESC, c.CUSTOMER_NAME ASC"
+                f"ch.CHURN_PROBABILITY DESC, {value_tiebreak}"
             )
         return (
             "CASE ch.CHURN_RISK_TIER "
             "WHEN 'LOW' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'HIGH' THEN 3 ELSE 4 END ASC, "
-            "ch.CHURN_PROBABILITY ASC, c.CUSTOMER_NAME ASC"
+            f"ch.CHURN_PROBABILITY ASC, {value_tiebreak}"
         )
     column = SORT_SQL[sort_by]
     direction = "DESC" if sort_order == "desc" else "ASC"
