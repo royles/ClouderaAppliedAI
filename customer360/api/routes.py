@@ -14,6 +14,7 @@ from customer360.api.schemas import (
     CustomerDetailResponse,
     CustomerInsightsResponse,
     CustomerProfile,
+    CustomerListResponse,
     CustomerSummary,
     DomainCount,
     ForeclosureRow,
@@ -117,7 +118,20 @@ def overview(conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> OverviewRe
     )
 
 
-@router.get("/customers", response_model=list[CustomerSummary])
+def _customer_list_where(
+    seg: str, q: str | None
+) -> tuple[str, list[object]]:
+    segment_sql = SEGMENT_WHERE[seg]
+    where = f"c.CURRENT_IND = 1 AND ({segment_sql})"
+    params: list[object] = []
+    if q and q.strip():
+        where += " AND (c.CUSTOMER_NAME LIKE ? OR CAST(c.CUSTOMER_ID AS TEXT) LIKE ?)"
+        like = f"%{q.strip()}%"
+        params.extend([like, like])
+    return where, params
+
+
+@router.get("/customers", response_model=CustomerListResponse)
 def list_customers(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
     q: str | None = Query(None, description="Search name or customer ID"),
@@ -134,9 +148,16 @@ def list_customers(
         description="Sort direction: asc or desc (defaults: desc for counts, asc for name)",
     ),
     limit: int = Query(50, ge=1, le=200),
-) -> list[CustomerSummary]:
+    offset: int = Query(0, ge=0),
+) -> CustomerListResponse:
     seg = normalize_segment(segment)
-    segment_sql = SEGMENT_WHERE[seg]
+    where_sql, params = _customer_list_where(seg, q)
+
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM DWH_DIM_CUSTOMERS_UNIQUE c WHERE {where_sql}",
+        params,
+    ).fetchone()[0]
+
     churn_join = ""
     churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"
     churn_scores_available = _churn_table_exists(conn)
@@ -174,17 +195,20 @@ def list_customers(
             {churn_cols}
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
         {churn_join}
-        WHERE c.CURRENT_IND = 1 AND ({segment_sql})
+        WHERE {where_sql}
     """
-    params: list[object] = []
-    if q and q.strip():
-        sql += " AND (c.CUSTOMER_NAME LIKE ? OR CAST(c.CUSTOMER_ID AS TEXT) LIKE ?)"
-        like = f"%{q.strip()}%"
-        params.extend([like, like])
-    sql += f" ORDER BY {order_clause(sort_key, order_key)} LIMIT ?"
-    params.append(limit)
-    rows = conn.execute(sql, params).fetchall()
-    return [CustomerSummary(**dict(r)) for r in rows]
+    list_params = list(params)
+    sql += f" ORDER BY {order_clause(sort_key, order_key)} LIMIT ? OFFSET ?"
+    list_params.extend([limit, offset])
+    rows = conn.execute(sql, list_params).fetchall()
+    customers = [CustomerSummary(**dict(r)) for r in rows]
+    return CustomerListResponse(
+        customers=customers,
+        total=int(total),
+        limit=limit,
+        offset=offset,
+        truncated=offset + len(customers) < int(total),
+    )
 
 
 @router.get("/customers/{customer_id}", response_model=CustomerDetailResponse)

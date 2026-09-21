@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActionDraft,
   SimulateSendResult,
@@ -21,16 +21,24 @@ export default function InsightActionModal({
   onClose,
 }: Props) {
   const [draft, setDraft] = useState<ActionDraft | null>(null);
+  const [body, setBody] = useState("");
+  const [subject, setSubject] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<SimulateSendResult | null>(null);
+  const [copied, setCopied] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        setDraft(await draftInsightAction(customerId, { recommendation, source }));
+        const next = await draftInsightAction(customerId, { recommendation, source });
+        if (cancelled) return;
+        setDraft(next);
+        setBody(next.body ?? "");
+        setSubject(next.subject ?? "");
         setError(null);
       } catch (e) {
         if (!cancelled) {
@@ -45,16 +53,25 @@ export default function InsightActionModal({
     };
   }, [customerId, recommendation, source]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    dialogRef.current?.focus();
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   async function handleSend() {
-    if (!draft?.actionable || !draft.body || !draft.channel) return;
+    if (!draft?.actionable || !body.trim() || !draft.channel) return;
     setSending(true);
     setError(null);
     try {
       setSent(
         await simulateInsightSend(customerId, {
           channel: draft.channel,
-          subject: draft.subject ?? undefined,
-          body: draft.body,
+          subject: subject.trim() || undefined,
+          body: body.trim(),
         }),
       );
     } catch (e) {
@@ -64,12 +81,24 @@ export default function InsightActionModal({
     }
   }
 
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Could not copy to clipboard");
+    }
+  }
+
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
       <div
+        ref={dialogRef}
         className="modal panel"
         role="dialog"
         aria-labelledby="action-draft-title"
+        tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="panel-head">
@@ -78,6 +107,11 @@ export default function InsightActionModal({
             Close
           </button>
         </div>
+
+        <p className="muted small modal-disclaimer">
+          Demo only — drafts are generated from account data; sends are simulated and not
+          delivered to customers.
+        </p>
 
         {loading && (
           <p className="muted">Generating draft with Amazon Bedrock from account data…</p>
@@ -126,15 +160,30 @@ export default function InsightActionModal({
               </div>
             </div>
 
-            {draft.subject && (
+            {draft.channel === "email" && (
               <>
-                <span className="label">Subject</span>
-                <div className="draft-subject">{draft.subject}</div>
+                <label className="label" htmlFor="draft-subject">
+                  Subject
+                </label>
+                <input
+                  id="draft-subject"
+                  className="control control-full"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                />
               </>
             )}
 
-            <span className="label">Body</span>
-            <pre className="draft-body">{draft.body}</pre>
+            <label className="label" htmlFor="draft-body">
+              Body
+            </label>
+            <textarea
+              id="draft-body"
+              className="draft-body draft-body-edit"
+              rows={10}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+            />
 
             {sent ? (
               <p className="send-success">
@@ -142,10 +191,13 @@ export default function InsightActionModal({
               </p>
             ) : (
               <div className="modal-actions">
+                <button type="button" className="control control-btn" onClick={handleCopy}>
+                  {copied ? "Copied" : "Copy body"}
+                </button>
                 <button
                   type="button"
                   className="btn"
-                  disabled={sending}
+                  disabled={sending || !body.trim()}
                   onClick={handleSend}
                 >
                   {sending

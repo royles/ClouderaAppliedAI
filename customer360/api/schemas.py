@@ -49,6 +49,14 @@ class CustomerSummary(BaseModel):
     churn_risk_tier: str | None = None
 
 
+class CustomerListResponse(BaseModel):
+    customers: list[CustomerSummary]
+    total: int
+    limit: int
+    offset: int = 0
+    truncated: bool = False
+
+
 class CustomerProfile(BaseModel):
     customer_id: int
     customer_key: str

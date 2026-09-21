@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import {
   CustomerSegment,
   CustomerSortBy,
@@ -12,8 +12,10 @@ import {
   SortOrder,
   ValueHistoryPoint,
 } from "../api";
+import Breadcrumbs from "../components/Breadcrumbs";
 import ChurnBadge from "../ChurnBadge";
 import CustomerValueChart from "../components/CustomerValueChart";
+import { DASHBOARD_PAGE_SIZE, parseDashboardSearch } from "../dashboardUrl";
 import {
   formatCity,
   formatLastLogin,
@@ -23,23 +25,79 @@ import {
   maskPhone,
 } from "../pii";
 
+function patchDashboardParams(
+  prev: URLSearchParams,
+  patch: Partial<{
+    segment: CustomerSegment;
+    q: string | null;
+    sortBy: CustomerSortBy;
+    sortOrder: SortOrder;
+    page: number | null;
+  }>,
+): URLSearchParams {
+  const next = new URLSearchParams(prev);
+  const apply = (key: string, value: string | null, omitWhen?: string) => {
+    if (value == null || value === "" || value === omitWhen) next.delete(key);
+    else next.set(key, value);
+  };
+  if ("segment" in patch) apply("segment", patch.segment ?? null, "customers_all");
+  if ("q" in patch) apply("q", patch.q ?? null);
+  if ("sortBy" in patch) apply("sort", patch.sortBy ?? null, "churn_risk");
+  if ("sortOrder" in patch) apply("order", patch.sortOrder ?? null, "desc");
+  if ("page" in patch) {
+    const p = patch.page;
+    apply("page", p == null || p <= 1 ? null : String(p));
+  }
+  return next;
+}
+
 export default function DashboardPage() {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlState = useMemo(
+    () => parseDashboardSearch(searchParams),
+    [searchParams],
+  );
+  const { segment, sortBy, sortOrder, page } = urlState;
+
   const [overview, setOverview] = useState<Overview | null>(null);
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [segment, setSegment] = useState<CustomerSegment>("customers_all");
-  const [sortBy, setSortBy] = useState<CustomerSortBy>("churn_risk");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
+  const [listTotal, setListTotal] = useState(0);
+  const [listTruncated, setListTruncated] = useState(false);
+  const [search, setSearch] = useState(urlState.q);
+  const [debouncedSearch, setDebouncedSearch] = useState(urlState.q);
   const [error, setError] = useState<string | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [valueHistory, setValueHistory] = useState<ValueHistoryPoint[]>([]);
   const [valueHistoryLoading, setValueHistoryLoading] = useState(true);
+  const [overviewUpdatedAt, setOverviewUpdatedAt] = useState<Date | null>(null);
   const customersRequestRef = useRef(0);
   const valueHistoryRequestRef = useRef(0);
   const valueHistorySegmentRef = useRef<CustomerSegment | null>(null);
+
+  const dashboardReturn = location.pathname + location.search;
+
+  useEffect(() => {
+    setSearch(urlState.q);
+    setDebouncedSearch(urlState.q);
+  }, [urlState.q]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      const trimmed = search.trim();
+      setDebouncedSearch(trimmed);
+      setSearchParams(
+        (prev) => {
+          const currentQ = prev.get("q") ?? "";
+          if (currentQ === trimmed) return prev;
+          return patchDashboardParams(prev, { q: trimmed || null, page: 1 });
+        },
+        { replace: true },
+      );
+    }, 300);
+    return () => window.clearTimeout(handle);
+  }, [search, setSearchParams]);
 
   const activeDomain = useMemo((): DomainCount | null => {
     if (segment === "customers_all" || !overview?.domains) return null;
@@ -47,12 +105,6 @@ export default function DashboardPage() {
     return match ?? null;
   }, [segment, overview]);
 
-  useEffect(() => {
-    const handle = window.setTimeout(() => setDebouncedSearch(search), 300);
-    return () => window.clearTimeout(handle);
-  }, [search]);
-
-  // Refetch overview when the user lands on the dashboard route.
   useEffect(() => {
     if (location.pathname !== "/") return;
 
@@ -63,6 +115,7 @@ export default function DashboardPage() {
         const ov = await fetchOverview();
         if (!cancelled) {
           setOverview(ov);
+          setOverviewUpdatedAt(new Date());
           setError(null);
         }
       } catch (e) {
@@ -84,19 +137,23 @@ export default function DashboardPage() {
 
     const requestId = ++customersRequestRef.current;
     let cancelled = false;
+    const offset = (page - 1) * DASHBOARD_PAGE_SIZE;
 
     (async () => {
       setTableLoading(true);
       try {
-        const rows = await fetchCustomers({
+        const result = await fetchCustomers({
           q: debouncedSearch,
           segment,
           sortBy,
           sortOrder,
-          limit: 200,
+          limit: DASHBOARD_PAGE_SIZE,
+          offset,
         });
         if (cancelled || requestId !== customersRequestRef.current) return;
-        setCustomers(rows);
+        setCustomers(result.customers);
+        setListTotal(result.total);
+        setListTruncated(result.truncated);
         setError(null);
       } catch (e) {
         if (cancelled || requestId !== customersRequestRef.current) return;
@@ -117,6 +174,7 @@ export default function DashboardPage() {
     segment,
     sortBy,
     sortOrder,
+    page,
     location.pathname,
     location.key,
     overviewLoading,
@@ -160,27 +218,57 @@ export default function DashboardPage() {
     overviewLoading,
   ]);
 
+  const setSegment = (next: CustomerSegment) => {
+    setSearchParams((prev) => patchDashboardParams(prev, { segment: next, page: 1 }), {
+      replace: true,
+    });
+  };
+
   const onCardClick = (domain: DomainCount) => {
     const key = domain.filter_key as CustomerSegment;
-    setSegment((prev) => (prev === key ? "customers_all" : key));
+    setSegment(segment === key ? "customers_all" : key);
   };
 
-  const clearFilter = () => {
-    setSegment("customers_all");
-  };
+  const clearFilter = () => setSegment("customers_all");
 
   const setRankBy = (by: CustomerSortBy) => {
-    setSortBy(by);
-    if (by === "churn_risk" || by === "policy_count" || by === "investment_count") {
-      setSortOrder("desc");
-    } else {
-      setSortOrder("asc");
-    }
+    const order: SortOrder =
+      by === "churn_risk" || by === "policy_count" || by === "investment_count"
+        ? "desc"
+        : "asc";
+    setSearchParams(
+      (prev) => patchDashboardParams(prev, { sortBy: by, sortOrder: order, page: 1 }),
+      { replace: true },
+    );
   };
 
   const toggleSortOrder = () => {
-    setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    setSearchParams(
+      (prev) =>
+        patchDashboardParams(prev, {
+          sortOrder: sortOrder === "asc" ? "desc" : "asc",
+          page: 1,
+        }),
+      { replace: true },
+    );
   };
+
+  const toggleColumnSort = (by: CustomerSortBy) => {
+    if (sortBy === by) {
+      toggleSortOrder();
+      return;
+    }
+    setRankBy(by);
+  };
+
+  const sortIndicator = (by: CustomerSortBy) => {
+    if (sortBy !== by) return "";
+    return sortOrder === "desc" ? " ↓" : " ↑";
+  };
+
+  const pageCount = Math.max(1, Math.ceil(listTotal / DASHBOARD_PAGE_SIZE));
+  const showingFrom = listTotal === 0 ? 0 : (page - 1) * DASHBOARD_PAGE_SIZE + 1;
+  const showingTo = Math.min(page * DASHBOARD_PAGE_SIZE, listTotal);
 
   const showRank =
     sortBy === "churn_risk" ||
@@ -188,17 +276,40 @@ export default function DashboardPage() {
     sortBy === "investment_count";
 
   if (overviewLoading && !overview) {
-    return <p className="muted">Loading warehouse…</p>;
+    return (
+      <>
+        <Breadcrumbs items={[{ label: "Dashboard" }]} />
+        <section className="panel">
+          <div className="skeleton skeleton-title" />
+          <div className="stat-grid">
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} className="skeleton skeleton-stat" />
+            ))}
+          </div>
+        </section>
+      </>
+    );
   }
   if (error && !overview) return <p className="error">{error}</p>;
 
   return (
     <>
+      <Breadcrumbs items={[{ label: "Dashboard" }]} />
       <section className="panel">
-        <h1>Warehouse overview</h1>
-        <p className="muted small">
-          Click a card to filter the customer table and value chart. Click again to clear.
-        </p>
+        <div className="panel-head">
+          <div>
+            <h1>Warehouse overview</h1>
+            <p className="muted small">
+              Click a card to filter the customer table and value chart. Click again to
+              clear.
+            </p>
+          </div>
+          {overviewUpdatedAt && (
+            <p className="muted small data-freshness">
+              Counts refreshed {overviewUpdatedAt.toLocaleTimeString()}
+            </p>
+          )}
+        </div>
         {overview && (
           <div className="stat-grid">
             {(overview.domains ?? []).map((d) => {
@@ -300,26 +411,46 @@ export default function DashboardPage() {
             <thead>
               <tr>
                 {showRank && <th>#</th>}
-                <th>Name</th>
+                <th>
+                  <button
+                    type="button"
+                    className="th-sort-btn"
+                    onClick={() => toggleColumnSort("name")}
+                  >
+                    Name{sortIndicator("name")}
+                  </button>
+                </th>
                 <th>ID</th>
                 <th>City</th>
                 <th>Email</th>
                 <th>Mobile</th>
-                <th
-                  className={sortBy === "policy_count" ? "th-sorted" : undefined}
-                >
-                  Policies
+                <th>
+                  <button
+                    type="button"
+                    className={`th-sort-btn${sortBy === "policy_count" ? " th-sorted" : ""}`}
+                    onClick={() => toggleColumnSort("policy_count")}
+                  >
+                    Policies{sortIndicator("policy_count")}
+                  </button>
                 </th>
-                <th
-                  className={
-                    sortBy === "investment_count" ? "th-sorted" : undefined
-                  }
-                >
-                  Investments
+                <th>
+                  <button
+                    type="button"
+                    className={`th-sort-btn${sortBy === "investment_count" ? " th-sorted" : ""}`}
+                    onClick={() => toggleColumnSort("investment_count")}
+                  >
+                    Investments{sortIndicator("investment_count")}
+                  </button>
                 </th>
                 <th>Last login</th>
-                <th className={sortBy === "churn_risk" ? "th-sorted" : undefined}>
-                  Churn risk
+                <th>
+                  <button
+                    type="button"
+                    className={`th-sort-btn${sortBy === "churn_risk" ? " th-sorted" : ""}`}
+                    onClick={() => toggleColumnSort("churn_risk")}
+                  >
+                    Churn risk{sortIndicator("churn_risk")}
+                  </button>
                 </th>
               </tr>
             </thead>
@@ -333,14 +464,24 @@ export default function DashboardPage() {
               ) : (
                 customers.map((c, index) => (
                   <tr key={c.customer_id} className="table-row-click">
-                    {showRank && <td className="rank-cell">{index + 1}</td>}
+                    {showRank && (
+                      <td className="rank-cell">
+                        {showingFrom + index}
+                      </td>
+                    )}
                     <td>
-                      <Link to={`/customers/${c.customer_id}`}>
+                      <Link
+                        to={`/customers/${c.customer_id}`}
+                        state={{ dashboardReturn }}
+                      >
                         {displayCustomerName(c.customer_name)}
                       </Link>
                     </td>
                     <td>
-                      <Link to={`/customers/${c.customer_id}`}>
+                      <Link
+                        to={`/customers/${c.customer_id}`}
+                        state={{ dashboardReturn }}
+                      >
                         {displayCustomerId(c.customer_id)}
                       </Link>
                     </td>
@@ -361,6 +502,47 @@ export default function DashboardPage() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="table-footer">
+          <p className="muted small">
+            {listTotal === 0
+              ? "No matching customers"
+              : `Showing ${showingFrom.toLocaleString()}–${showingTo.toLocaleString()} of ${listTotal.toLocaleString()}`}
+            {listTruncated && " · refine search or filter to narrow results"}
+          </p>
+          {pageCount > 1 && (
+            <div className="pagination">
+              <button
+                type="button"
+                className="control control-btn"
+                disabled={page <= 1 || tableLoading}
+                onClick={() =>
+                  setSearchParams(
+                    (prev) => patchDashboardParams(prev, { page: page - 1 }),
+                    { replace: true },
+                  )
+                }
+              >
+                Previous
+              </button>
+              <span className="muted small">
+                Page {page} of {pageCount}
+              </span>
+              <button
+                type="button"
+                className="control control-btn"
+                disabled={page >= pageCount || tableLoading}
+                onClick={() =>
+                  setSearchParams(
+                    (prev) => patchDashboardParams(prev, { page: page + 1 }),
+                    { replace: true },
+                  )
+                }
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
       </section>
     </>

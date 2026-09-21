@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { ValueHistoryPoint } from "../api";
 
 type Props = {
@@ -25,6 +26,14 @@ function formatAxisMoney(n: number) {
   return `₪${n.toFixed(0)}`;
 }
 
+function formatTooltipMoney(n: number) {
+  return new Intl.NumberFormat("en-IL", {
+    style: "currency",
+    currency: "ILS",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
+
 function linePath(
   values: number[],
   width: number,
@@ -46,6 +55,24 @@ function linePath(
     .join(" ");
 }
 
+function pointCoords(
+  index: number,
+  value: number,
+  count: number,
+  width: number,
+  height: number,
+  padX: number,
+  padY: number,
+  minY: number,
+  maxY: number,
+) {
+  const span = maxY - minY || 1;
+  const stepX = count > 1 ? (width - padX * 2) / (count - 1) : 0;
+  const x = padX + index * stepX;
+  const y = padY + (height - padY * 2) * (1 - (value - minY) / span);
+  return { x, y };
+}
+
 export default function CustomerValueChart({
   title,
   subtitle,
@@ -57,6 +84,22 @@ export default function CustomerValueChart({
   const height = 168;
   const padX = 44;
   const padY = 22;
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  const chartMetrics = useMemo(() => {
+    if (points.length === 0) return null;
+    const totals = points.map((p) => p.total_value);
+    const investments = points.map((p) => p.investment_value);
+    const coverage = points.map((p) => p.coverage_value);
+    const allY = [...totals, ...investments, ...coverage];
+    const minY = Math.min(...allY) * 0.95;
+    const maxY = Math.max(...allY) * 1.05;
+    const first = points[0].total_value;
+    const last = points[points.length - 1].total_value;
+    const delta = last - first;
+    const deltaPct = first > 0 ? (delta / first) * 100 : 0;
+    return { totals, investments, coverage, minY, maxY, first, last, delta, deltaPct };
+  }, [points]);
 
   if (loading) {
     return (
@@ -67,7 +110,7 @@ export default function CustomerValueChart({
     );
   }
 
-  if (points.length === 0) {
+  if (!chartMetrics || points.length === 0) {
     return (
       <div className="value-chart-wrap in-panel">
         <h2 className="subsection-title">{title}</h2>
@@ -76,17 +119,9 @@ export default function CustomerValueChart({
     );
   }
 
-  const totals = points.map((p) => p.total_value);
-  const investments = points.map((p) => p.investment_value);
-  const coverage = points.map((p) => p.coverage_value);
-  const allY = [...totals, ...investments, ...coverage];
-  const minY = Math.min(...allY) * 0.95;
-  const maxY = Math.max(...allY) * 1.05;
-
-  const first = points[0].total_value;
-  const last = points[points.length - 1].total_value;
-  const delta = last - first;
-  const deltaPct = first > 0 ? (delta / first) * 100 : 0;
+  const { totals, investments, coverage, minY, maxY, last, delta, deltaPct } =
+    chartMetrics;
+  const active = activeIndex != null ? points[activeIndex] : null;
 
   return (
     <div
@@ -111,64 +146,96 @@ export default function CustomerValueChart({
         </div>
       </div>
 
+      {active && (
+        <div className="chart-tooltip" role="status">
+          <strong>{formatPeriodLabel(active.period)}</strong>
+          <span>Total {formatTooltipMoney(active.total_value)}</span>
+          <span>Investments {formatTooltipMoney(active.investment_value)}</span>
+          <span>Coverage {formatTooltipMoney(active.coverage_value)}</span>
+        </div>
+      )}
+
       <div className="value-chart-canvas">
-      <svg
-        className="value-chart-svg"
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="xMidYMid meet"
-        role="img"
-        aria-label="Customer value over time"
-      >
-        <line
-          x1={padX}
-          y1={height - padY}
-          x2={width - padX}
-          y2={height - padY}
-          className="chart-axis"
-        />
-        <text x={padX - 6} y={padY} className="chart-axis-label" textAnchor="end">
-          {formatAxisMoney(maxY)}
-        </text>
-        <text
-          x={padX - 6}
-          y={height - padY}
-          className="chart-axis-label"
-          textAnchor="end"
+        <svg
+          className="value-chart-svg"
+          viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="xMidYMid meet"
+          role="img"
+          aria-label="Customer value over time"
+          onMouseLeave={() => setActiveIndex(null)}
         >
-          {formatAxisMoney(minY)}
-        </text>
-        <path
-          d={linePath(coverage, width, height, padX, padY, minY, maxY)}
-          className="chart-line chart-line-coverage"
-          fill="none"
-        />
-        <path
-          d={linePath(investments, width, height, padX, padY, minY, maxY)}
-          className="chart-line chart-line-investment"
-          fill="none"
-        />
-        <path
-          d={linePath(totals, width, height, padX, padY, minY, maxY)}
-          className="chart-line chart-line-total"
-          fill="none"
-        />
-        {points.map((p, i) => {
-          const stepX =
-            points.length > 1 ? (width - padX * 2) / (points.length - 1) : 0;
-          const x = padX + i * stepX;
-          return (
-            <text
-              key={p.period}
-              x={x}
-              y={height - 6}
-              className="chart-x-label"
-              textAnchor="middle"
-            >
-              {formatPeriodLabel(p.period)}
-            </text>
-          );
-        })}
-      </svg>
+          <line
+            x1={padX}
+            y1={height - padY}
+            x2={width - padX}
+            y2={height - padY}
+            className="chart-axis"
+          />
+          <text x={padX - 6} y={padY} className="chart-axis-label" textAnchor="end">
+            {formatAxisMoney(maxY)}
+          </text>
+          <text
+            x={padX - 6}
+            y={height - padY}
+            className="chart-axis-label"
+            textAnchor="end"
+          >
+            {formatAxisMoney(minY)}
+          </text>
+          <path
+            d={linePath(coverage, width, height, padX, padY, minY, maxY)}
+            className="chart-line chart-line-coverage"
+            fill="none"
+          />
+          <path
+            d={linePath(investments, width, height, padX, padY, minY, maxY)}
+            className="chart-line chart-line-investment"
+            fill="none"
+          />
+          <path
+            d={linePath(totals, width, height, padX, padY, minY, maxY)}
+            className="chart-line chart-line-total"
+            fill="none"
+          />
+          {points.map((p, i) => {
+            const { x, y } = pointCoords(
+              i,
+              p.total_value,
+              points.length,
+              width,
+              height,
+              padX,
+              padY,
+              minY,
+              maxY,
+            );
+            return (
+              <g key={p.period}>
+                <circle
+                  cx={x}
+                  cy={y}
+                  r={activeIndex === i ? 5 : 8}
+                  className="chart-hit"
+                  onMouseEnter={() => setActiveIndex(i)}
+                  onFocus={() => setActiveIndex(i)}
+                  tabIndex={0}
+                  aria-label={`${formatPeriodLabel(p.period)} total ${formatTooltipMoney(p.total_value)}`}
+                />
+                {activeIndex === i && (
+                  <circle cx={x} cy={y} r={3.5} className="chart-point-active" />
+                )}
+                <text
+                  x={x}
+                  y={height - 6}
+                  className="chart-x-label"
+                  textAnchor="middle"
+                >
+                  {formatPeriodLabel(p.period)}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
       </div>
 
       <ul className="chart-legend">

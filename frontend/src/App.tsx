@@ -9,7 +9,9 @@ export default function App() {
         <Link to="/" className="brand">
           Insurance Customer 360
         </Link>
-        <span className="tag">Cloudera AI · SQLite warehouse</span>
+        <span className="tag">
+          Cloudera AI · SQLite warehouse · cohort filters sync to the URL
+        </span>
       </header>
       <main className="main">
         <Routes>

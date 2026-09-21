@@ -160,12 +160,21 @@ export const fetchPortfolioValueHistory = (segment?: CustomerSegment | null) => 
 export const fetchCustomerValueHistory = (customerId: number) =>
   getJson<ValueHistory>(`/api/customers/${customerId}/value-history`);
 
+export type CustomerList = {
+  customers: CustomerSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+  truncated: boolean;
+};
+
 export const fetchCustomers = (options?: {
   q?: string;
   segment?: CustomerSegment | null;
   sortBy?: CustomerSortBy;
   sortOrder?: SortOrder;
   limit?: number;
+  offset?: number;
 }) => {
   const params = new URLSearchParams();
   if (options?.q?.trim()) params.set("q", options.q.trim());
@@ -177,8 +186,9 @@ export const fetchCustomers = (options?: {
   }
   if (options?.sortOrder) params.set("sort_order", options.sortOrder);
   if (options?.limit) params.set("limit", String(options.limit));
+  if (options?.offset) params.set("offset", String(options.offset));
   const qs = params.toString();
-  return getJson<CustomerSummary[]>(`/api/customers${qs ? `?${qs}` : ""}`);
+  return getJson<CustomerList>(`/api/customers${qs ? `?${qs}` : ""}`);
 };
 
 export const fetchCustomer = (id: number) =>

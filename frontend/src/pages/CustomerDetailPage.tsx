@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
+import Breadcrumbs from "../components/Breadcrumbs";
 import {
   CustomerDetail,
   fetchCustomer,
@@ -38,9 +39,21 @@ function formatEventType(t: string) {
   return t;
 }
 
+function interactionIcon(type: string) {
+  if (type === "REVIEW") return "★";
+  if (type === "AGENT_QUESTION") return "?";
+  if (type === "WEB_SEARCH") return "⌕";
+  return "•";
+}
+
 export default function CustomerDetailPage() {
   const { customerId } = useParams();
+  const location = useLocation();
   const id = Number(customerId);
+  const dashboardBack =
+    typeof location.state?.dashboardReturn === "string"
+      ? location.state.dashboardReturn
+      : "/";
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("policies");
@@ -98,11 +111,30 @@ export default function CustomerDetailPage() {
     return (
       <section className="panel">
         <p className="error">{error}</p>
-        <Link to="/">← Back to dashboard</Link>
+        <Link to={dashboardBack}>← Back to dashboard</Link>
       </section>
     );
   }
-  if (!detail) return <p className="muted">Loading customer…</p>;
+  if (!detail) {
+    return (
+      <>
+        <Breadcrumbs
+          items={[
+            { label: "Dashboard", to: dashboardBack },
+            { label: "Customer" },
+          ]}
+        />
+        <section className="panel">
+          <div className="skeleton skeleton-title" />
+          <div className="kpi-strip">
+            {[1, 2, 3, 4].map((n) => (
+              <div key={n} className="skeleton skeleton-kpi" />
+            ))}
+          </div>
+        </section>
+      </>
+    );
+  }
 
   const {
     profile,
@@ -113,19 +145,59 @@ export default function CustomerDetailPage() {
     interaction_summary,
   } = detail;
 
+  const activePolicies = policies.filter((p) => p.is_active).length;
+  const monthlyPremium = policies
+    .filter((p) => p.is_active)
+    .reduce((sum, p) => sum + (p.bruto_monthly_premium ?? 0), 0);
+  const latestAccumulation = investments.reduce(
+    (max, inv) => Math.max(max, inv.accumulation_total ?? 0),
+    0,
+  );
+
   return (
     <>
-      <p>
-        <Link to="/">← Back to dashboard</Link>
-      </p>
+      <Breadcrumbs
+        items={[
+          { label: "Dashboard", to: dashboardBack },
+          { label: displayCustomerName(profile.customer_name) },
+        ]}
+      />
       <section className="panel">
         <h1>{displayCustomerName(profile.customer_name)}</h1>
+        <div className="kpi-strip">
+          <div className="kpi-chip">
+            <span className="label">Active policies</span>
+            <strong>{activePolicies}</strong>
+          </div>
+          <div className="kpi-chip">
+            <span className="label">Monthly premium</span>
+            <strong>{formatMoney(monthlyPremium)}</strong>
+          </div>
+          <div className="kpi-chip">
+            <span className="label">Latest accumulation</span>
+            <strong>{formatMoney(latestAccumulation || null)}</strong>
+          </div>
+          <div className="kpi-chip">
+            <span className="label">Last interaction</span>
+            <strong>
+              {interaction_summary?.last_event_ts
+                ? formatLastLogin(interaction_summary.last_event_ts)
+                : "—"}
+            </strong>
+          </div>
+        </div>
         <div className="churn-detail-row">
           <span className="label">Churn likelihood</span>
           <ChurnBadge
             probability={detail.churn?.churn_probability}
             tier={detail.churn?.churn_risk_tier}
           />
+          {detail.churn?.scored_at && (
+            <span className="muted small">
+              Scored {formatLastLogin(detail.churn.scored_at)}
+              {detail.churn.model_version ? ` · ${detail.churn.model_version}` : ""}
+            </span>
+          )}
         </div>
         <p className="muted small">
           City and last login are shown in full; other sensitive fields remain masked.
@@ -319,40 +391,44 @@ export default function CustomerDetailPage() {
           {interactions.length === 0 ? (
             <p className="muted">No interaction events recorded.</p>
           ) : (
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>When</th>
-                    <th>Type</th>
-                    <th>Channel</th>
-                    <th>Title / query</th>
-                    <th>Signal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {interactions.map((ev) => (
-                    <tr key={ev.event_id}>
-                      <td>{maskDate(ev.event_ts)}</td>
-                      <td>{formatEventType(ev.event_type)}</td>
-                      <td>{ev.channel ?? "—"}</td>
-                      <td>{ev.query_or_title ?? "—"}</td>
-                      <td>
-                        {ev.event_type === "REVIEW" && ev.rating != null
-                          ? `${ev.rating}/5`
-                          : ev.event_type === "AGENT_QUESTION"
-                            ? ev.resolved
-                              ? "Resolved"
-                              : "Open"
-                            : ev.topic === "help_center"
-                              ? "Help"
-                              : "Product"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ol className="interaction-timeline">
+              {interactions.map((ev) => {
+                const signal =
+                  ev.event_type === "REVIEW" && ev.rating != null
+                    ? `${ev.rating}/5 stars`
+                    : ev.event_type === "AGENT_QUESTION"
+                      ? ev.resolved
+                        ? "Resolved"
+                        : "Open"
+                      : ev.topic === "help_center"
+                        ? "Help search"
+                        : "Product search";
+                return (
+                  <li
+                    key={ev.event_id}
+                    className={`timeline-item timeline-${ev.event_type.toLowerCase()}${
+                      ev.event_type === "AGENT_QUESTION" && !ev.resolved
+                        ? " timeline-open"
+                        : ""
+                    }`}
+                  >
+                    <div className="timeline-icon" aria-hidden>
+                      {interactionIcon(ev.event_type)}
+                    </div>
+                    <div className="timeline-body">
+                      <div className="timeline-head">
+                        <strong>{formatEventType(ev.event_type)}</strong>
+                        <span className="muted small">{maskDate(ev.event_ts)}</span>
+                      </div>
+                      <p className="timeline-title">{ev.query_or_title ?? "—"}</p>
+                      <p className="muted small timeline-meta">
+                        {[ev.channel, signal].filter(Boolean).join(" · ")}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
           )}
         </section>
       )}
