@@ -21,9 +21,9 @@ OVERVIEW_DOMAINS: list[tuple[str, str, str, str]] = [
         "SELECT COUNT(*) FROM DWH_DIM_CUSTOMERS_UNIQUE WHERE CURRENT_IND = 1",
     ),
     (
-        "Customers with policies",
+        "Policies",
         "with_policies",
-        "Active customers who hold at least one policy (see policy row totals below each card)",
+        "Filter to customers with policies. Card shows total policy rows, active policies, and average per customer.",
         """
         SELECT COUNT(DISTINCT c.CUSTOMER_ID)
         FROM DWH_DIM_CUSTOMERS_UNIQUE c

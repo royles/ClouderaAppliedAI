@@ -38,6 +38,13 @@ export default function DomainFilterGrid({
           {(overview.domains ?? []).map((d) => {
             const filterKey = d.filter_key ?? "customers_all";
             const selected = segment === filterKey;
+            const isPolicyBookCard = filterKey === "with_policies";
+            const policyTotal = d.policy_total ?? 0;
+            const policyActive = d.policy_active ?? 0;
+            const customersInCohort = d.row_count ?? 0;
+            const avgPoliciesPerCustomer =
+              customersInCohort > 0 ? policyTotal / customersInCohort : 0;
+
             return (
               <button
                 key={filterKey + d.domain}
@@ -48,17 +55,32 @@ export default function DomainFilterGrid({
                 }
                 title={d.description || d.domain}
               >
-                <div className="stat-value">
-                  {(d.row_count ?? 0).toLocaleString()}
-                </div>
-                <div className="stat-label">{d.domain}</div>
-                {d.policy_total != null && d.policy_total > 0 && (
-                  <div className="stat-policy-foot">
-                    {d.policy_total.toLocaleString()} policies
-                    {d.policy_active != null
-                      ? ` · ${d.policy_active.toLocaleString()} active`
-                      : ""}
-                  </div>
+                {isPolicyBookCard ? (
+                  <>
+                    <div className="stat-value">
+                      {policyTotal.toLocaleString()}
+                    </div>
+                    <div className="stat-label">{d.domain}</div>
+                    <div className="stat-policy-foot">
+                      {policyActive.toLocaleString()} active · avg{" "}
+                      {avgPoliciesPerCustomer.toFixed(1)} / customer
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="stat-value">
+                      {(d.row_count ?? 0).toLocaleString()}
+                    </div>
+                    <div className="stat-label">{d.domain}</div>
+                    {filterKey === "customers_all" &&
+                      policyTotal > 0 &&
+                      d.policy_total != null && (
+                        <div className="stat-policy-foot">
+                          {policyTotal.toLocaleString()} policies ·{" "}
+                          {policyActive.toLocaleString()} active
+                        </div>
+                      )}
+                  </>
                 )}
               </button>
             );
