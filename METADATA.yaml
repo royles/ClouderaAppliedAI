@@ -2,9 +2,9 @@
 # Populate fields used by the master blueprint website and internal catalog.
 
 # --- Identity ---
-  name: "Insurance Customer 360 Dashoard"
+  name: "Insurance Customer 360 Dashboard"
   slug: "insurance-360-dashboard"              # URL-safe repo / catalog identifier
-  description: "Insurance Customer 360 Dshboard"
+  description: "Insurance Customer 360 Dashboard"
   reprise_link: "[TBD]"         # Public reprise link
   
   # --- Classification (website filters) ---
@@ -28,7 +28,7 @@
   # --- Relationships ---
   product_mapping:                             # Cloudera products used
     - Cloudera Machine Learning
-  # model_dependencies:                          # Models, embeddings, or external AI services, if any. Comment out if none.
+  model_dependencies:                          # Models, embeddings, or external AI services, if any. Comment out if none.
       - Amazon Bedrock
   #   - nemotron-3-super-120b-a12b
   #   - llama-nemotron-embed-1b-v2
