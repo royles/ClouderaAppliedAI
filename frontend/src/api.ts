@@ -121,6 +121,14 @@ async function getJson<T>(path: string): Promise<T> {
   }
 }
 
+export type BedrockStatus = {
+  configured: boolean;
+  model_id: string;
+  region: string;
+};
+
+export const fetchBedrockStatus = () => getJson<BedrockStatus>("/api/bedrock/status");
+
 export const fetchOverview = () => getJson<Overview>("/api/overview");
 
 export const fetchCustomers = (options?: {

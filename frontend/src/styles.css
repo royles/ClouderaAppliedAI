@@ -411,6 +411,30 @@ select.control {
   color: #1e6b34;
 }
 
+.source-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  letter-spacing: 0.01em;
+}
+
+.source-bedrock {
+  background: #232f3e;
+  color: #ff9900;
+  border: 1px solid #ff9900;
+}
+
+.source-local {
+  background: #eef2f6;
+  color: #5a6b7d;
+  border: 1px solid #c5d0dc;
+}
+
+.insights-subtitle {
+  max-width: 52rem;
+}
+
 .insights-summary {
   font-size: 1.02rem;
   margin: 0.5rem 0 1rem;

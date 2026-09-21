@@ -35,16 +35,20 @@ def classify_recommendation(text: str) -> str | None:
 
 
 def _active_policies(conn: sqlite3.Connection, customer_id: int) -> list[sqlite3.Row]:
+    prev_factory = conn.row_factory
     conn.row_factory = sqlite3.Row
-    return conn.execute(
-        """
-        SELECT POLICY_NUM, POLICY_TYPE_DESC, POLICY_STATUS_DESC, BRUTO_MONTHLY_PREMIUM, IS_ACTIVE
-        FROM DWH_DIM_ALL_POLICY
-        WHERE CUSTOMER_ID = ?
-        ORDER BY IS_ACTIVE DESC, POLICY_NUM
-        """,
-        (str(customer_id),),
-    ).fetchall()
+    try:
+        return conn.execute(
+            """
+            SELECT POLICY_NUM, POLICY_TYPE_DESC, POLICY_STATUS_DESC, BRUTO_MONTHLY_PREMIUM, IS_ACTIVE
+            FROM DWH_DIM_ALL_POLICY
+            WHERE CUSTOMER_ID = ?
+            ORDER BY IS_ACTIVE DESC, POLICY_NUM
+            """,
+            (str(customer_id),),
+        ).fetchall()
+    finally:
+        conn.row_factory = prev_factory
 
 
 def _format_money(amount: float | None) -> str:
