@@ -224,6 +224,8 @@ export const fetchCustomers = (options?: {
   sortOrder?: SortOrder;
   limit?: number;
   offset?: number;
+  asOf?: string | null;
+  metric?: string | null;
 }) => {
   const params = new URLSearchParams();
   if (options?.q?.trim()) params.set("q", options.q.trim());
@@ -236,6 +238,8 @@ export const fetchCustomers = (options?: {
   if (options?.sortOrder) params.set("sort_order", options.sortOrder);
   if (options?.limit) params.set("limit", String(options.limit));
   if (options?.offset) params.set("offset", String(options.offset));
+  if (options?.asOf) params.set("as_of", options.asOf);
+  if (options?.metric) params.set("metric", options.metric);
   const qs = params.toString();
   return getJson<CustomerList>(`/api/customers${qs ? `?${qs}` : ""}`);
 };

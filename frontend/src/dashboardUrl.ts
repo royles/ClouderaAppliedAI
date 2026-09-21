@@ -28,6 +28,8 @@ export function parseDashboardSearch(params: URLSearchParams): DashboardUrlState
     sortOrder: "desc",
     page: 1,
     view: "grid",
+    asOf: null,
+    metric: null,
   };
 }
 

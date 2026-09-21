@@ -25,6 +25,8 @@ type Props = {
   valueFormat?: "money" | "percent";
   forecastDividerIndex?: number;
   emptyMessage?: string;
+  interactive?: boolean;
+  onPeriodSelect?: (selection: { period: string; kind?: string }) => void;
 };
 
 function LegendSwatch({ visualKey }: { visualKey: ChartSeries["visualKey"] }) {
@@ -61,6 +63,8 @@ export default function AnalyticsLineChart({
   valueFormat = "money",
   forecastDividerIndex = -1,
   emptyMessage = "No data for this cohort.",
+  interactive = false,
+  onPeriodSelect,
 }: Props) {
   const width = 640;
   const height = 160;
@@ -111,6 +115,11 @@ export default function AnalyticsLineChart({
     <div className="analytics-chart-panel">
       <h3 className="analytics-chart-title">{title}</h3>
       {subtitle && <p className="muted small analytics-chart-sub">{subtitle}</p>}
+      {interactive && onPeriodSelect && (
+        <p className="muted small chart-interactive-hint">
+          Click a date to open customers contributing to that point on the customer page.
+        </p>
+      )}
       {active && (
         <div className="chart-tooltip chart-tooltip-compact" role="status">
           <strong>
@@ -197,16 +206,32 @@ export default function AnalyticsLineChart({
               i === 0 ||
               i === points.length - 1 ||
               i % Math.max(1, Math.floor(points.length / 6)) === 0;
+            const selectable =
+              interactive &&
+              onPeriodSelect &&
+              p.kind !== "forecast" &&
+              anchor != null;
             return (
               <g key={`${p.period}-${i}`}>
                 <circle
                   cx={x}
                   cy={y}
                   r={7}
-                  className="chart-hit"
+                  className={`chart-hit${selectable ? " chart-hit-selectable" : ""}`}
                   onMouseEnter={() => setActiveIndex(i)}
-                  tabIndex={0}
+                  tabIndex={selectable ? 0 : -1}
                   onFocus={() => setActiveIndex(i)}
+                  onClick={() => {
+                    if (!selectable) return;
+                    onPeriodSelect({ period: p.period, kind: p.kind });
+                  }}
+                  onKeyDown={(e) => {
+                    if (!selectable) return;
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onPeriodSelect({ period: p.period, kind: p.kind });
+                    }
+                  }}
                 />
                 {showLabel && (
                   <text

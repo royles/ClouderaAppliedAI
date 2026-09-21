@@ -16,6 +16,8 @@ import {
   parseCohortSearch,
   patchCohortParams,
 } from "../cohortQuery";
+import { chartMetricLabel } from "../chartFilter";
+import { formatPeriodLabel } from "./charts/analyticsChartUtils";
 import CustomerCardGrid from "./CustomerCardGrid";
 import CustomerListTable from "./CustomerListTable";
 
@@ -38,7 +40,7 @@ export default function CustomerDirectoryPanel({
     () => parseCohortSearch(searchParams),
     [searchParams],
   );
-  const { sortBy, sortOrder, page, view } = urlState;
+  const { sortBy, sortOrder, page, view, asOf, metric } = urlState;
   const effectiveSegment = segment;
 
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
@@ -96,6 +98,8 @@ export default function CustomerDirectoryPanel({
           sortOrder,
           limit: CUSTOMER_PAGE_SIZE,
           offset,
+          asOf,
+          metric: asOf ? (metric ?? "total") : null,
         });
         if (cancelled || requestId !== customersRequestRef.current) return;
         setCustomers(result.customers);
@@ -125,7 +129,16 @@ export default function CustomerDirectoryPanel({
     location.pathname,
     location.key,
     overviewReady,
+    asOf,
+    metric,
   ]);
+
+  const clearChartFilter = () => {
+    setSearchParams(
+      (prev) => patchCohortParams(prev, { asOf: null, metric: null, page: 1 }),
+      { replace: true },
+    );
+  };
 
   const setRankBy = (by: CustomerSortBy) => {
     const order: SortOrder =
@@ -178,7 +191,15 @@ export default function CustomerDirectoryPanel({
       <div className="panel-head">
         <div>
           <h2>Customers</h2>
-          {activeDomain ? (
+          {asOf ? (
+            <p className="filter-banner chart-date-filter-banner">
+              Chart snapshot: <strong>{formatPeriodLabel(asOf)}</strong> (
+              {chartMetricLabel(metric ?? "total")})
+              <button type="button" className="link-btn" onClick={clearChartFilter}>
+                Clear date filter
+              </button>
+            </p>
+          ) : activeDomain ? (
             <p className="filter-banner">
               Filter: <strong>{activeDomain.domain}</strong>
               {onClearFilter && (

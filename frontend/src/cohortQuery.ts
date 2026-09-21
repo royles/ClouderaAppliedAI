@@ -1,4 +1,5 @@
 import { CustomerSegment, CustomerSortBy, SortOrder } from "./api";
+import { ChartValueMetric, parseChartMetric } from "./chartFilter";
 
 const VALID_SEGMENTS = new Set<string>([
   "customers_all",
@@ -28,6 +29,8 @@ export type CohortQueryState = {
   sortOrder: SortOrder;
   page: number;
   view: CustomerListView;
+  asOf: string | null;
+  metric: ChartValueMetric | null;
 };
 
 export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
@@ -50,7 +53,11 @@ export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
   const viewRaw = params.get("view");
   const view: CustomerListView = viewRaw === "table" ? "table" : "grid";
 
-  return { segment, q: params.get("q") ?? "", sortBy, sortOrder, page, view };
+  const asOfRaw = params.get("as_of")?.trim();
+  const asOf = asOfRaw ? asOfRaw : null;
+  const metric = parseChartMetric(params.get("metric"));
+
+  return { segment, q: params.get("q") ?? "", sortBy, sortOrder, page, view, asOf, metric };
 }
 
 export function cohortSearchString(state: Partial<CohortQueryState>): string {
@@ -71,6 +78,8 @@ export function cohortSearchString(state: Partial<CohortQueryState>): string {
   if (state.view === "table") {
     params.set("view", "table");
   }
+  if (state.asOf) params.set("as_of", state.asOf);
+  if (state.metric) params.set("metric", state.metric);
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -84,6 +93,8 @@ export function patchCohortParams(
     sortOrder: SortOrder;
     page: number | null;
     view: CustomerListView | null;
+    asOf: string | null;
+    metric: ChartValueMetric | null;
   }>,
 ): URLSearchParams {
   const next = new URLSearchParams(prev);
@@ -100,6 +111,8 @@ export function patchCohortParams(
     apply("page", p == null || p <= 1 ? null : String(p));
   }
   if ("view" in patch) apply("view", patch.view ?? null, "grid");
+  if ("asOf" in patch) apply("as_of", patch.asOf ?? null);
+  if ("metric" in patch) apply("metric", patch.metric ?? null);
   return next;
 }
 

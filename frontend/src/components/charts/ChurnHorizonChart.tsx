@@ -1,13 +1,21 @@
 import { useMemo } from "react";
 import { ChurnForecastPoint } from "../../api";
+import { ChartPeriodSelection } from "../../chartFilter";
 import AnalyticsLineChart, { moneyTooltip } from "./AnalyticsLineChart";
 
 type Props = {
   series: ChurnForecastPoint[];
   loading?: boolean;
+  interactive?: boolean;
+  onPeriodSelect?: (selection: ChartPeriodSelection) => void;
 };
 
-export default function ChurnHorizonChart({ series, loading }: Props) {
+export default function ChurnHorizonChart({
+  series,
+  loading,
+  interactive,
+  onPeriodSelect,
+}: Props) {
   const forecastStart = useMemo(
     () => series.findIndex((p) => p.kind === "forecast"),
     [series],
@@ -70,6 +78,8 @@ export default function ChurnHorizonChart({ series, loading }: Props) {
         },
       ]}
       emptyMessage="No churn horizon data for this cohort."
+      interactive={interactive}
+      onPeriodSelect={onPeriodSelect}
     />
   );
 }

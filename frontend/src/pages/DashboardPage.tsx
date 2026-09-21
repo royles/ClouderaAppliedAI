@@ -154,6 +154,7 @@ export default function DashboardPage() {
           loading={portfolioLoading && !portfolioAnalytics}
           refreshing={portfolioLoading && portfolioAnalytics != null}
           cohortLabel={activeDomain?.domain ?? null}
+          segment={segment}
         />
       </section>
     </>

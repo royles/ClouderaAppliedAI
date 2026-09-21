@@ -1246,7 +1246,19 @@ select.control {
 
 .chart-hit {
   fill: transparent;
+  cursor: default;
+}
+
+.chart-hit-selectable {
   cursor: pointer;
+}
+
+.chart-hit-selectable:hover {
+  fill: rgba(15, 109, 184, 0.12);
+}
+
+.chart-interactive-hint {
+  margin: 0 0 0.35rem;
 }
 
 .chart-hit:focus {

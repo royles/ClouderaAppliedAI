@@ -1,12 +1,20 @@
 import { InvestmentReturnPoint } from "../../api";
+import { ChartPeriodSelection } from "../../chartFilter";
 import AnalyticsLineChart, { moneyTooltip, pctTooltip } from "./AnalyticsLineChart";
 
 type Props = {
   series: InvestmentReturnPoint[];
   loading?: boolean;
+  interactive?: boolean;
+  onPeriodSelect?: (selection: ChartPeriodSelection) => void;
 };
 
-export default function InvestmentReturnsChart({ series, loading }: Props) {
+export default function InvestmentReturnsChart({
+  series,
+  loading,
+  interactive,
+  onPeriodSelect,
+}: Props) {
   const points = series.map((p) => ({
     period: p.period,
     kind: "actual" as const,
@@ -52,6 +60,8 @@ export default function InvestmentReturnsChart({ series, loading }: Props) {
             ]
       }
       emptyMessage="No investment history for this cohort."
+      interactive={interactive}
+      onPeriodSelect={onPeriodSelect}
     />
   );
 }

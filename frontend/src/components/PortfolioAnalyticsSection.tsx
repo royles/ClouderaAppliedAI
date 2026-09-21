@@ -1,4 +1,9 @@
-import { PortfolioAnalytics } from "../api";
+import { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { CustomerSegment, PortfolioAnalytics } from "../api";
+import { CUSTOMER_BASE } from "../appRoutes";
+import { ChartValueMetric } from "../chartFilter";
+import { cohortSearchString } from "../cohortQuery";
 import { formatMoneyIls } from "../formatMoney";
 import BookValueChart from "./charts/BookValueChart";
 import ChurnHorizonChart from "./charts/ChurnHorizonChart";
@@ -9,6 +14,8 @@ type Props = {
   loading: boolean;
   refreshing: boolean;
   cohortLabel?: string | null;
+  segment: CustomerSegment;
+  chartInteractive?: boolean;
 };
 
 function formatPct(rate: number | null | undefined, digits = 1) {
@@ -21,9 +28,28 @@ export default function PortfolioAnalyticsSection({
   loading,
   refreshing,
   cohortLabel,
+  segment,
+  chartInteractive = true,
 }: Props) {
+  const navigate = useNavigate();
   const kpis = data?.kpis;
   const chartLoading = loading && !data;
+
+  const goToCustomerList = useCallback(
+    (metric: ChartValueMetric) =>
+      (selection: { period: string; kind?: string }) => {
+        if (selection.kind === "forecast") return;
+        navigate(
+          `${CUSTOMER_BASE}${cohortSearchString({
+            segment,
+            asOf: selection.period,
+            metric,
+            page: 1,
+          })}`,
+        );
+      },
+    [navigate, segment],
+  );
 
   return (
     <div className="portfolio-analytics in-panel">
@@ -97,12 +123,24 @@ export default function PortfolioAnalyticsSection({
       <div
         className={`portfolio-charts-grid${refreshing ? " portfolio-charts-refreshing" : ""}`}
       >
-        <BookValueChart history={data?.value_points ?? []} loading={chartLoading} />
+        <BookValueChart
+          history={data?.value_points ?? []}
+          loading={chartLoading}
+          interactive={chartInteractive}
+          onPeriodSelect={goToCustomerList("total")}
+        />
         <InvestmentReturnsChart
           series={data?.investment_returns ?? []}
           loading={chartLoading}
+          interactive={chartInteractive}
+          onPeriodSelect={goToCustomerList("investment")}
         />
-        <ChurnHorizonChart series={data?.churn_forecast ?? []} loading={chartLoading} />
+        <ChurnHorizonChart
+          series={data?.churn_forecast ?? []}
+          loading={chartLoading}
+          interactive={chartInteractive}
+          onPeriodSelect={goToCustomerList("at_risk")}
+        />
       </div>
       {refreshing && (
         <p className="value-chart-refresh-label muted small">Updating analytics…</p>

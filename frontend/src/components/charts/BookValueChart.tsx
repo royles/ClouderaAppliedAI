@@ -1,12 +1,20 @@
 import { ValueHistoryPoint } from "../../api";
+import { ChartPeriodSelection } from "../../chartFilter";
 import AnalyticsLineChart, { moneyTooltip } from "./AnalyticsLineChart";
 
 type Props = {
   history: ValueHistoryPoint[];
   loading?: boolean;
+  interactive?: boolean;
+  onPeriodSelect?: (selection: ChartPeriodSelection) => void;
 };
 
-export default function BookValueChart({ history, loading }: Props) {
+export default function BookValueChart({
+  history,
+  loading,
+  interactive,
+  onPeriodSelect,
+}: Props) {
   const points = history.map((p) => ({
     period: p.period,
     kind: "actual" as const,
@@ -44,6 +52,8 @@ export default function BookValueChart({ history, loading }: Props) {
         },
       ]}
       emptyMessage="No book history for this cohort."
+      interactive={interactive}
+      onPeriodSelect={onPeriodSelect}
     />
   );
 }

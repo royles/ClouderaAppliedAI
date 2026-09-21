@@ -43,6 +43,61 @@ CUSTOMER_VALUE_SQL = """
 """.strip()
 
 
+VALID_VALUE_METRICS = frozenset({"total", "investment", "coverage", "at_risk"})
+
+
+def normalize_value_metric(value: str | None) -> str:
+    key = (value or "total").strip().lower()
+    if key in ("book", "book_total", "book_value"):
+        key = "total"
+    if key in ("inv", "investments"):
+        key = "investment"
+    if key in ("cov", "coverage_savings"):
+        key = "coverage"
+    if key in ("risk", "churn_risk", "value_at_risk"):
+        key = "at_risk"
+    return key if key in VALID_VALUE_METRICS else "total"
+
+
+_INVESTMENT_AT_PERIOD = """
+COALESCE(
+  (
+    SELECT SUM(pit.ACCUMULATION_TOTAL)
+    FROM DWH_FCT_POLICY_INVESTMENT_TRACK pit
+    WHERE pit.CUSTOMER_ID = c.CUSTOMER_ID
+      AND pit.SNAPSHOT_DATE = ?
+  ),
+  0
+)
+""".strip()
+
+_COVERAGE_AT_PERIOD = """
+COALESCE(
+  (
+    SELECT SUM(
+        COALESCE(m.MBB_SCHUM_BITUACH, 0)
+        + COALESCE(m.MBB_ITRAT_CHISACHON, 0)
+        + COALESCE(m.MBB_ERECH_PIDYON, 0)
+      )
+    FROM FCT_MATZAV_BITUACH m
+    WHERE m.MS_MEVUTACH = c.CUSTOMER_ID
+      AND m.TAARICH_MAATAFIT = ?
+  ),
+  0
+)
+""".strip()
+
+
+def customer_value_at_period_sql(metric: str) -> tuple[str, int]:
+    """SQL expression for one customer at a snapshot period; returns (sql, param_count)."""
+    m = normalize_value_metric(metric)
+    if m == "investment":
+        return _INVESTMENT_AT_PERIOD, 1
+    if m == "coverage":
+        return _COVERAGE_AT_PERIOD, 1
+    return f"({_INVESTMENT_AT_PERIOD} + {_COVERAGE_AT_PERIOD})", 2
+
+
 def _customer_scope_sql(segment: str, customer_id: int | None) -> tuple[str, list[object]]:
     if customer_id is not None:
         return "c.CUSTOMER_ID = ?", [customer_id]

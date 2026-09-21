@@ -32,7 +32,12 @@ from customer360.api.schemas import (
     ValueHistoryResponse,
 )
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
-from customer360.api.value_history import CUSTOMER_VALUE_SQL, fetch_value_history
+from customer360.api.value_history import (
+    CUSTOMER_VALUE_SQL,
+    customer_value_at_period_sql,
+    fetch_value_history,
+    normalize_value_metric,
+)
 from customer360.actions.draft import build_action_draft, classify_recommendation, simulate_send
 from customer360.interactions.summary import load_interaction_bundle
 from customer360.bedrock.config import get_bedrock_settings
@@ -164,14 +169,17 @@ def list_customers(
     ),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
+    as_of: str | None = Query(
+        None,
+        description="Snapshot period (YYYY-MM-DD) — list customers contributing value on that date",
+    ),
+    metric: str | None = Query(
+        None,
+        description="Value component at as_of: total, investment, coverage, or at_risk",
+    ),
 ) -> CustomerListResponse:
     seg = normalize_segment(segment)
     where_sql, params = _customer_list_where(seg, q)
-
-    total = conn.execute(
-        f"SELECT COUNT(*) FROM DWH_DIM_CUSTOMERS_UNIQUE c WHERE {where_sql}",
-        params,
-    ).fetchone()[0]
 
     churn_join = ""
     churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"
@@ -179,6 +187,35 @@ def list_customers(
     if churn_scores_available:
         churn_join = "LEFT JOIN APP_CUSTOMER_CHURN_SCORES ch ON ch.CUSTOMER_ID = c.CUSTOMER_ID"
         churn_cols = "ch.CHURN_PROBABILITY AS churn_probability, ch.CHURN_RISK_TIER AS churn_risk_tier"
+
+    value_metric = normalize_value_metric(metric)
+    period = (as_of or "").strip()
+    use_snapshot = bool(period)
+    if use_snapshot:
+        value_expr, period_param_count = customer_value_at_period_sql(value_metric)
+        period_params = [period] * period_param_count
+        where_sql += f" AND ({value_expr}) > 0"
+        params.extend(period_params)
+        if value_metric == "at_risk":
+            if churn_scores_available:
+                where_sql += " AND COALESCE(ch.CHURN_PROBABILITY, 0) > 0"
+            else:
+                where_sql += " AND 1 = 0"
+        customer_value_sql = f"ROUND({value_expr}, 2)"
+        count_params = list(params)
+    else:
+        customer_value_sql = f"ROUND({CUSTOMER_VALUE_SQL}, 2)"
+        count_params = list(params)
+
+    total = conn.execute(
+        f"""
+        SELECT COUNT(*)
+        FROM DWH_DIM_CUSTOMERS_UNIQUE c
+        {churn_join}
+        WHERE {where_sql}
+        """,
+        count_params,
+    ).fetchone()[0]
 
     sort_key = normalize_sort_by(sort_by)
     if sort_key == "churn_risk" and not churn_scores_available:
@@ -207,13 +244,15 @@ def list_customers(
                     WHERE pit.CUSTOMER_ID = c.CUSTOMER_ID
                 )
             ) AS investment_count,
-            ROUND({CUSTOMER_VALUE_SQL}, 2) AS customer_value,
+            {customer_value_sql} AS customer_value,
             {churn_cols}
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
         {churn_join}
         WHERE {where_sql}
     """
     list_params = list(params)
+    if use_snapshot:
+        list_params.extend(period_params)
     sql += (
         f" ORDER BY {order_clause(sort_key, order_key, churn_scores_available=churn_scores_available)} "
         "LIMIT ? OFFSET ?"
