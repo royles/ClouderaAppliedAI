@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import {
   ChartSeries,
@@ -7,11 +7,12 @@ import {
   formatAxisMoney,
   formatAxisPct,
   formatPeriodLabel,
-  formatTooltipCount,
   formatTooltipMoney,
   linePath,
   seriesHasPoints,
 } from "./analyticsChartUtils";
+import ChartFloatingTooltip from "./ChartFloatingTooltip";
+import { ChartTooltipPosition, indexFromSvgX, svgPointFromClient } from "./chartPointer";
 
 export type ChartPointMeta = {
   period: string;
@@ -41,27 +42,6 @@ function xForIndex(
   if (pointCount <= 1) return padX;
   const stepX = (width - padX * 2) / (pointCount - 1);
   return padX + index * stepX;
-}
-
-function indexFromSvgX(
-  x: number,
-  pointCount: number,
-  width: number,
-  padX: number,
-): number {
-  if (pointCount <= 1) return 0;
-  const stepX = (width - padX * 2) / (pointCount - 1);
-  const raw = (x - padX) / stepX;
-  return Math.max(0, Math.min(pointCount - 1, Math.round(raw)));
-}
-
-function svgPointFromClient(svg: SVGSVGElement, clientX: number, clientY: number) {
-  const pt = svg.createSVGPoint();
-  pt.x = clientX;
-  pt.y = clientY;
-  const ctm = svg.getScreenCTM();
-  if (!ctm) return null;
-  return pt.matrixTransform(ctm.inverse());
 }
 
 function isPeriodSelectable(meta: ChartPointMeta): boolean {
@@ -109,7 +89,9 @@ export default function AnalyticsLineChart({
   const height = 160;
   const padX = 44;
   const padY = 22;
+  const canvasRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<ChartTooltipPosition | null>(null);
 
   const visibleSeries = useMemo(
     () => series.filter((s) => seriesHasPoints(s.values)),
@@ -118,7 +100,11 @@ export default function AnalyticsLineChart({
 
   const pickIndexFromEvent = useCallback(
     (e: ReactMouseEvent<Element>) => {
-      const svg = (e.currentTarget as SVGElement).ownerSVGElement;
+      const target = e.currentTarget;
+      const svg =
+        target instanceof SVGSVGElement
+          ? target
+          : (target as SVGElement).ownerSVGElement;
       if (!svg) return null;
       const loc = svgPointFromClient(svg, e.clientX, e.clientY);
       if (!loc) return null;
@@ -127,13 +113,24 @@ export default function AnalyticsLineChart({
     [points.length, width, padX],
   );
 
+  const clearHover = useCallback(() => {
+    setActiveIndex(null);
+    setTooltipPos(null);
+  }, []);
+
   const handlePlotMove = useCallback(
-    (e: ReactMouseEvent<SVGRectElement>) => {
-      if (!interactive) return;
+    (e: ReactMouseEvent<SVGRectElement | SVGSVGElement>) => {
       const idx = pickIndexFromEvent(e);
-      if (idx != null) setActiveIndex(idx);
+      const canvas = canvasRef.current;
+      if (idx == null || !canvas) return;
+      setActiveIndex(idx);
+      const rect = canvas.getBoundingClientRect();
+      setTooltipPos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
     },
-    [interactive, pickIndexFromEvent],
+    [pickIndexFromEvent],
   );
 
   const handlePlotClick = useCallback(
@@ -212,18 +209,18 @@ export default function AnalyticsLineChart({
           customer page.
         </p>
       )}
-      {active && !interactive && (
-        <div className="chart-tooltip chart-tooltip-compact" role="status">
-          <strong>
-            {formatPeriodLabel(active.period)}
-            {active.kind === "forecast" ? " (forecast)" : ""}
-          </strong>
-          {active.tooltipLines.map((line) => (
-            <span key={line}>{line}</span>
-          ))}
-        </div>
-      )}
-      <div className="value-chart-canvas">
+      <div ref={canvasRef} className="value-chart-canvas">
+        {active && (
+          <ChartFloatingTooltip canvasRef={canvasRef} position={tooltipPos}>
+            <strong>
+              {formatPeriodLabel(active.period)}
+              {active.kind === "forecast" ? " (forecast)" : ""}
+            </strong>
+            {active.tooltipLines.map((line) => (
+              <span key={line}>{line}</span>
+            ))}
+          </ChartFloatingTooltip>
+        )}
         <svg
           className={`value-chart-svg analytics-chart-svg${interactive ? " analytics-chart-svg-interactive" : ""}`}
           viewBox={`0 0 ${width} ${height}`}
@@ -327,18 +324,18 @@ export default function AnalyticsLineChart({
               </g>
             );
           })}
-          {interactive && onPeriodSelect && (
-            <rect
-              x={padX}
-              y={padY}
-              width={plotWidth}
-              height={plotHeight}
-              className={`chart-plot-hit${crosshairSelectable ? " chart-plot-hit-actionable" : ""}`}
-              onMouseMove={handlePlotMove}
-              onMouseLeave={() => setActiveIndex(null)}
-              onClick={handlePlotClick}
-            />
-          )}
+          <rect
+            x={padX}
+            y={padY}
+            width={plotWidth}
+            height={plotHeight}
+            className={`chart-plot-hit${
+              interactive && crosshairSelectable ? " chart-plot-hit-actionable" : ""
+            }`}
+            onMouseMove={handlePlotMove}
+            onMouseLeave={clearHover}
+            onClick={interactive && onPeriodSelect ? handlePlotClick : undefined}
+          />
         </svg>
       </div>
       <ul className="chart-legend chart-legend-compact">

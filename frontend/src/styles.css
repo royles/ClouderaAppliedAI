@@ -1079,6 +1079,7 @@ select.control {
 }
 
 .value-chart-canvas {
+  position: relative;
   background: #f7fafc;
   border: 1px solid #e6ebf0;
   border-radius: 8px;

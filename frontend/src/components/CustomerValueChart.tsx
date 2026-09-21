@@ -6,6 +6,8 @@ import {
   CustomerChurnInput,
   ExtendedValuePoint,
 } from "../customerValueChurnForecast";
+import ChartFloatingTooltip from "./charts/ChartFloatingTooltip";
+import { chartPointerFromSvgEvent, ChartTooltipPosition } from "./charts/chartPointer";
 
 type Props = {
   title: string;
@@ -90,27 +92,6 @@ function pointCoords(
   return { x, y };
 }
 
-function indexFromSvgX(
-  x: number,
-  pointCount: number,
-  width: number,
-  padX: number,
-): number {
-  if (pointCount <= 1) return 0;
-  const stepX = (width - padX * 2) / (pointCount - 1);
-  const raw = (x - padX) / stepX;
-  return Math.max(0, Math.min(pointCount - 1, Math.round(raw)));
-}
-
-function svgPointFromClient(svg: SVGSVGElement, clientX: number, clientY: number) {
-  const pt = svg.createSVGPoint();
-  pt.x = clientX;
-  pt.y = clientY;
-  const ctm = svg.getScreenCTM();
-  if (!ctm) return null;
-  return pt.matrixTransform(ctm.inverse());
-}
-
 export default function CustomerValueChart({
   title,
   subtitle,
@@ -132,8 +113,10 @@ export default function CustomerValueChart({
     .join(" ");
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [canvasSize, setCanvasSize] = useState({ width: 640, height: 168 });
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [tooltipPos, setTooltipPos] = useState<ChartTooltipPosition | null>(null);
 
   useEffect(() => {
     if (!fillContainer || !canvasRef.current) return;
@@ -256,6 +239,24 @@ export default function CustomerValueChart({
     activeIndex != null ? (displayPoints[activeIndex] as ExtendedValuePoint) : null;
   const showChurnForecast = monthsToChurn > 0 && churnProbability != null;
 
+  const clearHover = useCallback(() => {
+    setActiveIndex(null);
+    setTooltipPos(null);
+  }, []);
+
+  const handlePlotPointer = useCallback(
+    (e: ReactMouseEvent<SVGSVGElement>) => {
+      const svg = svgRef.current;
+      const canvas = canvasRef.current;
+      if (!svg || !canvas || pointCount === 0) return;
+      const hit = chartPointerFromSvgEvent(e, svg, canvas, pointCount, width, padX);
+      if (!hit) return;
+      setActiveIndex(hit.index);
+      setTooltipPos(hit.position);
+    },
+    [pointCount, width, padX],
+  );
+
   return (
     <div className={wrapClass}>
       {refreshing && (
@@ -292,30 +293,30 @@ export default function CustomerValueChart({
         </div>
       </div>
 
-      {active && (
-        <div className="chart-tooltip" role="status">
-          <strong>
-            {formatPeriodLabel(active.period)}
-            {active.kind === "forecast" ? " (projected)" : ""}
-          </strong>
-          <span>Total {formatTooltipMoney(active.total_value)}</span>
-          {active.kind === "actual" && (
-            <>
-              <span>Investments {formatTooltipMoney(active.investment_value)}</span>
-              <span>Coverage {formatTooltipMoney(active.coverage_value)}</span>
-            </>
-          )}
-          {active.is_predicted_lapse && (
-            <span className="warn-stat">Predicted lapse — value at ₪0</span>
-          )}
-        </div>
-      )}
-
       <div
         ref={canvasRef}
         className={`value-chart-canvas${fillContainer ? " value-chart-canvas-fill" : ""}`}
       >
+        {active && (
+          <ChartFloatingTooltip canvasRef={canvasRef} position={tooltipPos}>
+            <strong>
+              {formatPeriodLabel(active.period)}
+              {active.kind === "forecast" ? " (projected)" : ""}
+            </strong>
+            <span>Total {formatTooltipMoney(active.total_value)}</span>
+            {active.kind === "actual" && (
+              <>
+                <span>Investments {formatTooltipMoney(active.investment_value)}</span>
+                <span>Coverage {formatTooltipMoney(active.coverage_value)}</span>
+              </>
+            )}
+            {active.is_predicted_lapse && (
+              <span className="warn-stat">Predicted lapse — value at ₪0</span>
+            )}
+          </ChartFloatingTooltip>
+        )}
         <svg
+          ref={svgRef}
           className="value-chart-svg"
           viewBox={`0 0 ${width} ${height}`}
           preserveAspectRatio={fillContainer ? "none" : "xMidYMid meet"}
@@ -325,8 +326,17 @@ export default function CustomerValueChart({
               ? "Customer value over time with churn lapse forecast"
               : "Customer value over time"
           }
-          onMouseLeave={() => setActiveIndex(null)}
+          onMouseMove={handlePlotPointer}
+          onMouseLeave={clearHover}
         >
+          <rect
+            x={padX}
+            y={padY}
+            width={Math.max(0, width - padX * 2)}
+            height={Math.max(0, height - padY * 2)}
+            fill="transparent"
+            aria-hidden
+          />
           <line
             x1={padX}
             y1={height - padY}
@@ -405,8 +415,20 @@ export default function CustomerValueChart({
                   cy={y}
                   r={activeIndex === i ? 5 : 8}
                   className="chart-hit"
-                  onMouseEnter={() => setActiveIndex(i)}
-                  onFocus={() => setActiveIndex(i)}
+                  onFocus={(e) => {
+                    setActiveIndex(i);
+                    const canvas = canvasRef.current;
+                    const target = e.currentTarget;
+                    if (canvas && target) {
+                      const cRect = canvas.getBoundingClientRect();
+                      const tRect = target.getBoundingClientRect();
+                      setTooltipPos({
+                        x: tRect.left - cRect.left + tRect.width / 2,
+                        y: tRect.top - cRect.top,
+                      });
+                    }
+                  }}
+                  onBlur={clearHover}
                   tabIndex={0}
                   aria-label={`${formatPeriodLabel(p.period)} total ${formatTooltipMoney(p.total_value)}`}
                 />
