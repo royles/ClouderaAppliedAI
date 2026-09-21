@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import {
   ChartSeries,
   SERIES_VISUAL,
@@ -28,6 +29,42 @@ type Props = {
   interactive?: boolean;
   onPeriodSelect?: (selection: { period: string; kind?: string }) => void;
 };
+
+function xForIndex(
+  index: number,
+  pointCount: number,
+  width: number,
+  padX: number,
+): number {
+  if (pointCount <= 1) return padX;
+  const stepX = (width - padX * 2) / (pointCount - 1);
+  return padX + index * stepX;
+}
+
+function indexFromSvgX(
+  x: number,
+  pointCount: number,
+  width: number,
+  padX: number,
+): number {
+  if (pointCount <= 1) return 0;
+  const stepX = (width - padX * 2) / (pointCount - 1);
+  const raw = (x - padX) / stepX;
+  return Math.max(0, Math.min(pointCount - 1, Math.round(raw)));
+}
+
+function svgPointFromClient(svg: SVGSVGElement, clientX: number, clientY: number) {
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return null;
+  return pt.matrixTransform(ctm.inverse());
+}
+
+function isPeriodSelectable(meta: ChartPointMeta): boolean {
+  return meta.kind !== "forecast";
+}
 
 function LegendSwatch({ visualKey }: { visualKey: ChartSeries["visualKey"] }) {
   const v = SERIES_VISUAL[visualKey];
@@ -77,6 +114,38 @@ export default function AnalyticsLineChart({
     [series],
   );
 
+  const pickIndexFromEvent = useCallback(
+    (e: ReactMouseEvent<Element>) => {
+      const svg = (e.currentTarget as SVGElement).ownerSVGElement;
+      if (!svg) return null;
+      const loc = svgPointFromClient(svg, e.clientX, e.clientY);
+      if (!loc) return null;
+      return indexFromSvgX(loc.x, points.length, width, padX);
+    },
+    [points.length, width, padX],
+  );
+
+  const handlePlotMove = useCallback(
+    (e: ReactMouseEvent<SVGRectElement>) => {
+      if (!interactive) return;
+      const idx = pickIndexFromEvent(e);
+      if (idx != null) setActiveIndex(idx);
+    },
+    [interactive, pickIndexFromEvent],
+  );
+
+  const handlePlotClick = useCallback(
+    (e: ReactMouseEvent<SVGRectElement>) => {
+      if (!interactive || !onPeriodSelect) return;
+      const idx = pickIndexFromEvent(e);
+      if (idx == null) return;
+      const p = points[idx];
+      if (!p || !isPeriodSelectable(p)) return;
+      onPeriodSelect({ period: p.period, kind: p.kind });
+    },
+    [interactive, onPeriodSelect, pickIndexFromEvent, points],
+  );
+
   if (loading) {
     return (
       <div className="analytics-chart-panel">
@@ -106,10 +175,13 @@ export default function AnalyticsLineChart({
   const formatAxis = valueFormat === "percent" ? formatAxisPct : formatAxisMoney;
   const active = activeIndex != null ? points[activeIndex] : null;
 
-  const anchorSeries =
-    visibleSeries.find((s) => s.visualKey === "book-total") ??
-    visibleSeries.find((s) => s.visualKey === "churn-book-actual") ??
-    visibleSeries[0];
+  const plotWidth = width - padX * 2;
+  const plotHeight = height - padY * 2;
+
+  const crosshairX =
+    activeIndex != null ? xForIndex(activeIndex, points.length, width, padX) : null;
+  const crosshairSelectable =
+    activeIndex != null && isPeriodSelectable(points[activeIndex]);
 
   return (
     <div className="analytics-chart-panel">
@@ -117,7 +189,8 @@ export default function AnalyticsLineChart({
       {subtitle && <p className="muted small analytics-chart-sub">{subtitle}</p>}
       {interactive && onPeriodSelect && (
         <p className="muted small chart-interactive-hint">
-          Click a date to open customers contributing to that point on the customer page.
+          Move along the chart to preview a date, then click to filter customers on the
+          customer page.
         </p>
       )}
       {active && (
@@ -133,12 +206,11 @@ export default function AnalyticsLineChart({
       )}
       <div className="value-chart-canvas">
         <svg
-          className="value-chart-svg analytics-chart-svg"
+          className={`value-chart-svg analytics-chart-svg${interactive ? " analytics-chart-svg-interactive" : ""}`}
           viewBox={`0 0 ${width} ${height}`}
           preserveAspectRatio="xMidYMid meet"
           role="img"
           aria-label={title}
-          onMouseLeave={() => setActiveIndex(null)}
         >
           {forecastDividerIndex > 0 && points.length > 1 && (
             <line
@@ -192,53 +264,43 @@ export default function AnalyticsLineChart({
               />
             );
           })}
+          {crosshairX != null && interactive && (
+            <>
+              <line
+                x1={crosshairX}
+                y1={padY}
+                x2={crosshairX}
+                y2={height - padY}
+                className="chart-crosshair"
+                pointerEvents="none"
+              />
+              {activeIndex != null && crosshairSelectable && (
+                <circle
+                  cx={crosshairX}
+                  cy={padY + plotHeight / 2}
+                  r={4}
+                  className="chart-crosshair-dot"
+                  pointerEvents="none"
+                />
+              )}
+            </>
+          )}
           {points.map((p, i) => {
-            const stepX =
-              points.length > 1 ? (width - padX * 2) / (points.length - 1) : 0;
-            const x = padX + i * stepX;
-            const anchor = anchorSeries?.values[i];
-            const y =
-              anchor != null
-                ? padY +
-                  (height - padY * 2) * (1 - (anchor - minY) / (maxY - minY || 1))
-                : height - padY;
+            const x = xForIndex(i, points.length, width, padX);
             const showLabel =
               i === 0 ||
               i === points.length - 1 ||
               i % Math.max(1, Math.floor(points.length / 6)) === 0;
-            const selectable =
-              interactive &&
-              onPeriodSelect &&
-              p.kind !== "forecast" &&
-              anchor != null;
+            const isActive = activeIndex === i;
             return (
               <g key={`${p.period}-${i}`}>
-                <circle
-                  cx={x}
-                  cy={y}
-                  r={7}
-                  className={`chart-hit${selectable ? " chart-hit-selectable" : ""}`}
-                  onMouseEnter={() => setActiveIndex(i)}
-                  tabIndex={selectable ? 0 : -1}
-                  onFocus={() => setActiveIndex(i)}
-                  onClick={() => {
-                    if (!selectable) return;
-                    onPeriodSelect({ period: p.period, kind: p.kind });
-                  }}
-                  onKeyDown={(e) => {
-                    if (!selectable) return;
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onPeriodSelect({ period: p.period, kind: p.kind });
-                    }
-                  }}
-                />
                 {showLabel && (
                   <text
                     x={x}
                     y={height - 5}
-                    className={`chart-x-label${p.kind === "forecast" ? " chart-x-forecast" : ""}`}
+                    className={`chart-x-label${p.kind === "forecast" ? " chart-x-forecast" : ""}${isActive ? " chart-x-label-active" : ""}`}
                     textAnchor="middle"
+                    pointerEvents="none"
                   >
                     {formatPeriodLabel(p.period)}
                   </text>
@@ -246,6 +308,18 @@ export default function AnalyticsLineChart({
               </g>
             );
           })}
+          {interactive && onPeriodSelect && (
+            <rect
+              x={padX}
+              y={padY}
+              width={plotWidth}
+              height={plotHeight}
+              className={`chart-plot-hit${crosshairSelectable ? " chart-plot-hit-actionable" : ""}`}
+              onMouseMove={handlePlotMove}
+              onMouseLeave={() => setActiveIndex(null)}
+              onClick={handlePlotClick}
+            />
+          )}
         </svg>
       </div>
       <ul className="chart-legend chart-legend-compact">

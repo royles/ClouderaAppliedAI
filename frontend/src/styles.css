@@ -1047,8 +1047,7 @@ select.control {
 }
 
 .portfolio-charts-refreshing {
-  opacity: 0.65;
-  pointer-events: none;
+  opacity: 0.85;
 }
 
 .analytics-chart-panel {
@@ -1259,6 +1258,35 @@ select.control {
 
 .chart-interactive-hint {
   margin: 0 0 0.35rem;
+}
+
+.analytics-chart-svg-interactive {
+  touch-action: none;
+}
+
+.chart-plot-hit {
+  fill: transparent;
+  cursor: crosshair;
+}
+
+.chart-plot-hit-actionable {
+  cursor: pointer;
+}
+
+.chart-crosshair {
+  stroke: #0f6db8;
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+
+.chart-crosshair-dot {
+  fill: #0f6db8;
+  opacity: 0.35;
+}
+
+.chart-x-label-active {
+  fill: #0f6db8;
+  font-weight: 600;
 }
 
 .chart-hit:focus {
