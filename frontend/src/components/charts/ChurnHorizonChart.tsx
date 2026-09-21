@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { ChurnForecastPoint } from "../../api";
-import AnalyticsLineChart, { moneyTooltip, pctTooltip } from "./AnalyticsLineChart";
+import AnalyticsLineChart, { moneyTooltip } from "./AnalyticsLineChart";
 
 type Props = {
   series: ChurnForecastPoint[];
