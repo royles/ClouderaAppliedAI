@@ -11,6 +11,7 @@ Unified customer dashboard for Cloudera AI (CAI), backed by a DDS-aligned SQLite
    - **Install Dependencies** — Python packages + editable `customer360` install
    - **Build React Frontend** — `npm run build` → `frontend/dist` (skipped if `npm` is missing; prebuilt `dist` is in Git)
    - **Initialize Customer 360 Database** — builds `data/customer360.db`
+   - **Train Churn Model** — normalized features + logistic regression → `APP_CUSTOMER_CHURN_SCORES`
    - **Customer 360 Dashboard** — FastAPI + React at subdomain `customer-360`
 3. Application scripts bind to `127.0.0.1` and use `CDSW_APP_PORT` (Workbench/CML) or `APP_PORT` (AI Inference, default 8080). Do not hard-code ports.
 
@@ -27,8 +28,9 @@ Optional environment variable:
 ├── .project-metadata.yaml          # AMP / prototype automation
 ├── 1_session-install-dependencies/ # pip install job
 ├── 2_job-init-database/            # warehouse seed job
-├── 3_application/                  # Streamlit app + start-app.py entrypoint
-├── customer360/                    # Shared Python package (seed, DB, CAI helpers)
+├── 2_job-train-churn-model/        # churn training job
+├── 3_application/                  # FastAPI launcher (start-app.py)
+├── customer360/                    # Shared Python package (seed, DB, churn, API)
 ├── data/schema.sql                 # Warehouse DDL
 └── scripts/init_db.py              # Local dev CLI (same seed logic as CAI job)
 ```
