@@ -23,19 +23,40 @@ from customer360.churn.features import (
 )
 from customer360.paths import default_db_path, project_root
 
-MODEL_VERSION = "churn-lr-v2"
+MODEL_VERSION = "churn-lr-v3"
+TARGET_PORTFOLIO_CHURN_RATE = 0.12
+HIGH_TIER_FRACTION = 0.10
+MEDIUM_TIER_FRACTION = 0.25
 MODEL_DIR = project_root() / "data" / "models"
 MODEL_PATH = MODEL_DIR / "churn_pipeline.joblib"
 META_PATH = MODEL_DIR / "churn_model_meta.json"
 CHURN_SCHEMA = project_root() / "data" / "churn_schema.sql"
 
 
-def risk_tier(probability: float) -> str:
-    if probability >= 0.65:
-        return "HIGH"
-    if probability >= 0.35:
-        return "MEDIUM"
-    return "LOW"
+def _calibrate_probabilities(raw: np.ndarray) -> np.ndarray:
+    """Scale raw model scores to a realistic portfolio mean churn probability."""
+    mean = float(np.mean(raw)) if len(raw) else TARGET_PORTFOLIO_CHURN_RATE
+    if mean <= 1e-6:
+        return np.full_like(raw, TARGET_PORTFOLIO_CHURN_RATE)
+    scaled = raw * (TARGET_PORTFOLIO_CHURN_RATE / mean)
+    return np.clip(scaled, 0.02, 0.85)
+
+
+def _assign_risk_tiers(probabilities: np.ndarray) -> list[str]:
+    """Rank-based tiers so synthetic book keeps ~10% HIGH / ~25% MEDIUM / ~65% LOW."""
+    n = len(probabilities)
+    if n == 0:
+        return []
+    order = np.argsort(probabilities, kind="stable")
+    n_high = max(1, int(round(n * HIGH_TIER_FRACTION)))
+    n_med = max(0, int(round(n * MEDIUM_TIER_FRACTION)))
+    tiers = ["LOW"] * n
+    for rank, idx in enumerate(order):
+        if rank >= n - n_high:
+            tiers[int(idx)] = "HIGH"
+        elif rank >= n - n_high - n_med:
+            tiers[int(idx)] = "MEDIUM"
+    return tiers
 
 
 def ensure_churn_table(conn: sqlite3.Connection) -> None:
@@ -72,7 +93,7 @@ def train_and_persist(db_path: Path | None = None) -> dict:
                     "clf",
                     LogisticRegression(
                         max_iter=500,
-                        class_weight="balanced",
+                        class_weight={0: 1.0, 1: 2.5},
                         random_state=42,
                     ),
                 ),
@@ -122,19 +143,21 @@ def score_customers(
     pipeline,
 ) -> None:
     X = feature_matrix(df)
-    probabilities = pipeline.predict_proba(X)[:, 1]
+    raw = pipeline.predict_proba(X)[:, 1]
+    probabilities = _calibrate_probabilities(raw)
+    tiers = _assign_risk_tiers(probabilities)
     scored_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     conn.execute("DELETE FROM APP_CUSTOMER_CHURN_SCORES")
     rows = [
         (
             int(row.customer_id),
-            float(prob),
-            risk_tier(float(prob)),
+            round(float(prob), 6),
+            tiers[i],
             MODEL_VERSION,
             scored_at,
         )
-        for row, prob in zip(df.itertuples(index=False), probabilities, strict=True)
+        for i, (row, prob) in enumerate(zip(df.itertuples(index=False), probabilities, strict=True))
     ]
     conn.executemany(
         """

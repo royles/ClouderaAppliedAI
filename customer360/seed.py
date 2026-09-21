@@ -72,13 +72,33 @@ POLICY_TYPES = [
     (403, "Study Fund"),
 ]
 
-POLICY_STATUS = [
+POLICY_STATUS_ACTIVE = [
     (10, "Active"),
     (20, "Premium Paying"),
     (45, "Paid Up"),
+]
+POLICY_STATUS_INACTIVE = [
     (55, "Lapsed"),
     (60, "Surrendered"),
 ]
+POLICY_STATUS = POLICY_STATUS_ACTIVE + POLICY_STATUS_INACTIVE
+
+# Portfolio mix: ~72% engaged, ~20% stable/watch, ~8% at-risk (industry-like spread).
+SEGMENT_WEIGHTS = ("engaged", 0.72), ("stable", 0.20), ("at_risk", 0.08)
+
+
+def _assign_engagement_segment() -> str:
+    roll = RNG.random()
+    cumulative = 0.0
+    for name, weight in SEGMENT_WEIGHTS:
+        cumulative += weight
+        if roll <= cumulative:
+            return name
+    return "engaged"
+
+
+def _customer_rows_for_db(customers: list[dict]) -> list[dict]:
+    return [{k: v for k, v in row.items() if not str(k).startswith("_")} for row in customers]
 
 EMPLOYERS = [
     (1001, "Intel Israel"),
@@ -153,12 +173,28 @@ def build_customers(n: int = DEFAULT_SEED_CUSTOMERS) -> list[dict]:
         prefix = RNG.choice(["050", "052", "053", "054", "058"])
         mobile = f"{prefix}-{RNG.randint(1000000, 9999999)}"
         email = f"{first.lower()}.{last.lower()}{i}@example.co.il"
-        registered = 1 if RNG.random() > 0.25 else 0
-        last_login = now - timedelta(days=RNG.randint(1, 120)) if registered else None
+        segment = _assign_engagement_segment()
+        if segment == "engaged":
+            registered = 1 if RNG.random() < 0.88 else 0
+            last_login = (
+                now - timedelta(days=RNG.randint(1, 45)) if registered else None
+            )
+        elif segment == "stable":
+            registered = 1 if RNG.random() < 0.55 else 0
+            if registered:
+                last_login = now - timedelta(days=RNG.randint(20, 100))
+            else:
+                last_login = None
+        else:
+            registered = 1 if RNG.random() < 0.7 else 0
+            last_login = (
+                now - timedelta(days=RNG.randint(95, 320)) if registered else None
+            )
 
         key = f"CK-{cid}"
         rows.append(
             {
+                "_segment": segment,
                 "CUSTOMER_KEY": key,
                 "CUSTOMER_ID": cid,
                 "CUSTOMER_ID_CHAR": str(cid),
@@ -201,19 +237,53 @@ def build_customers(n: int = DEFAULT_SEED_CUSTOMERS) -> list[dict]:
     return rows
 
 
+def _pick_policy_status(segment: str, *, allow_inactive: bool) -> tuple[int, str, int]:
+    if segment == "engaged":
+        status_code, status_desc = RNG.choice(POLICY_STATUS_ACTIVE)
+        return status_code, status_desc, 1
+    if segment == "at_risk" and (allow_inactive or RNG.random() < 0.55):
+        status_code, status_desc = RNG.choice(POLICY_STATUS_INACTIVE)
+        return status_code, status_desc, 0
+    if segment == "stable" and allow_inactive and RNG.random() < 0.35:
+        status_code, status_desc = RNG.choice(POLICY_STATUS_INACTIVE)
+        return status_code, status_desc, 0
+    status_code, status_desc = RNG.choices(
+        POLICY_STATUS_ACTIVE,
+        weights=[45, 40, 15],
+        k=1,
+    )[0]
+    return status_code, status_desc, 1
+
+
 def build_policies(customers: list[dict]) -> list[dict]:
     rows: list[dict] = []
     policy_seq = 100000
 
     active_customers = [c for c in customers if c["CURRENT_IND"] == 1]
     for cust in active_customers:
-        n_policies = RNG.randint(1, 4)
-        for _ in range(n_policies):
+        segment = cust.get("_segment", "engaged")
+        if segment == "engaged":
+            n_policies = RNG.randint(2, 4)
+        elif segment == "stable":
+            n_policies = RNG.randint(1, 3)
+        else:
+            n_policies = RNG.randint(1, 2)
+
+        has_active = False
+        for policy_idx in range(n_policies):
             policy_seq += 1
             ptype_code, ptype_desc = RNG.choice(POLICY_TYPES)
             mng = {101: 1, 102: 1, 201: 1, 301: 9, 401: 7, 402: 8, 403: 8}[ptype_code]
-            status_code, status_desc = RNG.choice(POLICY_STATUS)
-            is_active = 1 if status_code < 50 else 0
+            allow_inactive = policy_idx > 0 or segment != "engaged"
+            status_code, status_desc, is_active = _pick_policy_status(
+                segment, allow_inactive=allow_inactive
+            )
+            if is_active:
+                has_active = True
+            elif policy_idx == n_policies - 1 and not has_active and segment != "at_risk":
+                status_code, status_desc = RNG.choice(POLICY_STATUS_ACTIVE)
+                is_active = 1
+                has_active = True
             start = date(RNG.randint(2005, 2022), RNG.randint(1, 12), RNG.randint(1, 28))
             end = date(2099, 12, 31) if is_active else date(RNG.randint(2020, 2025), RNG.randint(1, 12), 28)
             collective = 1 if ptype_code in (401, 402) and RNG.random() < 0.4 else 0
@@ -256,15 +326,33 @@ def build_foreclosures(
     customers: list[dict],
     policies: list[dict],
     *,
-    target_fraction: float = 0.028,
+    target_fraction: float = 0.018,
     min_targets: int = 6,
 ) -> tuple[list[dict], list[dict]]:
     fc_rows: list[dict] = []
     asset_rows: list[dict] = []
     active = [c for c in customers if c["CURRENT_IND"] == 1]
+    at_risk = [c for c in active if c.get("_segment") == "at_risk"]
+    stable = [c for c in active if c.get("_segment") == "stable"]
+    engaged = [c for c in active if c.get("_segment") == "engaged"]
     target_count = max(min_targets, int(len(active) * target_fraction))
     target_count = min(target_count, len(active))
-    targets = RNG.sample(active, target_count)
+
+    targets: list[dict] = []
+    if at_risk:
+        targets.extend(RNG.sample(at_risk, min(len(at_risk), max(1, int(target_count * 0.55)))))
+    remaining = target_count - len(targets)
+    if remaining > 0 and stable:
+        targets.extend(RNG.sample(stable, min(len(stable), max(0, int(target_count * 0.35)))))
+    remaining = target_count - len(targets)
+    if remaining > 0 and engaged:
+        pool = [c for c in engaged if c not in targets]
+        if pool:
+            targets.extend(RNG.sample(pool, min(len(pool), remaining)))
+    if len(targets) < min(target_count, len(active)):
+        pool = [c for c in active if c not in targets]
+        if pool:
+            targets.extend(RNG.sample(pool, min(len(pool), target_count - len(targets))))
     spuror = 5000
 
     for cust in targets:
@@ -494,7 +582,7 @@ def init_database(
             conn.executescript(metrics_schema.read_text(encoding="utf-8"))
 
         print("Writing warehouse tables…", flush=True)
-        insert_rows(conn, "DWH_DIM_CUSTOMERS_UNIQUE", customers)
+        insert_rows(conn, "DWH_DIM_CUSTOMERS_UNIQUE", _customer_rows_for_db(customers))
         insert_rows(conn, "DWH_DIM_ALL_POLICY", policies)
         insert_rows(conn, "DWH_FCT_FORECLOSURES", foreclosures)
         insert_rows(conn, "DWH_FCT_FORECLOSURES_ASSETS", fc_assets)

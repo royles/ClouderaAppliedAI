@@ -225,22 +225,32 @@ def _append_interaction_features(conn: sqlite3.Connection, df: pd.DataFrame) -> 
 
 def derive_churn_label(df: pd.DataFrame) -> pd.Series:
     """
-    Observed churn proxy from warehouse behaviour:
-    - no active policies, or
-    - portal user with no login in 90+ days, or
-    - majority of policies lapsed / surrendered (avg status >= 55)
+    Observed churn proxy — tuned for ~10–18% positive rate on synthetic book:
+    strong lapse / disengagement signals, not single weak touchpoints.
     """
     no_active = df["active_policy_count"] <= 0
-    dormant_portal = (df["portal_registered"] == 1) & (df["days_since_last_login"] >= 90)
-    bad_status = (df["policy_count"] > 0) & (df["avg_policy_status_code"] >= 55)
-    disengaged = df["days_since_last_interaction"] >= 120
-    unhappy_reviews = (df["review_count_90d"] > 0) & (df["review_avg_rating_90d"] <= 2.5)
-    open_agent_cases = df["unresolved_agent_questions_90d"] >= 1
-    help_stress = (df["help_search_count_90d"] >= 2) & (
-        df["help_search_count_90d"] >= df["web_search_count_90d"] * 0.5
+    dormant_portal = (df["portal_registered"] == 1) & (df["days_since_last_login"] >= 150)
+    mostly_lapsed = (df["policy_count"] > 0) & (
+        df["inactive_policy_count"] >= df["active_policy_count"]
+    ) & (df["avg_policy_status_code"] >= 50)
+    disengaged = (df["days_since_last_interaction"] >= 150) & (
+        df["interaction_count_90d"] <= 1
+    )
+    unhappy_reviews = (df["review_count_90d"] >= 2) & (df["review_avg_rating_90d"] <= 2.2)
+    open_agent_cases = df["unresolved_agent_questions_90d"] >= 2
+    help_stress = (df["help_search_count_90d"] >= 3) & (
+        df["help_search_count_90d"] >= df["web_search_count_90d"] * 0.6
+    )
+    foreclosure_stress = (df["has_foreclosure"] == 1) & (
+        no_active | dormant_portal | (df["days_since_last_interaction"] >= 120)
     )
     churn = (
-        no_active | dormant_portal | bad_status | disengaged | unhappy_reviews | open_agent_cases | help_stress
+        no_active
+        | mostly_lapsed
+        | (dormant_portal & disengaged)
+        | (unhappy_reviews & open_agent_cases)
+        | (help_stress & disengaged)
+        | foreclosure_stress
     ).astype(int)
     return churn
 

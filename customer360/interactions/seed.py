@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import random
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 
 REFERENCE = datetime(2025, 9, 15, 12, 0, 0)
 
@@ -58,38 +58,51 @@ def _customer_policy_stats(policies: list[dict], customer_id: int) -> tuple[int,
     return total, active, inactive_ratio
 
 
+def _segment_risk_weight(segment: str | None) -> float:
+    if segment == "at_risk":
+        return 0.82
+    if segment == "stable":
+        return 0.48
+    return 0.18
+
+
 def _risk_weight(
     customer: dict,
     policies: list[dict],
     foreclosure_ids: set[int],
 ) -> float:
     """0 = engaged/low stress, 1 = disengaged/high stress."""
+    segment = customer.get("_segment")
+    if segment:
+        weight = _segment_risk_weight(segment)
+    else:
+        weight = 0.35
+
     cid = int(customer["CUSTOMER_ID"])
     _, active, inactive_ratio = _customer_policy_stats(policies, cid)
-    weight = 0.2
 
     if customer.get("USER_SITE_REGISTER_STATUS") != 1:
-        weight += 0.15
+        weight += 0.08
     last_login = customer.get("LAST_LOGIN")
     if not last_login:
-        weight += 0.25
+        weight += 0.1
     elif isinstance(last_login, str):
         try:
             login_dt = datetime.strptime(last_login[:19], "%Y-%m-%d %H:%M:%S")
             days = (REFERENCE - login_dt).days
-            if days > 90:
-                weight += 0.35
-            elif days > 45:
+            if days > 120:
                 weight += 0.2
+            elif days > 60:
+                weight += 0.08
         except ValueError:
-            weight += 0.1
+            weight += 0.05
 
     if active <= 0:
-        weight += 0.35
-    weight += inactive_ratio * 0.25
+        weight += 0.25
+    weight += inactive_ratio * 0.12
 
     if cid in foreclosure_ids:
-        weight += 0.25
+        weight += 0.15
 
     return min(1.0, max(0.0, weight))
 
@@ -110,13 +123,25 @@ def build_interaction_events(
 
     for customer in active_customers:
         cid = int(customer["CUSTOMER_ID"])
+        segment = customer.get("_segment", "engaged")
         risk = _risk_weight(customer, policies, foreclosure_ids)
-        base_events = int(rng.randint(8, 22) * (1.15 - risk * 0.55))
-        base_events = max(6, base_events)
+
+        if segment == "engaged":
+            base_events = rng.randint(14, 28)
+            recent_bias = 0.85
+        elif segment == "stable":
+            base_events = rng.randint(10, 20)
+            recent_bias = 0.55
+        else:
+            base_events = rng.randint(6, 14)
+            recent_bias = 0.25
 
         for _ in range(base_events):
             event_id += 1
-            days_ago = rng.randint(1, 180)
+            if rng.random() < recent_bias:
+                days_ago = rng.randint(1, 45)
+            else:
+                days_ago = rng.randint(46, 150)
             event_ts = REFERENCE - timedelta(days=days_ago, hours=rng.randint(0, 10))
 
             roll = rng.random()
@@ -124,11 +149,11 @@ def build_interaction_events(
                 event_type = "REVIEW"
                 title = rng.choice(REVIEW_TITLES)
                 if risk > 0.55:
-                    rating = rng.choices([1, 2, 3, 4], weights=[35, 30, 25, 10])[0]
+                    rating = rng.choices([1, 2, 3, 4], weights=[25, 25, 30, 20])[0]
                 elif risk < 0.35:
-                    rating = rng.choices([3, 4, 5], weights=[15, 35, 50])[0]
+                    rating = rng.choices([3, 4, 5], weights=[10, 35, 55])[0]
                 else:
-                    rating = rng.choices([2, 3, 4, 5], weights=[15, 30, 35, 20])[0]
+                    rating = rng.choices([2, 3, 4, 5], weights=[10, 25, 40, 25])[0]
                 sentiment = round((rating - 3) / 2 + rng.uniform(-0.2, 0.2), 2)
                 channel = rng.choice(["web", "app", "email_survey"])
                 detail = (
@@ -153,9 +178,9 @@ def build_interaction_events(
                 event_type = "AGENT_QUESTION"
                 title, topic, default_resolved = rng.choice(AGENT_TOPICS)
                 if risk > 0.6 and topic in ("retention", "legal", "billing"):
-                    resolved = 0 if rng.random() < 0.65 else 1
+                    resolved = 0 if rng.random() < 0.45 else 1
                 else:
-                    resolved = 1 if (default_resolved and rng.random() < 0.85) else 0
+                    resolved = 1 if (default_resolved and rng.random() < 0.9) else 0
                 channel = rng.choice(["phone", "chat", "branch"])
                 detail = "Agent provided next steps." if resolved else "Customer awaiting callback."
                 rows.append(
@@ -175,7 +200,7 @@ def build_interaction_events(
                 )
             else:
                 event_type = "WEB_SEARCH"
-                help_bias = 0.15 + risk * 0.55
+                help_bias = 0.08 + risk * 0.35
                 is_help = rng.random() < help_bias
                 if is_help:
                     query = rng.choice(HELP_SEARCHES)
