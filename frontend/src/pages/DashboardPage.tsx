@@ -11,9 +11,9 @@ import {
   SortOrder,
 } from "../api";
 import {
-  maskCity,
+  formatCity,
+  formatLastLogin,
   maskCustomerId,
-  maskDate,
   maskEmail,
   maskName,
   maskPhone,
@@ -128,8 +128,8 @@ export default function DashboardPage() {
       <section className="panel">
         <h1>Warehouse overview</h1>
         <p className="muted small">
-          Click a card to filter the customer table. Click again to clear. PII is masked in
-          the UI.
+          Click a card to filter the customer table. Click again to clear. Sensitive fields
+          are partially masked in the UI.
         </p>
         {overview && (
           <div className="stat-grid">

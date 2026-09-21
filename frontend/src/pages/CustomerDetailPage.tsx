@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { CustomerDetail, fetchCustomer } from "../api";
 import {
-  maskCity,
+  formatCity,
+  formatLastLogin,
   maskCustomerId,
   maskDate,
   maskEmail,
