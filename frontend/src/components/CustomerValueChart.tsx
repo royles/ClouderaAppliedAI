@@ -131,8 +131,9 @@ export default function CustomerValueChart({
 
   const width = fillContainer ? canvasSize.width : 640;
   const height = fillContainer ? canvasSize.height : 168;
-  const padX = fillContainer ? Math.max(40, Math.round(width * 0.07)) : 44;
-  const padY = fillContainer ? Math.max(24, Math.round(height * 0.14)) : 22;
+  const padX = fillContainer ? Math.max(36, Math.round(width * 0.06)) : 44;
+  const padY = fillContainer ? Math.max(28, Math.round(height * 0.12)) : 22;
+  const xLabelBottom = fillContainer ? Math.max(8, height - padY + 14) : height - 6;
 
   const forecastBundle = useMemo(
     () => buildCustomerValueWithChurnForecast(points, churn),
@@ -224,6 +225,11 @@ export default function CustomerValueChart({
     valueAtRisk,
     churnProbability,
   } = chartMetrics;
+  const pointCount = displayPoints.length;
+  const xLabelStep =
+    pointCount <= 8 ? 1 : pointCount <= 14 ? 2 : Math.max(2, Math.ceil(pointCount / 7));
+  const showXLabel = (index: number) =>
+    index === 0 || index === pointCount - 1 || index % xLabelStep === 0;
   const active =
     activeIndex != null ? (displayPoints[activeIndex] as ExtendedValuePoint) : null;
   const showChurnForecast = monthsToChurn > 0 && churnProbability != null;
@@ -285,7 +291,7 @@ export default function CustomerValueChart({
 
       <div
         ref={canvasRef}
-        className="value-chart-canvas"
+        className={`value-chart-canvas${fillContainer ? " value-chart-canvas-fill" : ""}`}
       >
         <svg
           className="value-chart-svg"
@@ -397,14 +403,16 @@ export default function CustomerValueChart({
                 {p.is_predicted_lapse && (
                   <circle cx={x} cy={y} r={4.5} className="chart-point-lapse-ring" />
                 )}
-                <text
-                  x={x}
-                  y={height - 6}
-                  className={`chart-x-label${isForecast ? " chart-x-forecast" : ""}`}
-                  textAnchor="middle"
-                >
-                  {formatPeriodLabel(p.period)}
-                </text>
+                {showXLabel(i) && (
+                  <text
+                    x={x}
+                    y={xLabelBottom}
+                    className={`chart-x-label${isForecast ? " chart-x-forecast" : ""}`}
+                    textAnchor="middle"
+                  >
+                    {formatPeriodLabel(p.period)}
+                  </text>
+                )}
               </g>
             );
           })}
