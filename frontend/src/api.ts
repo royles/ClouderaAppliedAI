@@ -202,6 +202,58 @@ export type WarehouseAdmin = {
 
 export const fetchWarehouseAdmin = () => getJson<WarehouseAdmin>("/api/admin/warehouse");
 
+export type DataSourceConfig = {
+  backend_type: string;
+  backend_label: string;
+  sqlite_path?: string | null;
+  jdbc_url?: string | null;
+  jdbc_user?: string | null;
+  jdbc_password_set: boolean;
+  iceberg_catalog?: string | null;
+  iceberg_namespace?: string | null;
+  iceberg_rest_uri?: string | null;
+  trino_host?: string | null;
+  trino_port?: number | null;
+  trino_catalog?: string | null;
+  trino_schema?: string | null;
+  trino_user?: string | null;
+  trino_password_set: boolean;
+  trino_use_ssl: boolean;
+  updated_at?: string | null;
+  api_routing_note: string;
+};
+
+export type DataSourceTestResult = {
+  ok: boolean;
+  backend_type: string;
+  message: string;
+  detail?: string | null;
+};
+
+export const fetchDataSourceConfig = () =>
+  getJson<DataSourceConfig>("/api/admin/data-source");
+
+async function putJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(apiUrl(path), {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(text || res.statusText);
+  }
+  return JSON.parse(text) as T;
+}
+
+export const updateDataSourceConfig = (payload: Record<string, unknown>) =>
+  putJson<DataSourceConfig>("/api/admin/data-source", payload);
+
+export const testDataSourceConnection = (config?: Record<string, unknown>) =>
+  postJson<DataSourceTestResult>("/api/admin/data-source/test", {
+    config: config ?? null,
+  });
+
 export type PortfolioKpis = {
   active_customers: number;
   total_book_value: number;

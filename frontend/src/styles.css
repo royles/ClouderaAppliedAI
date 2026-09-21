@@ -1291,6 +1291,99 @@ select.control {
   border-left: 3px solid #b42318;
 }
 
+.admin-datasource-note {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.65rem;
+  background: #f0f4f8;
+  border-radius: 6px;
+  border-left: 3px solid #5a7a9a;
+}
+
+.admin-datasource-success {
+  color: #1e6b34;
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0;
+}
+
+.admin-datasource-test {
+  font-size: 0.88rem;
+  margin: 0.5rem 0 0;
+}
+
+.admin-datasource-form {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.admin-datasource-form fieldset {
+  border: 1px solid #e6ebf0;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  margin: 0;
+}
+
+.admin-datasource-form legend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f3d5e;
+  padding: 0 0.25rem;
+}
+
+.admin-datasource-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9rem;
+  margin: 0.35rem 0;
+  cursor: pointer;
+}
+
+.admin-datasource-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.admin-datasource-field span {
+  color: #4a5568;
+  font-weight: 500;
+}
+
+.admin-datasource-field input[type="text"],
+.admin-datasource-field input[type="password"] {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.admin-datasource-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-datasource-field-narrow {
+  max-width: 6rem;
+}
+
+.admin-datasource-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+}
+
+.admin-datasource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.25rem;
+}
+
 .admin-kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));

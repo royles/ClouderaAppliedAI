@@ -286,3 +286,63 @@ class WarehouseAdminResponse(BaseModel):
     relationship_diagram: str = ""
     quality_checks: list[DataQualityCheck] = Field(default_factory=list)
     health_checks: list[SystemHealthCheck] = Field(default_factory=list)
+
+
+class DataSourceConfigResponse(BaseModel):
+    backend_type: str = "sqlite"
+    backend_label: str = "SQLite (local)"
+    sqlite_path: str | None = None
+    jdbc_url: str | None = None
+    jdbc_user: str | None = None
+    jdbc_password_set: bool = False
+    iceberg_catalog: str | None = None
+    iceberg_namespace: str | None = None
+    iceberg_rest_uri: str | None = None
+    trino_host: str | None = None
+    trino_port: int | None = 443
+    trino_catalog: str | None = None
+    trino_schema: str | None = None
+    trino_user: str | None = None
+    trino_password_set: bool = False
+    trino_use_ssl: bool = True
+    updated_at: str | None = None
+    api_routing_note: str = ""
+
+
+class DataSourceUpdateRequest(BaseModel):
+    backend_type: str | None = None
+    sqlite_path: str | None = None
+    jdbc_url: str | None = None
+    jdbc_user: str | None = None
+    jdbc_password: str | None = Field(
+        default=None,
+        description="Leave empty to keep existing JDBC password.",
+    )
+    clear_jdbc_password: bool = False
+    iceberg_catalog: str | None = None
+    iceberg_namespace: str | None = None
+    iceberg_rest_uri: str | None = None
+    trino_host: str | None = None
+    trino_port: int | None = None
+    trino_catalog: str | None = None
+    trino_schema: str | None = None
+    trino_user: str | None = None
+    trino_password: str | None = Field(
+        default=None,
+        description="Leave empty to keep existing Trino/CDW password.",
+    )
+    clear_trino_password: bool = False
+    trino_use_ssl: bool | None = None
+
+
+class DataSourceTestRequest(BaseModel):
+    """Optional overrides for connection test (unsaved draft settings)."""
+
+    config: DataSourceUpdateRequest | None = None
+
+
+class DataSourceTestResponse(BaseModel):
+    ok: bool
+    backend_type: str
+    message: str
+    detail: str | None = None

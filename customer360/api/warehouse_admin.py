@@ -442,6 +442,7 @@ def _quality_checks(conn: sqlite3.Connection) -> list[dict]:
 
 
 def _system_health_checks(conn: sqlite3.Connection, *, database_path: Path) -> list[dict]:
+    from customer360.data_source import active_backend_summary
     checks: list[dict] = []
 
     def add(
@@ -467,6 +468,18 @@ def _system_health_checks(conn: sqlite3.Connection, *, database_path: Path) -> l
         "ok",
         "API is reachable and serving this admin request.",
         detail="Health endpoint: GET /api/health",
+    )
+
+    backend = active_backend_summary()
+    backend_status = "ok" if backend["connection_ok"] else "warn"
+    if backend["backend_type"] != "sqlite" and not backend["connection_ok"]:
+        backend_status = "warn"
+    add(
+        "data_source",
+        "Configured warehouse backend",
+        backend_status,
+        f"{backend['backend_label']}: {backend['summary']}",
+        detail=backend.get("detail") or backend.get("api_routing_note"),
     )
 
     if not database_path.is_file():

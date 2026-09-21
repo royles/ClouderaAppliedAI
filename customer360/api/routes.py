@@ -32,6 +32,10 @@ from customer360.api.schemas import (
     SimulateSendResponse,
     ValueHistoryResponse,
     WarehouseAdminResponse,
+    DataSourceConfigResponse,
+    DataSourceUpdateRequest,
+    DataSourceTestRequest,
+    DataSourceTestResponse,
 )
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
 from customer360.api.value_history import (
@@ -50,6 +54,17 @@ from customer360.api.sorting import normalize_sort_by, normalize_sort_order, ord
 from customer360.metrics_refresh import customer_metrics_populated
 from customer360.paths import default_db_path
 from customer360.api.warehouse_admin import fetch_warehouse_admin
+from customer360.data_source import (
+    DataSourceConfig,
+    active_backend_summary,
+    config_for_api,
+    load_data_source_config,
+    merge_config_update,
+    normalize_backend,
+    resolve_sqlite_warehouse_path,
+    save_data_source_config,
+    test_data_source,
+)
 
 MAX_CUSTOMER_PAGE_SIZE = 100
 
@@ -209,11 +224,78 @@ def _customer_list_where(
     return where, params
 
 
+def _data_source_response() -> DataSourceConfigResponse:
+    cfg = load_data_source_config()
+    summary = active_backend_summary(cfg)
+    payload = config_for_api(cfg)
+    payload["api_routing_note"] = summary["api_routing_note"]
+    return DataSourceConfigResponse(**payload)
+
+
+def _config_for_test(payload: DataSourceTestRequest | None) -> DataSourceConfig:
+    saved = load_data_source_config()
+    if payload is None or payload.config is None:
+        return saved
+    updates = payload.config.model_dump(exclude_unset=True)
+    merged = merge_config_update(
+        saved,
+        updates,
+        clear_jdbc_password=payload.config.clear_jdbc_password,
+        clear_trino_password=payload.config.clear_trino_password,
+    )
+    return merged
+
+
+@router.get("/admin/data-source", response_model=DataSourceConfigResponse)
+def get_data_source_config() -> DataSourceConfigResponse:
+    return _data_source_response()
+
+
+@router.put("/admin/data-source", response_model=DataSourceConfigResponse)
+def put_data_source_config(body: DataSourceUpdateRequest) -> DataSourceConfigResponse:
+    saved = load_data_source_config()
+    updates = body.model_dump(exclude_unset=True)
+    backend = updates.pop("backend_type", None)
+    if backend is not None:
+        updates["backend_type"] = normalize_backend(backend)
+    clear_jdbc = bool(updates.pop("clear_jdbc_password", False))
+    clear_trino = bool(updates.pop("clear_trino_password", False))
+    jdbc_pw = updates.pop("jdbc_password", None)
+    trino_pw = updates.pop("trino_password", None)
+    if jdbc_pw:
+        updates["jdbc_password"] = jdbc_pw
+    if trino_pw:
+        updates["trino_password"] = trino_pw
+    merged = merge_config_update(
+        saved,
+        updates,
+        clear_jdbc_password=clear_jdbc,
+        clear_trino_password=clear_trino,
+    )
+    save_data_source_config(merged)
+    return _data_source_response()
+
+
+@router.post("/admin/data-source/test", response_model=DataSourceTestResponse)
+def post_data_source_test(
+    body: DataSourceTestRequest | None = None,
+) -> DataSourceTestResponse:
+    cfg = _config_for_test(body)
+    result = test_data_source(cfg)
+    return DataSourceTestResponse(
+        ok=bool(result.get("ok")),
+        backend_type=str(result.get("backend_type", cfg.backend_type)),
+        message=str(result.get("message", "")),
+        detail=result.get("detail"),
+    )
+
+
 @router.get("/admin/warehouse", response_model=WarehouseAdminResponse)
 def warehouse_admin(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
 ) -> WarehouseAdminResponse:
-    data = fetch_warehouse_admin(conn, database_path=default_db_path())
+    db_path = resolve_sqlite_warehouse_path()
+    data = fetch_warehouse_admin(conn, database_path=db_path)
     return WarehouseAdminResponse(**data)
 
 

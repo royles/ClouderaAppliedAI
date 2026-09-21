@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AdminDataSourcePanel from "../components/AdminDataSourcePanel";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { fetchWarehouseAdmin, WarehouseAdmin } from "../api";
 
@@ -77,6 +78,8 @@ export default function AdminPage() {
           <p className="error">{error}</p>
         </section>
       )}
+
+      <AdminDataSourcePanel />
 
       {data && (
         <>
