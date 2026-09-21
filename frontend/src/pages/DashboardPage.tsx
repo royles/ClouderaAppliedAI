@@ -195,58 +195,60 @@ export default function DashboardPage() {
         {tableLoading ? (
           <p className="muted">Updating table…</p>
         ) : (
-          <table className="table table-interactive">
-            <thead>
-              <tr>
-                {showRank && <th>#</th>}
-                <th>Name</th>
-                <th>ID</th>
-                <th>City</th>
-                <th>Email</th>
-                <th>Mobile</th>
-                <th
-                  className={sortBy === "policy_count" ? "th-sorted" : undefined}
-                >
-                  Policies
-                </th>
-                <th
-                  className={
-                    sortBy === "investment_count" ? "th-sorted" : undefined
-                  }
-                >
-                  Investments
-                </th>
-                <th>Last login</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.length === 0 ? (
+          <div className="table-wrap">
+            <table className="table table-interactive">
+              <thead>
                 <tr>
-                  <td colSpan={showRank ? 9 : 8} className="muted">
-                    No customers match this filter.
-                  </td>
+                  {showRank && <th>#</th>}
+                  <th>Name</th>
+                  <th>ID</th>
+                  <th>City</th>
+                  <th>Email</th>
+                  <th>Mobile</th>
+                  <th
+                    className={sortBy === "policy_count" ? "th-sorted" : undefined}
+                  >
+                    Policies
+                  </th>
+                  <th
+                    className={
+                      sortBy === "investment_count" ? "th-sorted" : undefined
+                    }
+                  >
+                    Investments
+                  </th>
+                  <th>Last login</th>
                 </tr>
-              ) : (
-                customers.map((c, index) => (
-                  <tr key={c.customer_key} className="table-row-click">
-                    {showRank && <td className="rank-cell">{index + 1}</td>}
-                    <td>
-                      <Link to={`/customers/${c.customer_id}`}>
-                        {maskName(c.customer_name)}
-                      </Link>
+              </thead>
+              <tbody>
+                {customers.length === 0 ? (
+                  <tr>
+                    <td colSpan={showRank ? 9 : 8} className="muted">
+                      No customers match this filter.
                     </td>
-                    <td>{maskCustomerId(c.customer_id)}</td>
-                    <td>{maskCity(c.city_name)}</td>
-                    <td>{maskEmail(c.email)}</td>
-                    <td>{maskPhone(c.mobile_no)}</td>
-                    <td>{c.policy_count}</td>
-                    <td>{c.investment_count}</td>
-                    <td>{maskDate(c.last_login?.slice(0, 10))}</td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  customers.map((c, index) => (
+                    <tr key={c.customer_key} className="table-row-click">
+                      {showRank && <td className="rank-cell">{index + 1}</td>}
+                      <td>
+                        <Link to={`/customers/${c.customer_id}`}>
+                          {maskName(c.customer_name)}
+                        </Link>
+                      </td>
+                      <td>{maskCustomerId(c.customer_id)}</td>
+                      <td>{maskCity(c.city_name)}</td>
+                      <td>{maskEmail(c.email)}</td>
+                      <td>{maskPhone(c.mobile_no)}</td>
+                      <td>{c.policy_count}</td>
+                      <td>{c.investment_count}</td>
+                      <td>{maskDate(c.last_login?.slice(0, 10))}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </>

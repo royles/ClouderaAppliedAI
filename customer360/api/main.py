@@ -26,7 +26,7 @@ def _mount_frontend() -> None:
         def ui_not_built() -> str:
             return f"""<!DOCTYPE html>
 <html><head><title>Customer 360 — build required</title></head>
-<body style="font-family: system-ui; max-width: 40rem; margin: 2rem auto; line-height: 1.5;">
+<body style="font-family: system-ui; width: 100%; margin: 0; padding: 2rem clamp(1rem, 3vw, 3rem); line-height: 1.5; box-sizing: border-box;">
   <h1>React UI not built yet</h1>
   <p>The API is running. Build the frontend into <code>frontend/dist</code>:</p>
   <pre>%run scripts/build_frontend.py</pre>

@@ -145,40 +145,42 @@ export default function CustomerDetailPage() {
         <section className="panel">
           <h2>Policies</h2>
           <p className="muted small">Click a policy to filter investment snapshots.</p>
-          <table className="table table-interactive">
-            <thead>
-              <tr>
-                <th>Number</th>
-                <th>Type</th>
-                <th>Status</th>
-                <th>Active</th>
-                <th>Monthly premium</th>
-              </tr>
-            </thead>
-            <tbody>
-              {policies.map((p) => (
-                <tr
-                  key={p.policy_num}
-                  className={
-                    activePolicy === p.policy_num
-                      ? "table-row-selected"
-                      : "table-row-click"
-                  }
-                  onClick={() =>
-                    setActivePolicy((prev) =>
-                      prev === p.policy_num ? null : p.policy_num,
-                    )
-                  }
-                >
-                  <td>{p.policy_num}</td>
-                  <td>{p.policy_type_desc ?? "—"}</td>
-                  <td>{p.policy_status_desc ?? "—"}</td>
-                  <td>{p.is_active ? "Yes" : "No"}</td>
-                  <td>{formatMoney(p.bruto_monthly_premium)}</td>
+          <div className="table-wrap">
+            <table className="table table-interactive">
+              <thead>
+                <tr>
+                  <th>Number</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                  <th>Active</th>
+                  <th>Monthly premium</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {policies.map((p) => (
+                  <tr
+                    key={p.policy_num}
+                    className={
+                      activePolicy === p.policy_num
+                        ? "table-row-selected"
+                        : "table-row-click"
+                    }
+                    onClick={() =>
+                      setActivePolicy((prev) =>
+                        prev === p.policy_num ? null : p.policy_num,
+                      )
+                    }
+                  >
+                    <td>{p.policy_num}</td>
+                    <td>{p.policy_type_desc ?? "—"}</td>
+                    <td>{p.policy_status_desc ?? "—"}</td>
+                    <td>{p.is_active ? "Yes" : "No"}</td>
+                    <td>{formatMoney(p.bruto_monthly_premium)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 
@@ -188,26 +190,28 @@ export default function CustomerDetailPage() {
           {foreclosures.length === 0 ? (
             <p className="muted">No foreclosure records.</p>
           ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Proceeding #</th>
-                  <th>Amount</th>
-                  <th>Date</th>
-                  <th>Portfolio</th>
-                </tr>
-              </thead>
-              <tbody>
-                {foreclosures.map((f) => (
-                  <tr key={f.foreclosures_number}>
-                    <td>{f.foreclosures_number}</td>
-                    <td>{formatMoney(f.foreclosures_amount)}</td>
-                    <td>{maskDate(f.foreclosures_date)}</td>
-                    <td>{f.portfolio_number ?? "—"}</td>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Proceeding #</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Portfolio</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {foreclosures.map((f) => (
+                    <tr key={f.foreclosures_number}>
+                      <td>{f.foreclosures_number}</td>
+                      <td>{formatMoney(f.foreclosures_amount)}</td>
+                      <td>{maskDate(f.foreclosures_date)}</td>
+                      <td>{f.portfolio_number ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
       )}
