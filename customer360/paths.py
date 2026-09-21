@@ -9,19 +9,29 @@ from pathlib import Path
 def project_root() -> Path:
     """Return the CAI project root without relying on the caller's ``__file__``."""
     try:
-        from cai_bootstrap import discover_project_root
+        from bootstrap_entry import discover_project_root
 
-        return discover_project_root()
+        return discover_project_root(None)
     except ImportError:
-        if cdsw := os.environ.get("CDSW_PROJECT"):
-            return Path(cdsw)
-        for candidate in (Path.cwd(), *Path.cwd().parents):
-            if (candidate / "data" / "schema.sql").is_file():
-                return candidate
+        pass
+
+    for candidate in (Path.cwd(), *Path.cwd().parents):
+        resolved = candidate.resolve()
+        if (resolved / "data" / "schema.sql").is_file():
+            return resolved
+    if cdsw := os.environ.get("CDSW_PROJECT"):
+        base = Path(cdsw)
         try:
-            return Path(__file__).resolve().parent.parent
-        except NameError:
-            return Path.cwd()
+            for child in base.iterdir():
+                if child.is_dir() and (child / "data" / "schema.sql").is_file():
+                    return child.resolve()
+        except OSError:
+            pass
+        return base.resolve()
+    try:
+        return Path(__file__).resolve().parent.parent
+    except NameError:
+        return Path.cwd().resolve()
 
 
 def schema_path() -> Path:

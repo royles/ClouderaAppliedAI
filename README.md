@@ -84,7 +84,15 @@ from customer360.seed import init_database
 init_database(default_db_path(), rebuild=True)
 ```
 
-On Cloudera AI, `CDSW_PROJECT` is set automatically; path resolution uses that or
-`data/schema.sql` relative to the current working directory.
+On Cloudera AI, `CDSW_PROJECT` is set automatically. If the Git repo lives in a
+subfolder (e.g. `midgalpoc/`), bootstrap walks that folder too — you do **not** need
+to point `CDSW_PROJECT` at the subfolder, but `%cd midgalpoc` before `%run` is fine.
+
+If install fails with a missing `requirements.txt`, run:
+
+```python
+%cd midgalpoc   # folder that contains data/schema.sql
+%run 1_session-install-dependencies/install.py
+```
 
 Generated databases are gitignored (`data/*.db`).

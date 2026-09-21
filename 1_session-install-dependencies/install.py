@@ -26,17 +26,26 @@ def _bootstrap() -> Path:
     raise RuntimeError("Project root not found (bootstrap_entry.py).")
 
 
-ROOT = _bootstrap()
-REQ = ROOT / "1_session-install-dependencies" / "requirements.txt"
-FRONTEND = ROOT / "frontend"
+ROOT = _bootstrap().resolve()
+REQ = (ROOT / "1_session-install-dependencies" / "requirements.txt").resolve()
+FRONTEND = (ROOT / "frontend").resolve()
 
 
 def run(cmd: list[str], *, cwd: Path | None = None) -> None:
     print("Running:", " ".join(cmd), flush=True)
-    subprocess.check_call(cmd, cwd=cwd or ROOT)
+    subprocess.check_call(cmd, cwd=str(cwd or ROOT))
 
 
 def main() -> None:
+    print(f"Project root: {ROOT}", flush=True)
+
+    if not REQ.is_file():
+        raise FileNotFoundError(
+            f"Requirements file not found: {REQ}\n"
+            f"Check that the session working directory is the repo (e.g. midgalpoc/) "
+            f"or that CDSW_PROJECT points at the folder containing data/schema.sql."
+        )
+
     if sys.version_info[:2] != (3, 11):
         print(
             f"Warning: this project targets Python 3.11; current interpreter is "
