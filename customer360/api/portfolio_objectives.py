@@ -6,12 +6,14 @@ import sqlite3
 
 from customer360.api.segments import SEGMENT_WHERE, normalize_segment
 
+BOOK_WIDE_SEGMENT = "customers_all"
+
 OBJECTIVES_NOTE = (
     "Objective charts mirror Migdal Insurance & Finance strategic themes: "
     "long-term savings and AUM growth (pension & provident), retention of active "
     "policy relationships and premium momentum in general insurance, and digital "
-    "customer engagement. Trends are computed from warehouse snapshots and "
-    "interaction events for the selected cohort."
+    "customer engagement. These three trends always reflect the full active customer "
+    "book (all current customers), not the overview card filter above."
 )
 
 
@@ -104,7 +106,35 @@ def fetch_premium_momentum_trend(
             for row in rows
         ]
 
-    # Fallback when no investment periods: single point from current policies.
+    status_rows = conn.execute(
+        f"""
+        WITH scoped AS (
+            SELECT c.CUSTOMER_ID
+            FROM DWH_DIM_CUSTOMERS_UNIQUE c
+            WHERE {where_sql}
+        )
+        SELECT
+            ps.SNAPSHOT_DATE AS period,
+            COUNT(DISTINCT ps.POLICY_NUM) AS active_policy_count,
+            COALESCE(SUM(ps.MONTHLY_PREMIUM), 0) AS monthly_premium_total
+        FROM DWH_FCT_POLICY_STATUS ps
+        INNER JOIN scoped sc ON sc.CUSTOMER_ID = ps.CUSTOMER_ID
+        GROUP BY ps.SNAPSHOT_DATE
+        ORDER BY ps.SNAPSHOT_DATE ASC
+        """,
+        params,
+    ).fetchall()
+    if status_rows:
+        return [
+            {
+                "period": row["period"],
+                "active_policy_count": int(row["active_policy_count"] or 0),
+                "monthly_premium_total": round(float(row["monthly_premium_total"] or 0), 2),
+            }
+            for row in status_rows
+        ]
+
+    # Fallback when no snapshot periods: single point from current policies.
     fallback = conn.execute(
         f"""
         WITH scoped AS (
@@ -180,11 +210,13 @@ def fetch_engagement_trend(
 def fetch_objective_trends(
     conn: sqlite3.Connection,
     *,
-    segment: str | None = None,
+    segment: str | None = BOOK_WIDE_SEGMENT,
 ) -> dict:
+    """Book-wide strategic trends (defaults to all active customers)."""
+    seg = normalize_segment(segment or BOOK_WIDE_SEGMENT)
     return {
         "objectives_note": OBJECTIVES_NOTE,
-        "savings_aum_trend": fetch_savings_aum_trend(conn, segment=segment),
-        "premium_momentum_trend": fetch_premium_momentum_trend(conn, segment=segment),
-        "engagement_trend": fetch_engagement_trend(conn, segment=segment),
+        "savings_aum_trend": fetch_savings_aum_trend(conn, segment=seg),
+        "premium_momentum_trend": fetch_premium_momentum_trend(conn, segment=seg),
+        "engagement_trend": fetch_engagement_trend(conn, segment=seg),
     }

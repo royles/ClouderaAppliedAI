@@ -41,6 +41,7 @@ from customer360.api.schemas import (
     KpiBenchmarkBulkUpdateRequest,
 )
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
+from customer360.api.portfolio_objectives import fetch_objective_trends
 from customer360.api.value_history import (
     CUSTOMER_VALUE_SQL,
     customer_value_at_period_sql,
@@ -124,6 +125,9 @@ def _portfolio_analytics_response(
     conn: sqlite3.Connection | None = None,
 ) -> PortfolioAnalyticsResponse:
     enriched = dict(payload)
+    if conn is not None:
+        # Always recompute book-wide objective charts (cached payloads may predate these fields).
+        enriched.update(fetch_objective_trends(conn))
     enriched["kpi_targets"] = build_kpi_targets(
         enriched.get("kpis", {}),
         enriched.get("value_points", []),

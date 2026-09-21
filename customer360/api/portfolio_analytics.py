@@ -210,7 +210,7 @@ def fetch_portfolio_analytics(
     )
     investment_returns = _build_investment_returns(value_points)
 
-    objectives = fetch_objective_trends(conn, segment=seg)
+    objectives = fetch_objective_trends(conn)
 
     return {
         "segment": seg,

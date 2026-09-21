@@ -40,7 +40,7 @@ export default function EngagementObjectiveChart({ series, loading }: Props) {
           values: series.map((p) => p.digital_touchpoints),
         },
       ]}
-      emptyMessage="No interaction history for this cohort."
+      emptyMessage="No interaction history for the active book yet."
     />
   );
 }

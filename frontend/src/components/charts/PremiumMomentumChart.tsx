@@ -32,7 +32,7 @@ export default function PremiumMomentumChart({ series, loading }: Props) {
           values: series.map((p) => p.monthly_premium_total),
         },
       ]}
-      emptyMessage="No policy premium trend for this cohort."
+      emptyMessage="No policy premium trend for the active book yet."
     />
   );
 }

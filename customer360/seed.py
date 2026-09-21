@@ -597,11 +597,14 @@ def init_database(
         from customer360.metrics_refresh import (
             refresh_customer_metrics,
             refresh_overview_counts,
+            refresh_portfolio_analytics_cache,
         )
 
         print("Precomputing customer list metrics and overview counts…", flush=True)
         refresh_customer_metrics(conn)
         refresh_overview_counts(conn)
+        print("Caching portfolio analytics (all segments)…", flush=True)
+        refresh_portfolio_analytics_cache(conn)
         from customer360.api.warehouse_admin import refresh_warehouse_manifest
 
         refresh_warehouse_manifest(conn, source_job="seed")

@@ -33,7 +33,7 @@ export default function SavingsAumObjectiveChart({ series, loading }: Props) {
           values: series.map((p) => p.accumulation_total),
         },
       ]}
-      emptyMessage="No savings snapshot history for this cohort."
+      emptyMessage="No savings snapshot history for the active book yet."
     />
   );
 }
