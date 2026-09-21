@@ -83,7 +83,7 @@ export default function CustomerDirectoryPanel({
   }, [effectiveSegment, overviewDomains]);
 
   useEffect(() => {
-    if (location.pathname !== CUSTOMER_BASE || !overviewReady) return;
+    if (location.pathname !== CUSTOMER_BASE) return;
 
     const requestId = ++customersRequestRef.current;
     let cancelled = false;
@@ -130,7 +130,6 @@ export default function CustomerDirectoryPanel({
     pageSize,
     location.pathname,
     location.key,
-    overviewReady,
     asOf,
     metric,
   ]);

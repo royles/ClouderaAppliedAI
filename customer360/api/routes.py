@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from typing import Annotated
 
@@ -45,7 +46,10 @@ from customer360.bedrock.client import is_bedrock_configured
 from customer360.insights.service import get_customer_insights
 from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE, normalize_segment
 from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
+from customer360.metrics_refresh import customer_metrics_populated
 from customer360.paths import default_db_path
+
+MAX_CUSTOMER_PAGE_SIZE = 100
 
 router = APIRouter(prefix="/api")
 
@@ -102,6 +106,19 @@ def portfolio_analytics(
     ),
 ) -> PortfolioAnalyticsResponse:
     seg = normalize_segment(segment)
+    cache_table = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_PORTFOLIO_ANALYTICS_CACHE'"
+    ).fetchone()
+    if cache_table:
+        cached = conn.execute(
+            """
+            SELECT PAYLOAD_JSON FROM APP_PORTFOLIO_ANALYTICS_CACHE
+            WHERE SEGMENT = ?
+            """,
+            (seg,),
+        ).fetchone()
+        if cached and cached[0]:
+            return PortfolioAnalyticsResponse(**json.loads(cached[0]))
     data = fetch_portfolio_analytics(conn, segment=seg)
     return PortfolioAnalyticsResponse(**data)
 
@@ -122,20 +139,59 @@ def portfolio_value_history(
 @router.get("/overview", response_model=OverviewResponse)
 def overview(conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> OverviewResponse:
     domains: list[DomainCount] = []
-    for label, filter_key, description, count_sql in OVERVIEW_DOMAINS:
-        row_count = conn.execute(count_sql).fetchone()[0]
-        domains.append(
-            DomainCount(
-                domain=label,
-                row_count=row_count,
-                filter_key=filter_key,
-                description=description,
+    cache_ready = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_OVERVIEW_COUNTS'"
+    ).fetchone()
+    if cache_ready:
+        for label, filter_key, description, count_sql in OVERVIEW_DOMAINS:
+            row = conn.execute(
+                "SELECT ROW_COUNT FROM APP_OVERVIEW_COUNTS WHERE FILTER_KEY = ?",
+                (filter_key,),
+            ).fetchone()
+            row_count = int(row[0]) if row else int(conn.execute(count_sql).fetchone()[0])
+            domains.append(
+                DomainCount(
+                    domain=label,
+                    row_count=row_count,
+                    filter_key=filter_key,
+                    description=description,
+                )
             )
-        )
+    else:
+        for label, filter_key, description, count_sql in OVERVIEW_DOMAINS:
+            row_count = conn.execute(count_sql).fetchone()[0]
+            domains.append(
+                DomainCount(
+                    domain=label,
+                    row_count=row_count,
+                    filter_key=filter_key,
+                    description=description,
+                )
+            )
     return OverviewResponse(
         domains=domains,
         database_path=str(default_db_path()),
     )
+
+
+_POLICY_COUNT_SELECT = """
+(
+    SELECT COUNT(*)
+    FROM DWH_DIM_ALL_POLICY p
+    WHERE p.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
+) AS policy_count
+""".strip()
+
+_INVESTMENT_COUNT_SELECT = """
+(
+    SELECT COUNT(*)
+    FROM (
+        SELECT DISTINCT pit.POLICY_NUM, pit.INVESTMENT_TRACK_ID
+        FROM DWH_FCT_POLICY_INVESTMENT_TRACK pit
+        WHERE pit.CUSTOMER_ID = c.CUSTOMER_ID
+    )
+) AS investment_count
+""".strip()
 
 
 def _customer_list_where(
@@ -167,7 +223,7 @@ def list_customers(
         None,
         description="Sort direction: asc or desc (defaults: desc for counts, asc for name)",
     ),
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=MAX_CUSTOMER_PAGE_SIZE),
     offset: int = Query(0, ge=0),
     as_of: str | None = Query(
         None,
@@ -178,6 +234,7 @@ def list_customers(
         description="Value component at as_of: total, investment, coverage, or at_risk",
     ),
 ) -> CustomerListResponse:
+    limit = min(max(1, limit), MAX_CUSTOMER_PAGE_SIZE)
     seg = normalize_segment(segment)
     where_sql, params = _customer_list_where(seg, q)
 
@@ -208,8 +265,21 @@ def list_customers(
             params.extend(period_params)
             customer_value_sql = f"ROUND({value_expr}, 2)"
         count_params = list(params)
+        metrics_join = ""
+        policy_count_sql = _POLICY_COUNT_SELECT
+        investment_count_sql = _INVESTMENT_COUNT_SELECT
     else:
-        customer_value_sql = f"ROUND({CUSTOMER_VALUE_SQL}, 2)"
+        use_metrics = customer_metrics_populated(conn)
+        if use_metrics:
+            metrics_join = "INNER JOIN APP_CUSTOMER_METRICS m ON m.CUSTOMER_ID = c.CUSTOMER_ID"
+            policy_count_sql = "m.POLICY_COUNT AS policy_count"
+            investment_count_sql = "m.INVESTMENT_TRACK_COUNT AS investment_count"
+            customer_value_sql = "m.CUSTOMER_VALUE"
+        else:
+            metrics_join = ""
+            policy_count_sql = _POLICY_COUNT_SELECT
+            investment_count_sql = _INVESTMENT_COUNT_SELECT
+            customer_value_sql = f"ROUND({CUSTOMER_VALUE_SQL}, 2)"
         count_params = list(params)
 
     total = conn.execute(
@@ -236,22 +306,12 @@ def list_customers(
             c.EMAIL AS email,
             c.MOBILE_NO AS mobile_no,
             c.LAST_LOGIN AS last_login,
-            (
-                SELECT COUNT(*)
-                FROM DWH_DIM_ALL_POLICY p
-                WHERE p.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
-            ) AS policy_count,
-            (
-                SELECT COUNT(*)
-                FROM (
-                    SELECT DISTINCT pit.POLICY_NUM, pit.INVESTMENT_TRACK_ID
-                    FROM DWH_FCT_POLICY_INVESTMENT_TRACK pit
-                    WHERE pit.CUSTOMER_ID = c.CUSTOMER_ID
-                )
-            ) AS investment_count,
+            {policy_count_sql},
+            {investment_count_sql},
             {customer_value_sql} AS customer_value,
             {churn_cols}
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
+        {metrics_join}
         {churn_join}
         WHERE {where_sql}
     """

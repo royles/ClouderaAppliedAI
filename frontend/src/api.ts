@@ -236,7 +236,9 @@ export const fetchCustomers = (options?: {
     params.set("sort_by", options.sortBy);
   }
   if (options?.sortOrder) params.set("sort_order", options.sortOrder);
-  if (options?.limit) params.set("limit", String(options.limit));
+  if (options?.limit) {
+    params.set("limit", String(Math.min(100, Math.max(1, options.limit))));
+  }
   if (options?.offset) params.set("offset", String(options.offset));
   if (options?.asOf) params.set("as_of", options.asOf);
   if (options?.metric) params.set("metric", options.metric);

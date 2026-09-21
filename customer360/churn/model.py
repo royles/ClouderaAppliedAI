@@ -97,6 +97,12 @@ def train_and_persist(db_path: Path | None = None) -> dict:
 
         ensure_churn_table(conn)
         score_customers(conn, df, pipeline)
+        try:
+            from customer360.metrics_refresh import refresh_portfolio_analytics_cache
+
+            refresh_portfolio_analytics_cache(conn)
+        except Exception:
+            pass
         conn.commit()
 
     return meta

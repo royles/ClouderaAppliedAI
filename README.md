@@ -140,6 +140,22 @@ python3 scripts/scale_warehouse.py --customers 5000
 
 Or set `CUSTOMER360_SEED_CUSTOMERS=5000` before the init job / `python3 -m customer360.seed --customers 5000`, then run `3_job-train-churn-model/train_churn.py` for churn scores.
 
+### API performance (large warehouses)
+
+After seeding, the warehouse precomputes:
+
+- **`APP_CUSTOMER_METRICS`** — per-customer value, policy count, investment tracks (customer list avoids heavy per-row subqueries).
+- **`APP_OVERVIEW_COUNTS`** — domain card counts.
+- **`APP_PORTFOLIO_ANALYTICS_CACHE`** — portfolio charts/KPIs per segment (refreshed after churn training).
+
+Refresh caches on an existing DB without reseeding:
+
+```bash
+python3 scripts/refresh_api_caches.py
+```
+
+The customer list API enforces **`limit` ≤ 100**; the UI defaults to 50 with 25/50/100 options.
+
 ### Frontend without Node on PATH
 
 The repo includes a prebuilt `frontend/dist/`. Restart the application after `git pull` —

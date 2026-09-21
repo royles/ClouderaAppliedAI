@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
-import subprocess
 import sys
 from pathlib import Path
 
@@ -59,15 +58,28 @@ def main() -> None:
 
     if args.skip_churn:
         print("Skipping churn training (--skip-churn).", flush=True)
-        return
+        from customer360.db import connect
+        from customer360.metrics_refresh import refresh_portfolio_analytics_cache
 
-    train_job = root / "3_job-train-churn-model" / "train_churn.py"
-    if not train_job.is_file():
-        print(f"Churn job not found at {train_job}; run training manually.", flush=True)
+        with connect(db_path) as conn:
+            n = refresh_portfolio_analytics_cache(conn)
+            print(f"Portfolio analytics cache refreshed for {n} segments.", flush=True)
         return
 
     print("Training churn model and writing APP_CUSTOMER_CHURN_SCORES…", flush=True)
-    subprocess.check_call([sys.executable, str(train_job)])
+    try:
+        from customer360.churn.model import train_and_persist
+
+        meta = train_and_persist(db_path)
+        for key, value in meta.items():
+            print(f"  {key}: {value}", flush=True)
+    except ImportError as exc:
+        print(
+            "Churn training skipped (missing ML dependencies). "
+            "Install requirements-ml.txt then run 3_job-train-churn-model/train_churn.py.",
+            flush=True,
+        )
+        print(f"  ({exc})", flush=True)
 
 
 if __name__ == "__main__":

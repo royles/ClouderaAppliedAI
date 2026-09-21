@@ -487,6 +487,9 @@ def init_database(
         insights_schema = project_root() / "data" / "insights_schema.sql"
         if insights_schema.is_file():
             conn.executescript(insights_schema.read_text(encoding="utf-8"))
+        metrics_schema = project_root() / "data" / "metrics_schema.sql"
+        if metrics_schema.is_file():
+            conn.executescript(metrics_schema.read_text(encoding="utf-8"))
 
         print("Writing warehouse tables…", flush=True)
         insert_rows(conn, "DWH_DIM_CUSTOMERS_UNIQUE", customers)
@@ -498,6 +501,15 @@ def init_database(
         insert_rows(conn, "FCT_MATZAV_BITUACH", matzav)
         insert_rows(conn, "APP_CUSTOMER_INTERACTION_EVENTS", interactions)
         conn.commit()
+
+        from customer360.metrics_refresh import (
+            refresh_customer_metrics,
+            refresh_overview_counts,
+        )
+
+        print("Precomputing customer list metrics and overview counts…", flush=True)
+        refresh_customer_metrics(conn)
+        refresh_overview_counts(conn)
 
         counts = conn.execute(
             """
