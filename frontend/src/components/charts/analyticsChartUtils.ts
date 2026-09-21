@@ -9,22 +9,56 @@ export function formatPeriodLabel(period: string) {
   return period;
 }
 
-/** X-axis labels for long monthly history (show endpoints, Jan/Jul, and light thinning). */
+/** Minimum horizontal gap between x-axis tick labels (px in SVG viewBox). */
+export const CHART_X_LABEL_MIN_GAP = 56;
+
+/**
+ * Pick x-axis label indices so labels do not overlap at the given plot width.
+ * Always includes first and last points; interior ticks are evenly spaced.
+ */
+export function historyLabelIndicesForPlot(
+  count: number,
+  width: number,
+  padX: number,
+  minGapPx: number = CHART_X_LABEL_MIN_GAP,
+): number[] {
+  if (count <= 0) return [];
+  if (count === 1) return [0];
+  const plotWidth = Math.max(1, width - padX * 2);
+  const maxLabels = Math.max(2, Math.floor(plotWidth / minGapPx));
+  if (maxLabels >= count) {
+    return Array.from({ length: count }, (_, i) => i);
+  }
+  const indices = new Set<number>([0, count - 1]);
+  const interior = maxLabels - 2;
+  for (let k = 1; k <= interior; k += 1) {
+    const idx = Math.round((k / (interior + 1)) * (count - 1));
+    if (idx > 0 && idx < count - 1) indices.add(idx);
+  }
+  return [...indices].sort((a, b) => a - b);
+}
+
+/** Compact month label for crowded x-axes (e.g. Jan '21). */
+export function formatPeriodAxisLabel(period: string) {
+  if (period.length >= 7) {
+    const [y, m] = period.split("-");
+    const month = new Date(Number(y), Number(m) - 1, 1).toLocaleString("en-GB", {
+      month: "short",
+    });
+    return `${month} '${y?.slice(2) ?? ""}`;
+  }
+  return period;
+}
+
 export function shouldShowHistoryLabel(
-  period: string,
+  _period: string,
   index: number,
   count: number,
+  layout?: { width: number; padX: number },
 ): boolean {
-  if (count <= 1) return true;
-  if (index === 0 || index === count - 1) return true;
-  const month =
-    period.length >= 7 ? Number.parseInt(period.slice(5, 7), 10) : Number.NaN;
-  if (month === 1 || month === 7) return true;
-  if (count > 18) {
-    const step = Math.max(3, Math.ceil(count / 10));
-    return index % step === 0;
-  }
-  return index % Math.max(1, Math.floor(count / 6)) === 0;
+  const width = layout?.width ?? 640;
+  const padX = layout?.padX ?? 44;
+  return historyLabelIndicesForPlot(count, width, padX).includes(index);
 }
 
 export function formatAxisMoney(n: number) {
@@ -127,12 +161,14 @@ export function linePath(
   width: number,
   height: number,
   padX: number,
-  padY: number,
+  padTop: number,
   minY: number,
   maxY: number,
+  padBottom: number = padTop,
 ): string {
   const span = maxY - minY || 1;
   const stepX = values.length > 1 ? (width - padX * 2) / (values.length - 1) : 0;
+  const plotHeight = Math.max(1, height - padTop - padBottom);
   let d = "";
   let segmentOpen = false;
   values.forEach((v, i) => {
@@ -141,7 +177,7 @@ export function linePath(
       return;
     }
     const x = padX + i * stepX;
-    const y = padY + (height - padY * 2) * (1 - (v - minY) / span);
+    const y = padTop + plotHeight * (1 - (v - minY) / span);
     if (!segmentOpen) {
       d += `${d ? " " : ""}M${x.toFixed(1)},${y.toFixed(1)}`;
       segmentOpen = true;

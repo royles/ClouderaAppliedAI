@@ -1237,16 +1237,18 @@ a.engagement-act-link {
   background: #f7fafc;
   border: 1px solid #e6ebf0;
   border-radius: 8px;
-  padding: 0.35rem 0.5rem 0.15rem;
+  padding: 0.35rem 0.5rem 0.35rem;
+  overflow: visible;
 }
 
 .value-chart-svg {
   width: 100%;
   max-width: 40rem;
   height: auto;
-  max-height: 10.5rem;
+  max-height: 11.75rem;
   display: block;
   margin: 0 auto;
+  overflow: visible;
 }
 
 .value-chart-wrap.value-chart-fill .value-chart-svg {
@@ -1664,7 +1666,12 @@ a.engagement-act-link {
 }
 
 .analytics-chart-svg {
-  max-height: 10.5rem;
+  max-height: 11.75rem;
+  overflow: visible;
+}
+
+.chart-x-label-rotated {
+  font-size: max(7.5pt, 0.78rem);
 }
 
 .chart-tooltip-compact {

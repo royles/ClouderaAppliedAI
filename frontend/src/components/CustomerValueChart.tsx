@@ -7,6 +7,10 @@ import {
   ExtendedValuePoint,
 } from "../customerValueChurnForecast";
 import { LegendSwatch } from "./charts/AnalyticsLineChart";
+import {
+  formatPeriodAxisLabel,
+  historyLabelIndicesForPlot,
+} from "./charts/analyticsChartUtils";
 import ChartFloatingTooltip from "./charts/ChartFloatingTooltip";
 import {
   chartPointerFromSvgEvent,
@@ -57,13 +61,15 @@ function linePath(
   width: number,
   height: number,
   padX: number,
-  padY: number,
+  padTop: number,
   minY: number,
   maxY: number,
+  padBottom: number = padTop,
 ): string {
   if (values.length === 0) return "";
   const span = maxY - minY || 1;
   const stepX = values.length > 1 ? (width - padX * 2) / (values.length - 1) : 0;
+  const plotHeight = Math.max(1, height - padTop - padBottom);
   let d = "";
   let open = false;
   values.forEach((v, i) => {
@@ -72,7 +78,7 @@ function linePath(
       return;
     }
     const x = padX + i * stepX;
-    const y = padY + (height - padY * 2) * (1 - (v - minY) / span);
+    const y = padTop + plotHeight * (1 - (v - minY) / span);
     d += `${open ? " L" : " M"}${x.toFixed(1)},${y.toFixed(1)}`;
     open = true;
   });
@@ -86,14 +92,16 @@ function pointCoords(
   width: number,
   height: number,
   padX: number,
-  padY: number,
+  padTop: number,
   minY: number,
   maxY: number,
+  padBottom: number = padTop,
 ) {
   const span = maxY - minY || 1;
   const stepX = count > 1 ? (width - padX * 2) / (count - 1) : 0;
+  const plotHeight = Math.max(1, height - padTop - padBottom);
   const x = padX + index * stepX;
-  const y = padY + (height - padY * 2) * (1 - (value - minY) / span);
+  const y = padTop + plotHeight * (1 - (value - minY) / span);
   return { x, y };
 }
 
@@ -141,14 +149,23 @@ export default function CustomerValueChart({
   }, [fillContainer]);
 
   const width = fillContainer ? canvasSize.width : 640;
-  const height = fillContainer ? canvasSize.height : 168;
+  const height = fillContainer ? canvasSize.height : 182;
   const padX = fillContainer ? Math.max(36, Math.round(width * 0.06)) : 44;
-  const padY = fillContainer ? Math.max(28, Math.round(height * 0.12)) : 22;
-  const xLabelBottom = fillContainer ? Math.max(8, height - padY + 14) : height - 6;
+  const padTop = fillContainer ? Math.max(24, Math.round(height * 0.1)) : 22;
+  const padBottom = fillContainer ? Math.max(36, Math.round(height * 0.2)) : 40;
+  const plotBottom = height - padBottom;
 
   const forecastBundle = useMemo(
     () => buildCustomerValueWithChurnForecast(points, churn),
     [points, churn],
+  );
+
+  const xLabelIndices = useMemo(
+    () =>
+      new Set(
+        historyLabelIndicesForPlot(forecastBundle?.points.length ?? 0, width, padX),
+      ),
+    [forecastBundle?.points.length, width, padX],
   );
 
   const chartMetrics = useMemo(() => {
@@ -251,10 +268,6 @@ export default function CustomerValueChart({
     churnTier,
   } = chartMetrics;
   const pointCount = displayPoints.length;
-  const xLabelStep =
-    pointCount <= 8 ? 1 : pointCount <= 14 ? 2 : Math.max(2, Math.ceil(pointCount / 7));
-  const showXLabel = (index: number) =>
-    index === 0 || index === pointCount - 1 || index % xLabelStep === 0;
   const active =
     activeIndex != null ? (displayPoints[activeIndex] as ExtendedValuePoint) : null;
   const showChurnForecast = scenario !== "none";
@@ -287,7 +300,7 @@ export default function CustomerValueChart({
   );
 
   const plotWidth = Math.max(0, width - padX * 2);
-  const plotHeight = Math.max(0, height - padY * 2);
+  const plotHeight = Math.max(0, plotBottom - padTop);
 
   return (
     <div className={wrapClass}>
@@ -349,40 +362,40 @@ export default function CustomerValueChart({
         >
           <line
             x1={padX}
-            y1={height - padY}
+            y1={plotBottom}
             x2={width - padX}
-            y2={height - padY}
+            y2={plotBottom}
             className="chart-axis"
           />
-          <text x={padX - 6} y={padY} className="chart-axis-label" textAnchor="end">
+          <text x={padX - 6} y={padTop} className="chart-axis-label" textAnchor="end">
             {formatAxisMoney(maxY)}
           </text>
           <text
             x={padX - 6}
-            y={height - padY}
+            y={plotBottom}
             className="chart-axis-label"
             textAnchor="end"
           >
             {formatAxisMoney(minY)}
           </text>
           <path
-            d={linePath(coverage, width, height, padX, padY, minY, maxY)}
+            d={linePath(coverage, width, height, padX, padTop, minY, maxY, padBottom)}
             className="chart-line chart-line-coverage"
             fill="none"
           />
           <path
-            d={linePath(investments, width, height, padX, padY, minY, maxY)}
+            d={linePath(investments, width, height, padX, padTop, minY, maxY, padBottom)}
             className="chart-line chart-line-investment"
             fill="none"
           />
           <path
-            d={linePath(actualTotals, width, height, padX, padY, minY, maxY)}
+            d={linePath(actualTotals, width, height, padX, padTop, minY, maxY, padBottom)}
             className="chart-line chart-line-total"
             fill="none"
           />
           {showChurnForecast && (
             <path
-              d={linePath(forecastTotals, width, height, padX, padY, minY, maxY)}
+              d={linePath(forecastTotals, width, height, padX, padTop, minY, maxY, padBottom)}
               className="chart-line chart-line-forecast chart-line-total"
               fill="none"
             />
@@ -397,9 +410,9 @@ export default function CustomerValueChart({
               return (
                 <line
                   x1={x}
-                  y1={padY}
+                  y1={padTop}
                   x2={x}
-                  y2={height - padY}
+                  y2={plotBottom}
                   className="chart-churn-lapse-marker"
                 />
               );
@@ -408,9 +421,9 @@ export default function CustomerValueChart({
           {crosshairSvgX != null && (
             <line
               x1={crosshairSvgX}
-              y1={padY}
+              y1={padTop}
               x2={crosshairSvgX}
-              y2={height - padY}
+              y2={plotBottom}
               className="chart-crosshair"
               pointerEvents="none"
             />
@@ -423,11 +436,13 @@ export default function CustomerValueChart({
               width,
               height,
               padX,
-              padY,
+              padTop,
               minY,
               maxY,
+              padBottom,
             );
             const isForecast = p.kind === "forecast";
+            const labelY = plotBottom + 6;
             return (
               <g key={`${p.period}-${p.kind}`}>
                 <circle
@@ -466,14 +481,15 @@ export default function CustomerValueChart({
                 {p.is_predicted_lapse && (
                   <circle cx={x} cy={y} r={4.5} className="chart-point-lapse-ring" />
                 )}
-                {showXLabel(i) && (
+                {xLabelIndices.has(i) && (
                   <text
                     x={x}
-                    y={xLabelBottom}
-                    className={`chart-x-label${isForecast ? " chart-x-forecast" : ""}`}
-                    textAnchor="middle"
+                    y={labelY}
+                    transform={`rotate(-42 ${x} ${labelY})`}
+                    className={`chart-x-label chart-x-label-rotated${isForecast ? " chart-x-forecast" : ""}`}
+                    textAnchor="end"
                   >
-                    {formatPeriodLabel(p.period)}
+                    {formatPeriodAxisLabel(p.period)}
                   </text>
                 )}
               </g>
@@ -481,7 +497,7 @@ export default function CustomerValueChart({
           })}
           <rect
             x={padX}
-            y={padY}
+            y={padTop}
             width={plotWidth}
             height={plotHeight}
             className="chart-plot-hit"

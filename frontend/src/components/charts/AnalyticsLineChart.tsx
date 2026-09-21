@@ -7,8 +7,9 @@ import {
   formatAxisCount,
   formatAxisMoney,
   formatAxisPct,
+  formatPeriodAxisLabel,
   formatPeriodLabel,
-  shouldShowHistoryLabel,
+  historyLabelIndicesForPlot,
   formatTooltipMoney,
   linePath,
   seriesHasPoints,
@@ -117,9 +118,15 @@ export default function AnalyticsLineChart({
   onPeriodSelect,
 }: Props) {
   const width = 640;
-  const height = 160;
+  const height = 182;
   const padX = 44;
-  const padY = 22;
+  const padTop = 22;
+  const padBottom = 40;
+  const plotBottom = height - padBottom;
+  const xLabelIndices = useMemo(
+    () => new Set(historyLabelIndicesForPlot(points.length, width, padX)),
+    [points.length, width, padX],
+  );
   const canvasRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -220,7 +227,7 @@ export default function AnalyticsLineChart({
   const active = activeIndex != null ? points[activeIndex] : null;
 
   const plotWidth = width - padX * 2;
-  const plotHeight = height - padY * 2;
+  const plotHeight = plotBottom - padTop;
 
   const crosshairSelectable =
     activeIndex != null && isPeriodSelectable(points[activeIndex]);
@@ -250,28 +257,28 @@ export default function AnalyticsLineChart({
                 padX +
                 ((forecastDividerIndex - 0.5) / (points.length - 1)) * (width - padX * 2)
               }
-              y1={padY}
+              y1={padTop}
               x2={
                 padX +
                 ((forecastDividerIndex - 0.5) / (points.length - 1)) * (width - padX * 2)
               }
-              y2={height - padY}
+              y2={plotBottom}
               className="chart-forecast-divider"
             />
           )}
           <line
             x1={padX}
-            y1={height - padY}
+            y1={plotBottom}
             x2={width - padX}
-            y2={height - padY}
+            y2={plotBottom}
             className="chart-axis"
           />
-          <text x={padX - 8} y={padY} className="chart-axis-label" textAnchor="end">
+          <text x={padX - 8} y={padTop} className="chart-axis-label" textAnchor="end">
             {formatAxis(maxY)}
           </text>
           <text
             x={padX - 8}
-            y={height - padY}
+            y={plotBottom}
             className="chart-axis-label"
             textAnchor="end"
           >
@@ -281,7 +288,7 @@ export default function AnalyticsLineChart({
             <>
               <text
                 x={width - padX + 8}
-                y={padY}
+                y={padTop}
                 className="chart-axis-label chart-axis-label-right"
                 textAnchor="start"
               >
@@ -289,7 +296,7 @@ export default function AnalyticsLineChart({
               </text>
               <text
                 x={width - padX + 8}
-                y={height - padY}
+                y={plotBottom}
                 className="chart-axis-label chart-axis-label-right"
                 textAnchor="start"
               >
@@ -306,9 +313,10 @@ export default function AnalyticsLineChart({
               width,
               height,
               padX,
-              padY,
+              padTop,
               scale.minY,
               scale.maxY,
+              padBottom,
             );
             if (!d) return null;
             return (
@@ -329,28 +337,30 @@ export default function AnalyticsLineChart({
           {crosshairSvgX != null && (
             <line
               x1={crosshairSvgX}
-              y1={padY}
+              y1={padTop}
               x2={crosshairSvgX}
-              y2={height - padY}
+              y2={plotBottom}
               className="chart-crosshair"
               pointerEvents="none"
             />
           )}
           {points.map((p, i) => {
             const x = xForIndex(i, points.length, width, padX);
-            const showLabel = shouldShowHistoryLabel(p.period, i, points.length);
+            const showLabel = xLabelIndices.has(i);
             const isActive = activeIndex === i;
+            const labelY = plotBottom + 6;
             return (
               <g key={`${p.period}-${i}`}>
                 {showLabel && (
                   <text
                     x={x}
-                    y={height - 5}
-                    className={`chart-x-label${p.kind === "forecast" ? " chart-x-forecast" : ""}${isActive ? " chart-x-label-active" : ""}`}
-                    textAnchor="middle"
+                    y={labelY}
+                    transform={`rotate(-42 ${x} ${labelY})`}
+                    className={`chart-x-label chart-x-label-rotated${p.kind === "forecast" ? " chart-x-forecast" : ""}${isActive ? " chart-x-label-active" : ""}`}
+                    textAnchor="end"
                     pointerEvents="none"
                   >
-                    {formatPeriodLabel(p.period)}
+                    {formatPeriodAxisLabel(p.period)}
                   </text>
                 )}
               </g>
@@ -358,7 +368,7 @@ export default function AnalyticsLineChart({
           })}
           <rect
             x={padX}
-            y={padY}
+            y={padTop}
             width={plotWidth}
             height={plotHeight}
             className={`chart-plot-hit${
