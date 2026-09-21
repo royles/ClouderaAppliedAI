@@ -122,7 +122,11 @@ def generate_israeli_id(rng: random.Random) -> int:
     return base
 
 
-def build_customers(n: int = 40) -> list[dict]:
+DEFAULT_SEED_CUSTOMERS = 40
+MAX_SEED_CUSTOMERS = 5000
+
+
+def build_customers(n: int = DEFAULT_SEED_CUSTOMERS) -> list[dict]:
     rows: list[dict] = []
     used_ids: set[int] = set()
     now = datetime(2025, 9, 15, 10, 30, 0)
@@ -133,9 +137,10 @@ def build_customers(n: int = 40) -> list[dict]:
             cid = generate_israeli_id(RNG)
         used_ids.add(cid)
 
-        ctype = 1 if i < n - 2 else RNG.choice([2, 5])
+        corp_slots = max(2, n // 200)
+        ctype = 1 if i < n - corp_slots else RNG.choice([2, 5])
         first = FIRST_NAMES[i % len(FIRST_NAMES)]
-        last = LAST_NAMES[i % len(LAST_NAMES)]
+        last = LAST_NAMES[(i // len(FIRST_NAMES)) % len(LAST_NAMES)]
         city, street, zipcode = CITIES[i % len(CITIES)]
         marital_code = RNG.choice(list(MARITAL_MAP.keys()))
         comm = RNG.choice([1, 2, 6])
@@ -245,10 +250,19 @@ def build_policies(customers: list[dict]) -> list[dict]:
     return rows
 
 
-def build_foreclosures(customers: list[dict], policies: list[dict]) -> tuple[list[dict], list[dict]]:
+def build_foreclosures(
+    customers: list[dict],
+    policies: list[dict],
+    *,
+    target_fraction: float = 0.028,
+    min_targets: int = 6,
+) -> tuple[list[dict], list[dict]]:
     fc_rows: list[dict] = []
     asset_rows: list[dict] = []
-    targets = RNG.sample([c for c in customers if c["CURRENT_IND"] == 1], 6)
+    active = [c for c in customers if c["CURRENT_IND"] == 1]
+    target_count = max(min_targets, int(len(active) * target_fraction))
+    target_count = min(target_count, len(active))
+    targets = RNG.sample(active, target_count)
     spuror = 5000
 
     for cust in targets:
@@ -415,35 +429,66 @@ def build_matzav_bituach(policies: list[dict], months: list[date]) -> list[dict]
     return rows
 
 
-def insert_rows(conn: sqlite3.Connection, table: str, rows: list[dict]) -> None:
+def insert_rows(
+    conn: sqlite3.Connection,
+    table: str,
+    rows: list[dict],
+    *,
+    chunk_size: int = 5000,
+) -> None:
     if not rows:
         return
     cols = list(rows[0].keys())
     placeholders = ", ".join("?" for _ in cols)
     col_sql = ", ".join(cols)
     sql = f"INSERT INTO {table} ({col_sql}) VALUES ({placeholders})"
-    conn.executemany(sql, [tuple(r[c] for c in cols) for r in rows])
+    for start in range(0, len(rows), chunk_size):
+        batch = rows[start : start + chunk_size]
+        conn.executemany(sql, [tuple(r[c] for c in cols) for r in batch])
 
 
-def init_database(db_path: Path, rebuild: bool = True) -> None:
+def init_database(
+    db_path: Path,
+    rebuild: bool = True,
+    *,
+    customer_count: int = DEFAULT_SEED_CUSTOMERS,
+) -> None:
     db_path.parent.mkdir(parents=True, exist_ok=True)
     if rebuild and db_path.exists():
         db_path.unlink()
 
+    n = max(1, min(int(customer_count), MAX_SEED_CUSTOMERS))
+    if n != customer_count:
+        print(f"Note: customer_count clamped to {n} (max {MAX_SEED_CUSTOMERS})", flush=True)
+
     months = [date(2025, m, 1) for m in range(1, 10)]
 
-    customers = build_customers()
+    print(f"Generating {n} representative customers…", flush=True)
+    customers = build_customers(n)
+    print("Building policies…", flush=True)
     policies = build_policies(customers)
+    print("Building foreclosures, investments, coverage snapshots…", flush=True)
     foreclosures, fc_assets = build_foreclosures(customers, policies)
     pit = build_policy_investment_tracks(policies, months)
     market = build_market_tracks(months)
     matzav = build_matzav_bituach(policies, months)
+    print("Building interaction events…", flush=True)
     interactions = build_interaction_events(customers, policies, foreclosures, rng=RNG)
 
     with sqlite3.connect(db_path) as conn:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         conn.executescript(schema_path().read_text(encoding="utf-8"))
         if INTERACTIONS_SCHEMA.is_file():
             conn.executescript(INTERACTIONS_SCHEMA.read_text(encoding="utf-8"))
+        churn_schema = project_root() / "data" / "churn_schema.sql"
+        if churn_schema.is_file():
+            conn.executescript(churn_schema.read_text(encoding="utf-8"))
+        insights_schema = project_root() / "data" / "insights_schema.sql"
+        if insights_schema.is_file():
+            conn.executescript(insights_schema.read_text(encoding="utf-8"))
+
+        print("Writing warehouse tables…", flush=True)
         insert_rows(conn, "DWH_DIM_CUSTOMERS_UNIQUE", customers)
         insert_rows(conn, "DWH_DIM_ALL_POLICY", policies)
         insert_rows(conn, "DWH_FCT_FORECLOSURES", foreclosures)
@@ -485,9 +530,20 @@ def main() -> None:
         action="store_true",
         help="Append to existing DB without deleting (schema still applied)",
     )
+    parser.add_argument(
+        "--customers",
+        type=int,
+        default=DEFAULT_SEED_CUSTOMERS,
+        metavar="N",
+        help=f"Number of current customers to generate (max {MAX_SEED_CUSTOMERS}, default {DEFAULT_SEED_CUSTOMERS})",
+    )
     args = parser.parse_args()
     db_path = args.db or default_db_path()
-    init_database(db_path, rebuild=not args.no_rebuild)
+    init_database(
+        db_path,
+        rebuild=not args.no_rebuild,
+        customer_count=args.customers,
+    )
 
 
 if __name__ == "__main__":

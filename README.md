@@ -128,6 +128,18 @@ If install fails with a missing `requirements.txt`, run:
 
 Generated databases are gitignored (`data/*.db`).
 
+### Scale to ~5,000 customers
+
+The seed generator uses the same DDS-aligned patterns as the default warehouse (policies,
+investments, coverage snapshots, foreclosures, interactions) and scales every table from
+that logic:
+
+```bash
+python3 scripts/scale_warehouse.py --customers 5000
+```
+
+Or set `CUSTOMER360_SEED_CUSTOMERS=5000` before the init job / `python3 -m customer360.seed --customers 5000`, then run `3_job-train-churn-model/train_churn.py` for churn scores.
+
 ### Frontend without Node on PATH
 
 The repo includes a prebuilt `frontend/dist/`. Restart the application after `git pull` —
