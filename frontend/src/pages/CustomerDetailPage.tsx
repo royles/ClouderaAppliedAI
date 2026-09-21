@@ -7,7 +7,7 @@ import {
   maskCustomerId,
   maskDate,
   maskEmail,
-  maskName,
+  displayCustomerName,
   maskPhone,
   maskStreet,
 } from "../pii";
@@ -76,9 +76,9 @@ export default function CustomerDetailPage() {
         <Link to="/">← Back to dashboard</Link>
       </p>
       <section className="panel">
-        <h1>{maskName(profile.customer_name)}</h1>
+        <h1>{displayCustomerName(profile.customer_name)}</h1>
         <p className="muted small">
-          Name shows first name and surname initial; city and last login are shown in full.
+          City and last login are shown in full; other sensitive fields remain masked.
         </p>
         <div className="detail-grid">
           <div>

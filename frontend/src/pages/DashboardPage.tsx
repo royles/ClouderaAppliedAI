@@ -15,7 +15,7 @@ import {
   formatLastLogin,
   maskCustomerId,
   maskEmail,
-  maskName,
+  displayCustomerName,
   maskPhone,
 } from "../pii";
 
@@ -247,7 +247,7 @@ export default function DashboardPage() {
                       {showRank && <td className="rank-cell">{index + 1}</td>}
                       <td>
                         <Link to={`/customers/${c.customer_id}`}>
-                          {maskName(c.customer_name)}
+                          {displayCustomerName(c.customer_name)}
                         </Link>
                       </td>
                       <td>{maskCustomerId(c.customer_id)}</td>

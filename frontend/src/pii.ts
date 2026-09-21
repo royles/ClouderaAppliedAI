@@ -1,14 +1,14 @@
 /** Display-layer masking for demo / POC (UX only; API may still return raw values). */
 
-/** First name in full, first letter of surname only (e.g. "David Cohen" → "David C"). */
-export function maskName(name: string | null | undefined): string {
+/** Customer name is shown in full in the UI (per PII policy). */
+export function displayCustomerName(name: string | null | undefined): string {
   if (!name?.trim()) return "—";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0];
-  const firstName = parts[0];
-  const surname = parts[parts.length - 1];
-  if (!surname?.length) return firstName;
-  return `${firstName} ${surname[0]}.`;
+  return name.trim();
+}
+
+/** @deprecated use displayCustomerName */
+export function maskName(name: string | null | undefined): string {
+  return displayCustomerName(name);
 }
 
 export function maskCustomerId(id: number | string | null | undefined): string {
