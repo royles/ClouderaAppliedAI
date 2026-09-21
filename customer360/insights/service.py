@@ -69,14 +69,18 @@ def get_customer_insights(
     if not refresh:
         cached = load_cached(conn, customer_id, ctx.context_hash)
         if cached:
-            cached["bedrock_configured"] = bedrock_ready
-            cached["cached"] = True
-            cached.setdefault("experience_note", "")
-            return cached
+            stale_fallback = bedrock_ready and cached.get("source") == "fallback"
+            if not stale_fallback:
+                cached["bedrock_configured"] = bedrock_ready
+                cached["cached"] = True
+                cached.setdefault("experience_note", "")
+                cached.setdefault("fallback_reason", None)
+                return cached
 
     parsed: dict
     source: str
     model_id: str | None = None
+    fallback_reason: str | None = None
 
     if bedrock_ready:
         try:
@@ -88,6 +92,7 @@ def get_customer_insights(
             source = "bedrock"
         except (BedrockError, ValueError) as exc:
             logger.warning("Bedrock insight generation failed: %s", exc)
+            fallback_reason = str(exc)
             parsed = generate_fallback(ctx.payload)
             source = "fallback"
     else:
@@ -101,8 +106,10 @@ def get_customer_insights(
         summary=parsed["summary"],
         primary_focus=parsed["primary_focus"],
         recommendations=parsed["recommendations"],
+        experience_note=parsed.get("experience_note", ""),
         source=source,
         model_id=model_id,
+        fallback_reason=fallback_reason,
     )
 
     return {
@@ -114,5 +121,6 @@ def get_customer_insights(
         "model_id": model_id,
         "generated_at": generated_at,
         "bedrock_configured": bedrock_ready,
+        "fallback_reason": fallback_reason,
         "cached": False,
     }

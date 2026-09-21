@@ -114,6 +114,16 @@ def _parse_anthropic_response(response_body: dict[str, Any]) -> str:
     return json.dumps(response_body)
 
 
+def _invoke_model(client, inference_model: str, body: dict[str, Any]) -> dict[str, Any]:
+    response = client.invoke_model(
+        modelId=inference_model,
+        body=json.dumps(body),
+        contentType="application/json",
+        accept="application/json",
+    )
+    return json.loads(response["body"].read())
+
+
 def invoke_text(*, system_prompt: str, user_prompt: str) -> tuple[str, str]:
     """
     Invoke Bedrock and return (text, catalog_model_id).
@@ -144,13 +154,22 @@ def invoke_text(*, system_prompt: str, user_prompt: str) -> tuple[str, str]:
             client_region,
             inference_model,
         )
-        response = client.invoke_model(
-            modelId=inference_model,
-            body=json.dumps(body),
-            contentType="application/json",
-            accept="application/json",
-        )
-        response_body = json.loads(response["body"].read())
+        try:
+            response_body = _invoke_model(client, inference_model, body)
+        except ClientError as first_exc:
+            error_code = first_exc.response.get("Error", {}).get("Code", "Unknown")
+            if (
+                error_code == "ValidationException"
+                and inference_model != catalog_model
+                and ui_region in GEO_SCOPES
+            ):
+                logger.info(
+                    "Retrying Bedrock with base model id %s after ValidationException",
+                    catalog_model,
+                )
+                response_body = _invoke_model(client, catalog_model, body)
+            else:
+                raise
         if not catalog_model.startswith("anthropic."):
             logger.warning(
                 "Non-Anthropic model %s requested; using Anthropic request format",

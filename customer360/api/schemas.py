@@ -133,6 +133,7 @@ class CustomerInsightsResponse(BaseModel):
     generated_at: str | None = None
     bedrock_configured: bool = False
     cached: bool = False
+    fallback_reason: str | None = None
 
 
 class BedrockStatusResponse(BaseModel):

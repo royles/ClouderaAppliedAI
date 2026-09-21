@@ -175,6 +175,7 @@ export type CustomerInsights = {
   generated_at?: string | null;
   bedrock_configured: boolean;
   cached: boolean;
+  fallback_reason?: string | null;
 };
 
 export type ActionDraft = {
