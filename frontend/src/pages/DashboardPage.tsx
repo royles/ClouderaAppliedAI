@@ -25,8 +25,8 @@ export default function DashboardPage() {
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [search, setSearch] = useState("");
   const [segment, setSegment] = useState<CustomerSegment>("customers_all");
-  const [sortBy, setSortBy] = useState<CustomerSortBy>("name");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [sortBy, setSortBy] = useState<CustomerSortBy>("churn_risk");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [activeDomain, setActiveDomain] = useState<DomainCount | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -108,7 +108,7 @@ export default function DashboardPage() {
 
   const setRankBy = (by: CustomerSortBy) => {
     setSortBy(by);
-    if (by === "policy_count" || by === "investment_count") {
+    if (by === "churn_risk" || by === "policy_count" || by === "investment_count") {
       setSortOrder("desc");
     } else {
       setSortOrder("asc");
@@ -119,7 +119,10 @@ export default function DashboardPage() {
     setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
   };
 
-  const showRank = sortBy === "policy_count" || sortBy === "investment_count";
+  const showRank =
+    sortBy === "churn_risk" ||
+    sortBy === "policy_count" ||
+    sortBy === "investment_count";
 
   if (loading) return <p className="muted">Loading warehouse…</p>;
   if (error && !overview) return <p className="error">{error}</p>;
@@ -182,6 +185,7 @@ export default function DashboardPage() {
                 value={sortBy}
                 onChange={(e) => setRankBy(e.target.value as CustomerSortBy)}
               >
+                <option value="churn_risk">Churn risk</option>
                 <option value="name">Name (A–Z)</option>
                 <option value="policy_count">Policy count</option>
                 <option value="investment_count">Investment tracks</option>
@@ -192,7 +196,13 @@ export default function DashboardPage() {
               className="control control-btn"
               onClick={toggleSortOrder}
             >
-              {sortOrder === "desc" ? "Highest first ↓" : "Lowest first ↑"}
+              {sortBy === "churn_risk"
+                ? sortOrder === "desc"
+                  ? "High risk first ↓"
+                  : "Low risk first ↑"
+                : sortOrder === "desc"
+                  ? "Highest first ↓"
+                  : "Lowest first ↑"}
             </button>
             <div className="toolbar-item toolbar-item-grow">
               <label htmlFor="customer-search">Search</label>
@@ -233,7 +243,9 @@ export default function DashboardPage() {
                     Investments
                   </th>
                   <th>Last login</th>
-                  <th>Churn risk</th>
+                  <th className={sortBy === "churn_risk" ? "th-sorted" : undefined}>
+                    Churn risk
+                  </th>
                 </tr>
               </thead>
               <tbody>

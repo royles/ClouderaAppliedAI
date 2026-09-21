@@ -32,7 +32,11 @@ export type CustomerSummary = {
   churn_risk_tier?: string | null;
 };
 
-export type CustomerSortBy = "name" | "policy_count" | "investment_count";
+export type CustomerSortBy =
+  | "churn_risk"
+  | "name"
+  | "policy_count"
+  | "investment_count";
 export type SortOrder = "asc" | "desc";
 
 export type CustomerDetail = {
@@ -143,10 +147,8 @@ export const fetchCustomers = (options?: {
   if (options?.segment && options.segment !== "customers_all") {
     params.set("segment", options.segment);
   }
-  if (options?.sortBy && options.sortBy !== "name") {
+  if (options?.sortBy) {
     params.set("sort_by", options.sortBy);
-  } else if (options?.sortBy === "name") {
-    params.set("sort_by", "name");
   }
   if (options?.sortOrder) params.set("sort_order", options.sortOrder);
   if (options?.limit) params.set("limit", String(options.limit));

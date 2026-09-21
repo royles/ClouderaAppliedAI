@@ -33,7 +33,9 @@ Optional environment variable:
 
 ```
 .
-├── .project-metadata.yaml          # AMP / prototype automation
+├── .project-metadata.yaml          # CAI AMP import + application tasks
+├── amp-catalog.yaml                # Optional AMP catalog registration
+├── docs/CAI_APPLICATION.md         # Deploy guide
 ├── 1_session-install-dependencies/ # stage 1: pip install
 ├── 2_job-init-database/            # stage 3: warehouse seed
 ├── 3_job-train-churn-model/        # stage 4: churn training

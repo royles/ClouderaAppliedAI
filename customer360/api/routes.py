@@ -112,7 +112,7 @@ def list_customers(
     ),
     sort_by: str | None = Query(
         None,
-        description="Sort key: name, policy_count, or investment_count",
+        description="Sort key: churn_risk (default), name, policy_count, or investment_count",
     ),
     sort_order: str | None = Query(
         None,
@@ -122,14 +122,17 @@ def list_customers(
 ) -> list[CustomerSummary]:
     seg = normalize_segment(segment)
     segment_sql = SEGMENT_WHERE[seg]
-    sort_key = normalize_sort_by(sort_by)
-    order_key = normalize_sort_order(sort_order, sort_by=sort_key)
-
     churn_join = ""
     churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"
-    if _churn_table_exists(conn):
+    churn_scores_available = _churn_table_exists(conn)
+    if churn_scores_available:
         churn_join = "LEFT JOIN APP_CUSTOMER_CHURN_SCORES ch ON ch.CUSTOMER_ID = c.CUSTOMER_ID"
         churn_cols = "ch.CHURN_PROBABILITY AS churn_probability, ch.CHURN_RISK_TIER AS churn_risk_tier"
+
+    sort_key = normalize_sort_by(sort_by)
+    if sort_key == "churn_risk" and not churn_scores_available:
+        sort_key = "name"
+    order_key = normalize_sort_order(sort_order, sort_by=sort_key)
 
     sql = f"""
         SELECT
