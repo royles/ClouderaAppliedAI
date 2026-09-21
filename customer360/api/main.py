@@ -28,6 +28,23 @@ async def database_missing_handler(_request: Request, exc: FileNotFoundError) ->
     )
 
 
+@app.exception_handler(sqlite3.ProgrammingError)
+async def sqlite_programming_handler(
+    _request: Request, exc: sqlite3.ProgrammingError
+) -> JSONResponse:
+    message = str(exc).lower()
+    if "thread" in message and "sqlite" in message:
+        logger.exception("SQLite thread affinity error")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Database connection thread error; restart the API after updating customer360.",
+            },
+        )
+    logger.exception("SQLite programming error")
+    return JSONResponse(status_code=500, content={"detail": "Database error."})
+
+
 @app.exception_handler(sqlite3.OperationalError)
 async def sqlite_operational_handler(
     _request: Request, exc: sqlite3.OperationalError

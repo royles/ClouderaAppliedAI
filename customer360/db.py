@@ -14,7 +14,9 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
         raise FileNotFoundError(
             f"Database not found at {path}. Run 2_job-init-database/init_database.py first."
         )
-    conn = sqlite3.connect(path, timeout=30.0)
+    # FastAPI runs sync route handlers in a worker thread; allow this connection
+    # to be opened from the dependency generator and used in the same request.
+    conn = sqlite3.connect(path, timeout=30.0, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA busy_timeout = 30000")
     try:
