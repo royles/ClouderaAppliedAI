@@ -193,7 +193,7 @@ export default function AnalyticsLineChart({
           customer page.
         </p>
       )}
-      {active && (
+      {active && !interactive && (
         <div className="chart-tooltip chart-tooltip-compact" role="status">
           <strong>
             {formatPeriodLabel(active.period)}
