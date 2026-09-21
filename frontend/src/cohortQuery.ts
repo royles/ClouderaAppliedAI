@@ -18,7 +18,21 @@ const VALID_SORT: CustomerSortBy[] = [
   "investment_count",
 ];
 
-export const CUSTOMER_PAGE_SIZE = 50;
+export const CUSTOMER_PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+export type CustomerPageSize = (typeof CUSTOMER_PAGE_SIZE_OPTIONS)[number];
+export const DEFAULT_CUSTOMER_PAGE_SIZE: CustomerPageSize = 50;
+export const MAX_CUSTOMER_PAGE_SIZE = 100;
+
+/** @deprecated use DEFAULT_CUSTOMER_PAGE_SIZE or url state pageSize */
+export const CUSTOMER_PAGE_SIZE = DEFAULT_CUSTOMER_PAGE_SIZE;
+
+function parsePageSize(raw: string | null): CustomerPageSize {
+  const n = Number.parseInt(raw ?? "", 10);
+  if (CUSTOMER_PAGE_SIZE_OPTIONS.includes(n as CustomerPageSize)) {
+    return n as CustomerPageSize;
+  }
+  return DEFAULT_CUSTOMER_PAGE_SIZE;
+}
 
 export type CustomerListView = "grid" | "table";
 
@@ -28,6 +42,7 @@ export type CohortQueryState = {
   sortBy: CustomerSortBy;
   sortOrder: SortOrder;
   page: number;
+  pageSize: CustomerPageSize;
   view: CustomerListView;
   asOf: string | null;
   metric: ChartValueMetric | null;
@@ -57,7 +72,19 @@ export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
   const asOf = asOfRaw ? asOfRaw : null;
   const metric = parseChartMetric(params.get("metric"));
 
-  return { segment, q: params.get("q") ?? "", sortBy, sortOrder, page, view, asOf, metric };
+  const pageSize = parsePageSize(params.get("page_size"));
+
+  return {
+    segment,
+    q: params.get("q") ?? "",
+    sortBy,
+    sortOrder,
+    page,
+    pageSize,
+    view,
+    asOf,
+    metric,
+  };
 }
 
 export function cohortSearchString(state: Partial<CohortQueryState>): string {
@@ -74,6 +101,9 @@ export function cohortSearchString(state: Partial<CohortQueryState>): string {
   }
   if (state.page && state.page > 1) {
     params.set("page", String(state.page));
+  }
+  if (state.pageSize && state.pageSize !== DEFAULT_CUSTOMER_PAGE_SIZE) {
+    params.set("page_size", String(state.pageSize));
   }
   if (state.view === "table") {
     params.set("view", "table");
@@ -92,6 +122,7 @@ export function patchCohortParams(
     sortBy: CustomerSortBy;
     sortOrder: SortOrder;
     page: number | null;
+    pageSize: CustomerPageSize | null;
     view: CustomerListView | null;
     asOf: string | null;
     metric: ChartValueMetric | null;
@@ -109,6 +140,13 @@ export function patchCohortParams(
   if ("page" in patch) {
     const p = patch.page;
     apply("page", p == null || p <= 1 ? null : String(p));
+  }
+  if ("pageSize" in patch) {
+    const ps = patch.pageSize;
+    apply(
+      "page_size",
+      ps == null || ps === DEFAULT_CUSTOMER_PAGE_SIZE ? null : String(ps),
+    );
   }
   if ("view" in patch) apply("view", patch.view ?? null, "grid");
   if ("asOf" in patch) apply("as_of", patch.asOf ?? null);

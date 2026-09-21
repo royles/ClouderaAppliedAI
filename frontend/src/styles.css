@@ -1205,8 +1205,18 @@ select.control {
 
 .pagination {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.65rem;
+}
+
+.pagination-page-size {
+  margin: 0;
+}
+
+.pagination-page-size label {
+  font-size: 0.8rem;
+  margin-right: 0.35rem;
 }
 
 .kpi-strip {

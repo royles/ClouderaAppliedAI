@@ -10,8 +10,9 @@ import {
 } from "../api";
 import { CUSTOMER_BASE } from "../appRoutes";
 import {
-  CUSTOMER_PAGE_SIZE,
+  CUSTOMER_PAGE_SIZE_OPTIONS,
   CustomerListView,
+  CustomerPageSize,
   CohortQueryState,
   parseCohortSearch,
   patchCohortParams,
@@ -40,7 +41,7 @@ export default function CustomerDirectoryPanel({
     () => parseCohortSearch(searchParams),
     [searchParams],
   );
-  const { sortBy, sortOrder, page, view, asOf, metric } = urlState;
+  const { sortBy, sortOrder, page, pageSize, view, asOf, metric } = urlState;
   const effectiveSegment = segment;
 
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
@@ -86,7 +87,7 @@ export default function CustomerDirectoryPanel({
 
     const requestId = ++customersRequestRef.current;
     let cancelled = false;
-    const offset = (page - 1) * CUSTOMER_PAGE_SIZE;
+    const offset = (page - 1) * pageSize;
 
     (async () => {
       setTableLoading(true);
@@ -96,7 +97,7 @@ export default function CustomerDirectoryPanel({
           segment: effectiveSegment,
           sortBy,
           sortOrder,
-          limit: CUSTOMER_PAGE_SIZE,
+          limit: pageSize,
           offset,
           asOf,
           metric: asOf ? (metric ?? "total") : null,
@@ -126,6 +127,7 @@ export default function CustomerDirectoryPanel({
     sortBy,
     sortOrder,
     page,
+    pageSize,
     location.pathname,
     location.key,
     overviewReady,
@@ -176,9 +178,23 @@ export default function CustomerDirectoryPanel({
     });
   };
 
-  const pageCount = Math.max(1, Math.ceil(listTotal / CUSTOMER_PAGE_SIZE));
-  const showingFrom = listTotal === 0 ? 0 : (page - 1) * CUSTOMER_PAGE_SIZE + 1;
-  const showingTo = Math.min(page * CUSTOMER_PAGE_SIZE, listTotal);
+  const pageCount = Math.max(1, Math.ceil(listTotal / pageSize));
+  const showingFrom = listTotal === 0 ? 0 : (page - 1) * pageSize + 1;
+  const showingTo = Math.min(page * pageSize, listTotal);
+
+  const setPageSize = (next: CustomerPageSize) => {
+    setSearchParams(
+      (prev) => patchCohortParams(prev, { pageSize: next, page: 1 }),
+      { replace: true },
+    );
+  };
+
+  useEffect(() => {
+    if (page <= pageCount) return;
+    setSearchParams((prev) => patchCohortParams(prev, { page: pageCount }), {
+      replace: true,
+    });
+  }, [page, pageCount, setSearchParams]);
 
   const showRank =
     sortBy === "customer_value" ||
@@ -317,39 +333,59 @@ export default function CustomerDirectoryPanel({
           {listTotal === 0
             ? "No matching customers"
             : `Showing ${showingFrom.toLocaleString()}–${showingTo.toLocaleString()} of ${listTotal.toLocaleString()}`}
-          {listTruncated && " · refine search or filter to narrow results"}
+          {listTotal > 0 && ` · up to ${pageSize} per page`}
         </p>
-        {pageCount > 1 && (
+        {listTotal > 0 && (
           <div className="pagination">
-            <button
-              type="button"
-              className="control control-btn"
-              disabled={page <= 1 || tableLoading}
-              onClick={() =>
-                setSearchParams(
-                  (prev) => patchCohortParams(prev, { page: page - 1 }),
-                  { replace: true },
-                )
-              }
-            >
-              Previous
-            </button>
-            <span className="muted small">
-              Page {page} of {pageCount}
-            </span>
-            <button
-              type="button"
-              className="control control-btn"
-              disabled={page >= pageCount || tableLoading}
-              onClick={() =>
-                setSearchParams(
-                  (prev) => patchCohortParams(prev, { page: page + 1 }),
-                  { replace: true },
-                )
-              }
-            >
-              Next
-            </button>
+            <div className="toolbar-item pagination-page-size">
+              <label htmlFor="customer-page-size">Per page</label>
+              <select
+                id="customer-page-size"
+                className="control"
+                value={pageSize}
+                disabled={tableLoading}
+                onChange={(e) => setPageSize(Number(e.target.value) as CustomerPageSize)}
+              >
+                {CUSTOMER_PAGE_SIZE_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {pageCount > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="control control-btn"
+                  disabled={page <= 1 || tableLoading}
+                  onClick={() =>
+                    setSearchParams(
+                      (prev) => patchCohortParams(prev, { page: page - 1 }),
+                      { replace: true },
+                    )
+                  }
+                >
+                  Previous
+                </button>
+                <span className="muted small">
+                  Page {page} of {pageCount}
+                </span>
+                <button
+                  type="button"
+                  className="control control-btn"
+                  disabled={page >= pageCount || tableLoading}
+                  onClick={() =>
+                    setSearchParams(
+                      (prev) => patchCohortParams(prev, { page: page + 1 }),
+                      { replace: true },
+                    )
+                  }
+                >
+                  Next
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

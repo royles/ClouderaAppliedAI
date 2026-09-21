@@ -27,6 +27,7 @@ export function parseDashboardSearch(params: URLSearchParams): DashboardUrlState
     sortBy: "churn_risk",
     sortOrder: "desc",
     page: 1,
+    pageSize: 50,
     view: "grid",
     asOf: null,
     metric: null,
