@@ -1948,6 +1948,42 @@ select.control {
   font-size: 0.85rem;
 }
 
+.chart-tooltip-floating {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 9rem;
+  max-width: 14rem;
+  padding: 0.45rem 0.6rem;
+  background: #fff;
+  border: 1px solid #c5d0dc;
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(15, 61, 94, 0.14);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  transform: translate(10px, 10px);
+}
+
+.chart-tooltip-floating.flip-x {
+  transform: translate(calc(-100% - 10px), 10px);
+}
+
+.chart-tooltip-floating.flip-y {
+  transform: translate(10px, calc(-100% - 10px));
+}
+
+.chart-tooltip-floating.flip-x.flip-y {
+  transform: translate(calc(-100% - 10px), calc(-100% - 10px));
+}
+
+.chart-tooltip-floating strong {
+  color: #0f3d5e;
+  font-size: 0.88rem;
+}
+
 .chart-hit {
   fill: transparent;
   cursor: default;

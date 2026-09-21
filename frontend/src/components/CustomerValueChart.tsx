@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { ValueHistoryPoint } from "../api";
 import {
   buildCustomerValueWithChurnForecast,
@@ -87,6 +88,27 @@ function pointCoords(
   const x = padX + index * stepX;
   const y = padY + (height - padY * 2) * (1 - (value - minY) / span);
   return { x, y };
+}
+
+function indexFromSvgX(
+  x: number,
+  pointCount: number,
+  width: number,
+  padX: number,
+): number {
+  if (pointCount <= 1) return 0;
+  const stepX = (width - padX * 2) / (pointCount - 1);
+  const raw = (x - padX) / stepX;
+  return Math.max(0, Math.min(pointCount - 1, Math.round(raw)));
+}
+
+function svgPointFromClient(svg: SVGSVGElement, clientX: number, clientY: number) {
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return null;
+  return pt.matrixTransform(ctm.inverse());
 }
 
 export default function CustomerValueChart({
