@@ -28,11 +28,12 @@ export default function DashboardPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [segment, setSegment] = useState<CustomerSegment>("customers_all");
   const [sortBy, setSortBy] = useState<CustomerSortBy>("churn_risk");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [error, setError] = useState<string | null>(null);
-  const [initialLoading, setInitialLoading] = useState(true);
+  const [overviewLoading, setOverviewLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [valueHistory, setValueHistory] = useState<ValueHistoryPoint[]>([]);
   const [valueHistoryLoading, setValueHistoryLoading] = useState(true);
@@ -46,57 +47,88 @@ export default function DashboardPage() {
     return match ?? null;
   }, [segment, overview]);
 
-  const loadOverview = useCallback(async () => {
-    const ov = await fetchOverview();
-    setOverview(ov);
-    return ov;
-  }, []);
+  useEffect(() => {
+    const handle = window.setTimeout(() => setDebouncedSearch(search), 300);
+    return () => window.clearTimeout(handle);
+  }, [search]);
 
-  const loadCustomers = useCallback(
-    async (
-      q: string,
-      seg: CustomerSegment,
-      by: CustomerSortBy,
-      order: SortOrder,
-      immediate = false,
-    ) => {
-      const requestId = ++customersRequestRef.current;
-      setTableLoading(true);
-      if (!immediate) {
-        await new Promise((r) => window.setTimeout(r, 300));
-      }
-      if (requestId !== customersRequestRef.current) return;
+  // Refetch overview when the user lands on the dashboard route.
+  useEffect(() => {
+    if (location.pathname !== "/") return;
+
+    let cancelled = false;
+    (async () => {
+      setOverviewLoading(true);
       try {
-        setCustomers(
-          await fetchCustomers({
-            q,
-            segment: seg,
-            sortBy: by,
-            sortOrder: order,
-            limit: 200,
-          }),
-        );
+        const ov = await fetchOverview();
+        if (!cancelled) {
+          setOverview(ov);
+          setError(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Failed to load overview");
+        }
+      } finally {
+        if (!cancelled) setOverviewLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, location.key]);
+
+  useEffect(() => {
+    if (location.pathname !== "/" || overviewLoading) return;
+
+    const requestId = ++customersRequestRef.current;
+    let cancelled = false;
+
+    (async () => {
+      setTableLoading(true);
+      try {
+        const rows = await fetchCustomers({
+          q: debouncedSearch,
+          segment,
+          sortBy,
+          sortOrder,
+          limit: 200,
+        });
+        if (cancelled || requestId !== customersRequestRef.current) return;
+        setCustomers(rows);
         setError(null);
       } catch (e) {
-        if (requestId === customersRequestRef.current) {
-          setError(e instanceof Error ? e.message : "Failed to load customers");
-        }
+        if (cancelled || requestId !== customersRequestRef.current) return;
+        setError(e instanceof Error ? e.message : "Failed to load customers");
       } finally {
         if (requestId === customersRequestRef.current) {
           setTableLoading(false);
         }
       }
-    },
-    [],
-  );
+    })();
+
+    return () => {
+      cancelled = true;
+      customersRequestRef.current += 1;
+    };
+  }, [
+    debouncedSearch,
+    segment,
+    sortBy,
+    sortOrder,
+    location.pathname,
+    location.key,
+    overviewLoading,
+  ]);
 
   const loadValueHistory = useCallback(async (seg: CustomerSegment) => {
     const requestId = ++valueHistoryRequestRef.current;
-    setValueHistoryLoading(true);
     if (valueHistorySegmentRef.current !== seg) {
       setValueHistory([]);
       valueHistorySegmentRef.current = seg;
     }
+    setValueHistoryLoading(true);
     try {
       const data = await fetchPortfolioValueHistory(seg);
       if (requestId !== valueHistoryRequestRef.current) return;
@@ -112,47 +144,21 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Refetch overview + cohort data whenever the user lands on the dashboard route.
   useEffect(() => {
-    if (location.pathname !== "/") return;
+    if (location.pathname !== "/" || overviewLoading) return;
 
-    let cancelled = false;
-    (async () => {
-      try {
-        if (!overview) setInitialLoading(true);
-        await loadOverview();
-        if (cancelled) return;
-        setError(null);
-        await Promise.all([
-          loadCustomers(search, segment, sortBy, sortOrder, true),
-          loadValueHistory(segment),
-        ]);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load dashboard");
-        }
-      } finally {
-        if (!cancelled) setInitialLoading(false);
-      }
-    })();
+    void loadValueHistory(segment);
 
     return () => {
-      cancelled = true;
-      customersRequestRef.current += 1;
       valueHistoryRequestRef.current += 1;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh on navigation, not every filter keystroke
-  }, [location.pathname, location.key]);
-
-  useEffect(() => {
-    if (location.pathname !== "/" || initialLoading) return;
-    void loadCustomers(search, segment, sortBy, sortOrder);
-  }, [search, segment, sortBy, sortOrder, loadCustomers, location.pathname, initialLoading]);
-
-  useEffect(() => {
-    if (location.pathname !== "/" || initialLoading) return;
-    void loadValueHistory(segment);
-  }, [segment, loadValueHistory, location.pathname, initialLoading]);
+  }, [
+    segment,
+    loadValueHistory,
+    location.pathname,
+    location.key,
+    overviewLoading,
+  ]);
 
   const onCardClick = (domain: DomainCount) => {
     const key = domain.filter_key as CustomerSegment;
@@ -181,7 +187,7 @@ export default function DashboardPage() {
     sortBy === "policy_count" ||
     sortBy === "investment_count";
 
-  if (initialLoading && !overview) {
+  if (overviewLoading && !overview) {
     return <p className="muted">Loading warehouse…</p>;
   }
   if (error && !overview) return <p className="error">{error}</p>;

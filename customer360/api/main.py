@@ -4,15 +4,44 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+import logging
+import sqlite3
+
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from customer360.api.routes import router
 from customer360.paths import project_root
 
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="Insurance Customer 360", version="0.1.0")
 app.include_router(router)
+
+
+@app.exception_handler(FileNotFoundError)
+async def database_missing_handler(_request: Request, exc: FileNotFoundError) -> JSONResponse:
+    logger.exception("Database not available")
+    return JSONResponse(
+        status_code=503,
+        content={"detail": str(exc)},
+    )
+
+
+@app.exception_handler(sqlite3.OperationalError)
+async def sqlite_operational_handler(
+    _request: Request, exc: sqlite3.OperationalError
+) -> JSONResponse:
+    message = str(exc).lower()
+    if "locked" in message or "busy" in message:
+        logger.warning("SQLite busy: %s", exc)
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Database is busy; retry shortly."},
+        )
+    logger.exception("SQLite error")
+    return JSONResponse(status_code=500, content={"detail": "Database error."})
 
 
 def _frontend_dist() -> Path:
