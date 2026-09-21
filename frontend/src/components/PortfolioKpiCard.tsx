@@ -20,14 +20,12 @@ export default function PortfolioKpiCard({
 }: Props) {
   return (
     <div className={`portfolio-kpi${progress ? " portfolio-kpi-with-thermo" : ""}`}>
-      <div className="portfolio-kpi-main">
-        <span className="label">{label}</span>
-        <strong>{loading ? "…" : value}</strong>
-        {sub ? <span className="muted small kpi-sub">{sub}</span> : null}
-        {progress && targetLabel && !loading ? (
-          <span className="muted small kpi-target-line">Objective: {targetLabel}</span>
-        ) : null}
-      </div>
+      <span className="label">{label}</span>
+      <strong>{loading ? "…" : value}</strong>
+      {sub ? <span className="muted small kpi-sub">{sub}</span> : null}
+      {progress && targetLabel && !loading ? (
+        <span className="muted small kpi-target-line">Objective: {targetLabel}</span>
+      ) : null}
       {progress && !loading ? <KpiThermometer progress={progress} /> : null}
     </div>
   );
