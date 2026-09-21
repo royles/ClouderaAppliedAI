@@ -4,6 +4,10 @@
   line-height: 1.5;
   color: #1a2332;
   background: #f4f6f9;
+  --chart-font-min: 8pt;
+  --chart-font-axis: 9pt;
+  --chart-font-legend: max(8pt, 0.85rem);
+  --chart-font-caption: max(8pt, 0.875rem);
 }
 
 * {
@@ -1102,7 +1106,7 @@ select.control {
 }
 
 .value-chart-canvas-fill .chart-x-label {
-  font-size: clamp(7px, 0.85vw, 9px);
+  font-size: clamp(8pt, 1vw, 10pt);
 }
 
 .chart-axis {
@@ -1113,7 +1117,7 @@ select.control {
 .chart-axis-label,
 .chart-x-label {
   fill: #5a6b7d;
-  font-size: 9px;
+  font-size: var(--chart-font-axis);
   font-family: "Segoe UI", system-ui, sans-serif;
 }
 
@@ -1147,7 +1151,7 @@ select.control {
   list-style: none;
   margin: 0.5rem 0 0;
   padding: 0;
-  font-size: 0.82rem;
+  font-size: var(--chart-font-legend);
   color: #5a6b7d;
 }
 
@@ -1417,7 +1421,7 @@ select.control {
 
 .analytics-chart-title {
   margin: 0 0 0.2rem;
-  font-size: 0.95rem;
+  font-size: max(8pt, 0.95rem);
   font-weight: 600;
   color: #0f3d5e;
 }
@@ -1425,19 +1429,20 @@ select.control {
 .analytics-chart-sub {
   margin: 0 0 0.45rem;
   line-height: 1.35;
+  font-size: var(--chart-font-caption);
 }
 
 .analytics-chart-svg {
-  max-height: 9.5rem;
+  max-height: 10.5rem;
 }
 
 .chart-tooltip-compact {
   margin-bottom: 0.35rem;
-  font-size: 0.8rem;
+  font-size: var(--chart-font-caption);
 }
 
 .chart-legend-compact {
-  font-size: 0.75rem;
+  font-size: var(--chart-font-legend);
   margin-top: 0.35rem;
 }
 
@@ -1963,13 +1968,13 @@ select.control {
   border: 1px solid #c5d0dc;
   border-radius: 6px;
   box-shadow: 0 4px 14px rgba(15, 61, 94, 0.14);
-  font-size: 0.82rem;
+  font-size: var(--chart-font-caption);
   line-height: 1.35;
 }
 
 .chart-tooltip-floating strong {
   color: #0f3d5e;
-  font-size: 0.88rem;
+  font-size: max(8pt, 0.9rem);
 }
 
 .chart-hit {
@@ -1987,6 +1992,25 @@ select.control {
 
 .chart-interactive-hint {
   margin: 0 0 0.35rem;
+  font-size: var(--chart-font-caption);
+}
+
+.value-chart-wrap .value-chart-kpi,
+.value-chart-wrap .value-chart-kpi .label,
+.value-chart-wrap .value-chart-churn-kpi,
+.value-chart-wrap .value-chart-churn-kpi .label,
+.value-chart-refresh-label,
+.analytics-chart-panel .muted.small {
+  font-size: var(--chart-font-caption);
+}
+
+.value-chart-wrap .value-chart-kpi strong,
+.value-chart-wrap .value-chart-churn-kpi strong {
+  font-size: max(8pt, 1.05rem);
+}
+
+.value-chart-wrap .subsection-title {
+  font-size: max(8pt, 1rem);
 }
 
 .analytics-chart-svg-interactive {
