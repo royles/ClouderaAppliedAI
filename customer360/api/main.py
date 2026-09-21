@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import logging
 import sqlite3
+from pathlib import Path
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from customer360.api.routes import router
@@ -48,6 +47,22 @@ def _frontend_dist() -> Path:
     return (project_root() / "frontend" / "dist").resolve()
 
 
+def _is_api_or_docs_path(path: str) -> bool:
+    normalized = path.lstrip("/")
+    if normalized.startswith("api/") or normalized == "api":
+        return True
+    if normalized in ("docs", "redoc", "openapi.json"):
+        return True
+    return normalized.startswith("docs/") or normalized.startswith("redoc/")
+
+
+def _spa_index_response(dist_dir: Path) -> FileResponse:
+    index = dist_dir / "index.html"
+    if not index.is_file():
+        raise HTTPException(status_code=404, detail="UI not built")
+    return FileResponse(index, media_type="text/html")
+
+
 def _mount_frontend() -> None:
     dist_dir = _frontend_dist()
     if not (dist_dir / "index.html").is_file():
@@ -65,10 +80,25 @@ def _mount_frontend() -> None:
   <p>API docs: <a href="/docs">/docs</a> · Health: <a href="/api/health">/api/health</a></p>
   <p><small>Expected path: {dist_dir / "index.html"}</small></p>
 </body></html>"""
+
         return
 
-    # Register after /api routes so API paths are not shadowed by static files.
-    app.mount("/", StaticFiles(directory=dist_dir, html=True), name="frontend")
+    assets_dir = dist_dir / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="frontend-assets")
+
+    @app.get("/", include_in_schema=False)
+    async def spa_root() -> FileResponse:
+        return _spa_index_response(dist_dir)
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_client_routes(full_path: str) -> FileResponse:
+        if _is_api_or_docs_path(full_path):
+            raise HTTPException(status_code=404, detail="Not Found")
+        candidate = dist_dir / full_path
+        if candidate.is_file():
+            return FileResponse(candidate)
+        return _spa_index_response(dist_dir)
 
 
 _mount_frontend()
