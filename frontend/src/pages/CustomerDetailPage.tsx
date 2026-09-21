@@ -205,6 +205,7 @@ export default function CustomerDetailPage() {
           )}
           <CustomerValueChart
             className="customer-detail-value-chart"
+            fillContainer
             title="Value & churn risk"
             subtitle="Actual monthly value from warehouse snapshots; dashed line shows expected value declining to zero at the predicted lapse month from the churn model."
             points={valueHistory}

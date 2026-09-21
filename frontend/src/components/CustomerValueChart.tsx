@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ValueHistoryPoint } from "../api";
 import {
   buildCustomerValueWithChurnForecast,
@@ -15,6 +15,8 @@ type Props = {
   className?: string;
   /** When set, extends the chart with a lapse scenario (value → 0 at predicted churn). */
   churn?: CustomerChurnInput | null;
+  /** Size SVG to the chart canvas (customer detail hero). */
+  fillContainer?: boolean;
 };
 
 function formatPeriodLabel(period: string) {
@@ -95,21 +97,42 @@ export default function CustomerValueChart({
   refreshing,
   className,
   churn,
+  fillContainer = false,
 }: Props) {
   const wrapClass = [
     "value-chart-wrap",
     "in-panel",
+    fillContainer ? "value-chart-fill" : "",
     refreshing ? "value-chart-refreshing" : "",
     className ?? "",
   ]
     .filter(Boolean)
     .join(" ");
 
-  const width = 640;
-  const height = 168;
-  const padX = 44;
-  const padY = 22;
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 640, height: 168 });
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!fillContainer || !canvasRef.current) return;
+    const node = canvasRef.current;
+    const update = () => {
+      const rect = node.getBoundingClientRect();
+      setCanvasSize({
+        width: Math.max(280, Math.floor(rect.width)),
+        height: Math.max(140, Math.floor(rect.height)),
+      });
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [fillContainer]);
+
+  const width = fillContainer ? canvasSize.width : 640;
+  const height = fillContainer ? canvasSize.height : 168;
+  const padX = fillContainer ? Math.max(40, Math.round(width * 0.07)) : 44;
+  const padY = fillContainer ? Math.max(24, Math.round(height * 0.14)) : 22;
 
   const forecastBundle = useMemo(
     () => buildCustomerValueWithChurnForecast(points, churn),
@@ -260,11 +283,14 @@ export default function CustomerValueChart({
         </div>
       )}
 
-      <div className="value-chart-canvas">
+      <div
+        ref={canvasRef}
+        className="value-chart-canvas"
+      >
         <svg
           className="value-chart-svg"
           viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio={fillContainer ? "none" : "xMidYMid meet"}
           role="img"
           aria-label={
             showChurnForecast
