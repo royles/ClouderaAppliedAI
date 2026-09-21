@@ -7,6 +7,7 @@ type Props = {
   points: ValueHistoryPoint[];
   loading?: boolean;
   refreshing?: boolean;
+  className?: string;
 };
 
 function formatPeriodLabel(period: string) {
@@ -79,7 +80,17 @@ export default function CustomerValueChart({
   points,
   loading,
   refreshing,
+  className,
 }: Props) {
+  const wrapClass = [
+    "value-chart-wrap",
+    "in-panel",
+    refreshing ? "value-chart-refreshing" : "",
+    className ?? "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   const width = 640;
   const height = 168;
   const padX = 44;
@@ -103,7 +114,7 @@ export default function CustomerValueChart({
 
   if (loading) {
     return (
-      <div className="value-chart-wrap in-panel">
+      <div className={wrapClass}>
         <h2 className="subsection-title">{title}</h2>
         <p className="muted small">Loading value history…</p>
       </div>
@@ -112,7 +123,7 @@ export default function CustomerValueChart({
 
   if (!chartMetrics || points.length === 0) {
     return (
-      <div className="value-chart-wrap in-panel">
+      <div className={wrapClass}>
         <h2 className="subsection-title">{title}</h2>
         <p className="muted small">No historical value snapshots for this selection.</p>
       </div>
@@ -124,9 +135,7 @@ export default function CustomerValueChart({
   const active = activeIndex != null ? points[activeIndex] : null;
 
   return (
-    <div
-      className={`value-chart-wrap in-panel${refreshing ? " value-chart-refreshing" : ""}`}
-    >
+    <div className={wrapClass}>
       {refreshing && (
         <p className="value-chart-refresh-label muted small">Updating chart…</p>
       )}

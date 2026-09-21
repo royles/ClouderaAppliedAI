@@ -9,15 +9,13 @@ import {
   fetchCustomerValueHistory,
   ValueHistoryPoint,
 } from "../api";
-import ChurnBadge from "../ChurnBadge";
 import CustomerInsightsPanel from "../components/CustomerInsightsPanel";
+import CustomerSummaryCard from "../components/CustomerSummaryCard";
 import CustomerValueChart from "../components/CustomerValueChart";
 import {
   formatCity,
   formatLastLogin,
-  displayCustomerId,
   maskDate,
-  maskEmail,
   displayCustomerName,
   maskPhone,
   maskStreet,
@@ -121,6 +119,31 @@ export default function CustomerDetailPage() {
     return detail.investments.filter((i) => i.policy_num === activePolicy);
   }, [detail, activePolicy]);
 
+  const customerCard = useMemo(() => {
+    if (!detail) return null;
+    const { profile, policies, investments, churn } = detail;
+    const investmentCount = new Set(
+      investments.map((inv) => `${inv.policy_num}-${inv.fund_id ?? ""}`),
+    ).size;
+    const customerValue =
+      valueHistory.length > 0
+        ? valueHistory[valueHistory.length - 1].total_value
+        : 0;
+    return {
+      customer_id: profile.customer_id,
+      customer_name: profile.customer_name,
+      city_name: profile.city_name,
+      email: profile.email,
+      mobile_no: profile.mobile_no,
+      last_login: profile.last_login,
+      policy_count: policies.length,
+      investment_count: investmentCount,
+      customer_value: customerValue,
+      churn_probability: churn?.churn_probability,
+      churn_risk_tier: churn?.churn_risk_tier,
+    };
+  }, [detail, valueHistory]);
+
   if (error) {
     return (
       <section className="panel">
@@ -159,15 +182,6 @@ export default function CustomerDetailPage() {
     interaction_summary,
   } = detail;
 
-  const activePolicies = policies.filter((p) => p.is_active).length;
-  const monthlyPremium = policies
-    .filter((p) => p.is_active)
-    .reduce((sum, p) => sum + (p.bruto_monthly_premium ?? 0), 0);
-  const latestAccumulation = investments.reduce(
-    (max, inv) => Math.max(max, inv.accumulation_total ?? 0),
-    0,
-  );
-
   return (
     <>
       <Breadcrumbs
@@ -185,51 +199,29 @@ export default function CustomerDetailPage() {
           </>
         )}
       </p>
-      <section className="panel">
-        <h1>{displayCustomerName(profile.customer_name)}</h1>
-        <div className="kpi-strip">
-          <div className="kpi-chip">
-            <span className="label">Active policies</span>
-            <strong>{activePolicies}</strong>
-          </div>
-          <div className="kpi-chip">
-            <span className="label">Monthly premium</span>
-            <strong>{formatMoney(monthlyPremium)}</strong>
-          </div>
-          <div className="kpi-chip">
-            <span className="label">Latest accumulation</span>
-            <strong>{formatMoney(latestAccumulation || null)}</strong>
-          </div>
-          <div className="kpi-chip">
-            <span className="label">Last interaction</span>
-            <strong>
-              {interaction_summary?.last_event_ts
-                ? formatLastLogin(interaction_summary.last_event_ts)
-                : "—"}
-            </strong>
-          </div>
-        </div>
-        <div className="churn-detail-row">
-          <span className="label">Churn likelihood</span>
-          <ChurnBadge
-            probability={detail.churn?.churn_probability}
-            tier={detail.churn?.churn_risk_tier}
-          />
-          {detail.churn?.scored_at && (
-            <span className="muted small">
-              Scored {formatLastLogin(detail.churn.scored_at)}
-              {detail.churn.model_version ? ` · ${detail.churn.model_version}` : ""}
-            </span>
+      <section className="panel customer-detail-hero">
+        <div className="customer-detail-hero-grid">
+          {customerCard && (
+            <CustomerSummaryCard variant="static" customer={customerCard} />
           )}
+          <CustomerValueChart
+            className="customer-detail-value-chart"
+            title="Lifetime value trajectory"
+            subtitle="Monthly investment accumulation plus coverage and savings snapshots."
+            points={valueHistory}
+            loading={valueHistoryLoading}
+          />
         </div>
-        <p className="muted small">
+        {detail.churn?.scored_at && (
+          <p className="muted small customer-detail-churn-meta">
+            Churn scored {formatLastLogin(detail.churn.scored_at)}
+            {detail.churn.model_version ? ` · ${detail.churn.model_version}` : ""}
+          </p>
+        )}
+        <p className="muted small customer-detail-privacy">
           City and last login are shown in full; other sensitive fields remain masked.
         </p>
-        <div className="detail-grid">
-          <div>
-            <span className="label">Customer ID</span>
-            <div>{displayCustomerId(profile.customer_id)}</div>
-          </div>
+        <div className="detail-grid customer-detail-profile-grid">
           <div>
             <span className="label">Type</span>
             <div>{profile.customer_type_dsc ?? "—"}</div>
@@ -241,14 +233,6 @@ export default function CustomerDetailPage() {
           <div>
             <span className="label">Marital status</span>
             <div>{profile.marital_status_dsc ?? "—"}</div>
-          </div>
-          <div>
-            <span className="label">Email</span>
-            <div>{maskEmail(profile.email)}</div>
-          </div>
-          <div>
-            <span className="label">Mobile</span>
-            <div>{maskPhone(profile.mobile_no)}</div>
           </div>
           <div>
             <span className="label">Address</span>
@@ -263,16 +247,14 @@ export default function CustomerDetailPage() {
             <div>{profile.communication_dsc ?? "—"}</div>
           </div>
           <div>
-            <span className="label">Last login</span>
-            <div>{formatLastLogin(profile.last_login)}</div>
+            <span className="label">Last interaction</span>
+            <div>
+              {interaction_summary?.last_event_ts
+                ? formatLastLogin(interaction_summary.last_event_ts)
+                : "—"}
+            </div>
           </div>
         </div>
-        <CustomerValueChart
-          title="Lifetime value trajectory"
-          subtitle="Monthly investment accumulation plus coverage and savings snapshots for this customer."
-          points={valueHistory}
-          loading={valueHistoryLoading}
-        />
       </section>
 
       <CustomerInsightsPanel

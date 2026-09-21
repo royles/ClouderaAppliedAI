@@ -558,6 +558,45 @@ select.control {
   opacity: 0.5;
 }
 
+.customer-card-static {
+  height: 100%;
+  background: #fff;
+  cursor: default;
+}
+
+.customer-card-static:hover {
+  border-color: #e6ebf0;
+  box-shadow: none;
+}
+
+.customer-detail-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.customer-detail-value-chart.value-chart-wrap {
+  margin: 0;
+  min-height: 13rem;
+  height: 100%;
+}
+
+.customer-detail-churn-meta,
+.customer-detail-privacy {
+  margin: 0.85rem 0 0;
+}
+
+.customer-detail-profile-grid {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 900px) {
+  .customer-detail-hero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .table-wrap {
   width: 100%;
   overflow-x: auto;
