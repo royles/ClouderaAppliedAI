@@ -27,16 +27,42 @@ def _bootstrap() -> None:
 
 def main() -> None:
     _bootstrap()
+    import sqlite3
+    import time
+
     from customer360.db import connect
+    from customer360.kpi_benchmarks import ensure_kpi_benchmark_catalog
     from customer360.metrics_refresh import refresh_all_api_caches
     from customer360.paths import default_db_path
 
     db_path = default_db_path()
     print(f"Refreshing API caches for {db_path}…", flush=True)
-    with connect(db_path) as conn:
-        summary = refresh_all_api_caches(conn)
-    for key, value in summary.items():
-        print(f"  {key}: {value}", flush=True)
+
+    last_error: sqlite3.OperationalError | None = None
+    for attempt in range(5):
+        try:
+            conn = connect(db_path)
+            try:
+                ensure_kpi_benchmark_catalog(conn)
+                summary = refresh_all_api_caches(conn)
+            finally:
+                conn.close()
+            for key, value in summary.items():
+                print(f"  {key}: {value}", flush=True)
+            return
+        except sqlite3.OperationalError as exc:
+            last_error = exc
+            if "locked" not in str(exc).lower():
+                raise
+            wait_s = 2**attempt
+            print(
+                f"Database busy (attempt {attempt + 1}/5), retrying in {wait_s}s…",
+                flush=True,
+            )
+            time.sleep(wait_s)
+
+    if last_error is not None:
+        raise last_error
 
 
 if __name__ == "__main__":

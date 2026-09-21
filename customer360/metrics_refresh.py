@@ -97,6 +97,7 @@ def refresh_portfolio_analytics_cache(conn: sqlite3.Connection) -> int:
     ensure_metrics_schema(conn)
     refreshed_at = datetime.now(timezone.utc).isoformat()
     conn.execute("DELETE FROM APP_PORTFOLIO_ANALYTICS_CACHE")
+    conn.commit()
     written = 0
     for segment in SEGMENT_WHERE:
         payload = fetch_portfolio_analytics(conn, segment=segment)

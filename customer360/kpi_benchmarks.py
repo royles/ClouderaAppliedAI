@@ -145,13 +145,18 @@ def ensure_kpi_benchmark_catalog(conn: sqlite3.Connection | None = None) -> None
         conn.close()
 
 
-def list_kpi_benchmarks(conn: sqlite3.Connection | None = None) -> list[KpiBenchmarkRow]:
+def list_kpi_benchmarks(
+    conn: sqlite3.Connection | None = None,
+    *,
+    ensure_catalog: bool = True,
+) -> list[KpiBenchmarkRow]:
     own = conn is None
     if own:
         conn = admin_connect()
     else:
         ensure_admin_schema(conn)
-    ensure_kpi_benchmark_catalog(conn)
+    if ensure_catalog:
+        ensure_kpi_benchmark_catalog(conn)
     rows = conn.execute(
         """
         SELECT * FROM APP_ADMIN_KPI_BENCHMARK
@@ -163,8 +168,15 @@ def list_kpi_benchmarks(conn: sqlite3.Connection | None = None) -> list[KpiBench
     return [_row_to_benchmark(r) for r in rows]
 
 
-def benchmarks_by_key(conn: sqlite3.Connection | None = None) -> dict[str, KpiBenchmarkRow]:
-    return {row.kpi_key: row for row in list_kpi_benchmarks(conn)}
+def benchmarks_by_key(
+    conn: sqlite3.Connection | None = None,
+    *,
+    ensure_catalog: bool = False,
+) -> dict[str, KpiBenchmarkRow]:
+    return {
+        row.kpi_key: row
+        for row in list_kpi_benchmarks(conn, ensure_catalog=ensure_catalog)
+    }
 
 
 def save_kpi_benchmarks(

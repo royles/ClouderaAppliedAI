@@ -119,11 +119,15 @@ def bedrock_status() -> BedrockStatusResponse:
     )
 
 
-def _portfolio_analytics_response(payload: dict) -> PortfolioAnalyticsResponse:
+def _portfolio_analytics_response(
+    payload: dict,
+    conn: sqlite3.Connection | None = None,
+) -> PortfolioAnalyticsResponse:
     enriched = dict(payload)
     enriched["kpi_targets"] = build_kpi_targets(
         enriched.get("kpis", {}),
         enriched.get("value_points", []),
+        conn=conn,
     )
     return PortfolioAnalyticsResponse(**enriched)
 
@@ -149,9 +153,9 @@ def portfolio_analytics(
             (seg,),
         ).fetchone()
         if cached and cached[0]:
-            return _portfolio_analytics_response(json.loads(cached[0]))
+            return _portfolio_analytics_response(json.loads(cached[0]), conn=conn)
     data = fetch_portfolio_analytics(conn, segment=seg)
-    return _portfolio_analytics_response(data)
+    return _portfolio_analytics_response(data, conn=conn)
 
 
 @router.get("/admin/kpi-benchmarks", response_model=KpiBenchmarkListResponse)

@@ -5,7 +5,9 @@ from __future__ import annotations
 import math
 from typing import Any, Literal
 
-from customer360.kpi_benchmarks import KpiBenchmarkRow, benchmarks_by_key, ensure_kpi_benchmark_catalog
+import sqlite3
+
+from customer360.kpi_benchmarks import KpiBenchmarkRow, benchmarks_by_key
 from customer360.admin_store import admin_connect
 
 Status = Literal["green", "amber", "red"]
@@ -120,12 +122,16 @@ def _kpi_actual(kpi_key: str, kpis: dict[str, Any]) -> float | None:
 def build_kpi_targets(
     kpis: dict[str, Any],
     value_points: list[dict] | None = None,
+    *,
+    conn: sqlite3.Connection | None = None,
 ) -> dict[str, dict[str, Any]]:
     points = value_points or []
-    conn = admin_connect()
-    ensure_kpi_benchmark_catalog(conn)
+    own = conn is None
+    if own:
+        conn = admin_connect()
     lookup = benchmarks_by_key(conn)
-    conn.close()
+    if own:
+        conn.close()
 
     out: dict[str, dict[str, Any]] = {}
     for key, bench in lookup.items():

@@ -212,7 +212,7 @@ def fetch_portfolio_analytics(
     return {
         "segment": seg,
         "kpis": kpis,
-        "kpi_targets": build_kpi_targets(kpis, value_points),
+        "kpi_targets": build_kpi_targets(kpis, value_points, conn=conn),
         "value_points": value_points,
         "investment_returns": investment_returns,
         "churn_forecast": churn_forecast,
