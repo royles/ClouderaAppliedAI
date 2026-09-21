@@ -1,0 +1,23 @@
+-- Synthetic omnichannel interaction events (reviews, agent questions, web activity).
+
+CREATE TABLE IF NOT EXISTS APP_CUSTOMER_INTERACTION_EVENTS (
+    EVENT_ID          INTEGER PRIMARY KEY AUTOINCREMENT,
+    CUSTOMER_ID       INTEGER NOT NULL,
+    EVENT_TYPE        TEXT NOT NULL,
+    EVENT_TS          TEXT NOT NULL,
+    CHANNEL           TEXT,
+    TOPIC             TEXT,
+    QUERY_OR_TITLE    TEXT,
+    RATING            INTEGER,
+    SENTIMENT         REAL,
+    RESOLVED          INTEGER,
+    DETAIL            TEXT,
+    CHECK (EVENT_TYPE IN ('REVIEW', 'AGENT_QUESTION', 'WEB_SEARCH'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_interactions_customer
+    ON APP_CUSTOMER_INTERACTION_EVENTS (CUSTOMER_ID);
+CREATE INDEX IF NOT EXISTS idx_interactions_customer_ts
+    ON APP_CUSTOMER_INTERACTION_EVENTS (CUSTOMER_ID, EVENT_TS DESC);
+CREATE INDEX IF NOT EXISTS idx_interactions_type
+    ON APP_CUSTOMER_INTERACTION_EVENTS (EVENT_TYPE);

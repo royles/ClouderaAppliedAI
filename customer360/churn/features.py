@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import datetime
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
-REFERENCE_DATE = datetime(2025, 9, 15)
+from customer360.interactions.summary import REFERENCE_DATE, interactions_table_exists
 
 FEATURE_COLUMNS = [
     "policy_count",
@@ -27,6 +26,27 @@ FEATURE_COLUMNS = [
     "smoker_flag",
     "customer_age_years",
     "collective_policy_count",
+    "interaction_count_90d",
+    "review_count_90d",
+    "review_avg_rating_90d",
+    "negative_review_count_90d",
+    "agent_question_count_90d",
+    "unresolved_agent_questions_90d",
+    "web_search_count_90d",
+    "help_search_count_90d",
+    "days_since_last_interaction",
+]
+
+INTERACTION_FEATURE_COLUMNS = [
+    "interaction_count_90d",
+    "review_count_90d",
+    "review_avg_rating_90d",
+    "negative_review_count_90d",
+    "agent_question_count_90d",
+    "unresolved_agent_questions_90d",
+    "web_search_count_90d",
+    "help_search_count_90d",
+    "days_since_last_interaction",
 ]
 
 
@@ -139,9 +159,67 @@ def load_customer_frame(conn: sqlite3.Connection) -> pd.DataFrame:
     df["smoker_flag"] = (df["smoker_status_code"].astype(str) == "1").astype(int)
     df.drop(columns=["smoker_status_code", "birth_date", "last_login"], inplace=True)
 
+    df = _append_interaction_features(conn, df)
+
     for col in FEATURE_COLUMNS:
         df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
 
+    return df
+
+
+def _append_interaction_features(conn: sqlite3.Connection, df: pd.DataFrame) -> pd.DataFrame:
+    if not interactions_table_exists(conn):
+        for col in INTERACTION_FEATURE_COLUMNS:
+            df[col] = 999.0 if col == "days_since_last_interaction" else 0.0
+        return df
+
+    ref = REFERENCE_DATE.strftime("%Y-%m-%d")
+    interaction_df = pd.read_sql_query(
+        f"""
+        SELECT
+            CUSTOMER_ID AS customer_id,
+            SUM(CASE WHEN julianday('{ref}') - julianday(EVENT_TS) <= 90 THEN 1 ELSE 0 END)
+                AS interaction_count_90d,
+            SUM(CASE WHEN EVENT_TYPE = 'REVIEW'
+                AND julianday('{ref}') - julianday(EVENT_TS) <= 90 THEN 1 ELSE 0 END)
+                AS review_count_90d,
+            AVG(CASE WHEN EVENT_TYPE = 'REVIEW'
+                AND julianday('{ref}') - julianday(EVENT_TS) <= 90 THEN RATING END)
+                AS review_avg_rating_90d,
+            SUM(CASE WHEN EVENT_TYPE = 'REVIEW' AND RATING <= 2
+                AND julianday('{ref}') - julianday(EVENT_TS) <= 90 THEN 1 ELSE 0 END)
+                AS negative_review_count_90d,
+            SUM(CASE WHEN EVENT_TYPE = 'AGENT_QUESTION'
+                AND julianday('{ref}') - julianday(EVENT_TS) <= 90 THEN 1 ELSE 0 END)
+                AS agent_question_count_90d,
+            SUM(CASE WHEN EVENT_TYPE = 'AGENT_QUESTION' AND COALESCE(RESOLVED, 1) = 0
+                AND julianday('{ref}') - julianday(EVENT_TS) <= 90 THEN 1 ELSE 0 END)
+                AS unresolved_agent_questions_90d,
+            SUM(CASE WHEN EVENT_TYPE = 'WEB_SEARCH'
+                AND julianday('{ref}') - julianday(EVENT_TS) <= 90 THEN 1 ELSE 0 END)
+                AS web_search_count_90d,
+            SUM(CASE WHEN EVENT_TYPE = 'WEB_SEARCH' AND TOPIC = 'help_center'
+                AND julianday('{ref}') - julianday(EVENT_TS) <= 90 THEN 1 ELSE 0 END)
+                AS help_search_count_90d,
+            MIN(julianday('{ref}') - julianday(EVENT_TS)) AS days_since_last_interaction
+        FROM APP_CUSTOMER_INTERACTION_EVENTS
+        GROUP BY CUSTOMER_ID
+        """,
+        conn,
+    )
+    df = df.merge(interaction_df, on="customer_id", how="left")
+    df["review_avg_rating_90d"] = df["review_avg_rating_90d"].fillna(0.0)
+    df["days_since_last_interaction"] = df["days_since_last_interaction"].fillna(999.0)
+    for col in (
+        "interaction_count_90d",
+        "review_count_90d",
+        "negative_review_count_90d",
+        "agent_question_count_90d",
+        "unresolved_agent_questions_90d",
+        "web_search_count_90d",
+        "help_search_count_90d",
+    ):
+        df[col] = df[col].fillna(0.0)
     return df
 
 
@@ -155,7 +233,15 @@ def derive_churn_label(df: pd.DataFrame) -> pd.Series:
     no_active = df["active_policy_count"] <= 0
     dormant_portal = (df["portal_registered"] == 1) & (df["days_since_last_login"] >= 90)
     bad_status = (df["policy_count"] > 0) & (df["avg_policy_status_code"] >= 55)
-    churn = (no_active | dormant_portal | bad_status).astype(int)
+    disengaged = df["days_since_last_interaction"] >= 120
+    unhappy_reviews = (df["review_count_90d"] > 0) & (df["review_avg_rating_90d"] <= 2.5)
+    open_agent_cases = df["unresolved_agent_questions_90d"] >= 1
+    help_stress = (df["help_search_count_90d"] >= 2) & (
+        df["help_search_count_90d"] >= df["web_search_count_90d"] * 0.5
+    )
+    churn = (
+        no_active | dormant_portal | bad_status | disengaged | unhappy_reviews | open_agent_cases | help_stress
+    ).astype(int)
     return churn
 
 

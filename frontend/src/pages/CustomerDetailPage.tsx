@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { CustomerDetail, fetchCustomer } from "../api";
 import ChurnBadge from "../ChurnBadge";
+import CustomerInsightsPanel from "../components/CustomerInsightsPanel";
 import {
   formatCity,
   formatLastLogin,
@@ -22,7 +23,14 @@ function formatMoney(n?: number | null) {
   }).format(n);
 }
 
-type Tab = "policies" | "foreclosures" | "investments";
+type Tab = "policies" | "foreclosures" | "investments" | "interactions";
+
+function formatEventType(t: string) {
+  if (t === "REVIEW") return "Review";
+  if (t === "AGENT_QUESTION") return "Agent question";
+  if (t === "WEB_SEARCH") return "Web search";
+  return t;
+}
 
 export default function CustomerDetailPage() {
   const { customerId } = useParams();
@@ -69,7 +77,14 @@ export default function CustomerDetailPage() {
   }
   if (!detail) return <p className="muted">Loading customer…</p>;
 
-  const { profile, policies, foreclosures, investments } = detail;
+  const {
+    profile,
+    policies,
+    foreclosures,
+    investments,
+    interactions = [],
+    interaction_summary,
+  } = detail;
 
   return (
     <>
@@ -132,6 +147,11 @@ export default function CustomerDetailPage() {
         </div>
       </section>
 
+      <CustomerInsightsPanel
+        customerId={profile.customer_id}
+        churnTier={detail.churn?.churn_risk_tier}
+      />
+
       <div className="tab-bar">
         <button
           type="button"
@@ -153,6 +173,13 @@ export default function CustomerDetailPage() {
           onClick={() => setTab("investments")}
         >
           Investments ({investments.length})
+        </button>
+        <button
+          type="button"
+          className={tab === "interactions" ? "tab active" : "tab"}
+          onClick={() => setTab("interactions")}
+        >
+          Interactions ({interaction_summary?.total_events ?? interactions.length})
         </button>
       </div>
 
@@ -222,6 +249,72 @@ export default function CustomerDetailPage() {
                       <td>{formatMoney(f.foreclosures_amount)}</td>
                       <td>{maskDate(f.foreclosures_date)}</td>
                       <td>{f.portfolio_number ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      )}
+
+      {tab === "interactions" && (
+        <section className="panel">
+          <h2>Interaction timeline</h2>
+          <p className="muted small">
+            Synthetic omnichannel events — reviews, agent questions, and product or help
+            searches — used by churn scoring and AI recommendations.
+          </p>
+          {interaction_summary && (
+            <div className="interaction-stats">
+              <span>
+                Last 90 days: <strong>{interaction_summary.events_last_90d}</strong> events
+              </span>
+              {interaction_summary.avg_review_rating != null && (
+                <span>
+                  Avg review: <strong>{interaction_summary.avg_review_rating}/5</strong>
+                </span>
+              )}
+              {interaction_summary.unresolved_agent_questions > 0 && (
+                <span className="warn-stat">
+                  Open agent items:{" "}
+                  <strong>{interaction_summary.unresolved_agent_questions}</strong>
+                </span>
+              )}
+            </div>
+          )}
+          {interactions.length === 0 ? (
+            <p className="muted">No interaction events recorded.</p>
+          ) : (
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Type</th>
+                    <th>Channel</th>
+                    <th>Title / query</th>
+                    <th>Signal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {interactions.map((ev) => (
+                    <tr key={ev.event_id}>
+                      <td>{maskDate(ev.event_ts)}</td>
+                      <td>{formatEventType(ev.event_type)}</td>
+                      <td>{ev.channel ?? "—"}</td>
+                      <td>{ev.query_or_title ?? "—"}</td>
+                      <td>
+                        {ev.event_type === "REVIEW" && ev.rating != null
+                          ? `${ev.rating}/5`
+                          : ev.event_type === "AGENT_QUESTION"
+                            ? ev.resolved
+                              ? "Resolved"
+                              : "Open"
+                            : ev.topic === "help_center"
+                              ? "Help"
+                              : "Product"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

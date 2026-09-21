@@ -10,7 +10,10 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
-from customer360.paths import default_db_path, schema_path
+from customer360.interactions.seed import build_interaction_events
+from customer360.paths import default_db_path, project_root, schema_path
+
+INTERACTIONS_SCHEMA = project_root() / "data" / "interactions_schema.sql"
 
 RNG = random.Random(36085)
 
@@ -435,9 +438,12 @@ def init_database(db_path: Path, rebuild: bool = True) -> None:
     pit = build_policy_investment_tracks(policies, months)
     market = build_market_tracks(months)
     matzav = build_matzav_bituach(policies, months)
+    interactions = build_interaction_events(customers, policies, foreclosures, rng=RNG)
 
     with sqlite3.connect(db_path) as conn:
         conn.executescript(schema_path().read_text(encoding="utf-8"))
+        if INTERACTIONS_SCHEMA.is_file():
+            conn.executescript(INTERACTIONS_SCHEMA.read_text(encoding="utf-8"))
         insert_rows(conn, "DWH_DIM_CUSTOMERS_UNIQUE", customers)
         insert_rows(conn, "DWH_DIM_ALL_POLICY", policies)
         insert_rows(conn, "DWH_FCT_FORECLOSURES", foreclosures)
@@ -445,6 +451,7 @@ def init_database(db_path: Path, rebuild: bool = True) -> None:
         insert_rows(conn, "DWH_FCT_POLICY_INVESTMENT_TRACK", pit)
         insert_rows(conn, "DWH_FCT_INVESTMENT_TRACK", market)
         insert_rows(conn, "FCT_MATZAV_BITUACH", matzav)
+        insert_rows(conn, "APP_CUSTOMER_INTERACTION_EVENTS", interactions)
         conn.commit()
 
         counts = conn.execute(
@@ -456,6 +463,7 @@ def init_database(db_path: Path, rebuild: bool = True) -> None:
             UNION ALL SELECT 'DWH_FCT_POLICY_INVESTMENT_TRACK', COUNT(*) FROM DWH_FCT_POLICY_INVESTMENT_TRACK
             UNION ALL SELECT 'DWH_FCT_INVESTMENT_TRACK', COUNT(*) FROM DWH_FCT_INVESTMENT_TRACK
             UNION ALL SELECT 'FCT_MATZAV_BITUACH', COUNT(*) FROM FCT_MATZAV_BITUACH
+            UNION ALL SELECT 'APP_CUSTOMER_INTERACTION_EVENTS', COUNT(*) FROM APP_CUSTOMER_INTERACTION_EVENTS
             """
         ).fetchall()
 

@@ -77,6 +77,31 @@ export type CustomerDetail = {
     yearly_profit_loss_total?: number | null;
     fund_id?: number | null;
   }>;
+  interactions?: InteractionEvent[];
+  interaction_summary?: InteractionSummary | null;
+};
+
+export type InteractionEvent = {
+  event_id: number;
+  event_type: string;
+  event_ts: string;
+  channel?: string | null;
+  topic?: string | null;
+  query_or_title?: string | null;
+  rating?: number | null;
+  sentiment?: number | null;
+  resolved?: boolean | null;
+  detail?: string | null;
+};
+
+export type InteractionSummary = {
+  total_events: number;
+  events_last_90d: number;
+  avg_review_rating?: number | null;
+  unresolved_agent_questions: number;
+  help_search_share?: number | null;
+  last_event_ts?: string | null;
+  recent_highlights?: string[];
 };
 
 import { apiUrl } from "./apiBase";
@@ -123,3 +148,27 @@ export const fetchCustomers = (options?: {
 
 export const fetchCustomer = (id: number) =>
   getJson<CustomerDetail>(`/api/customers/${id}`);
+
+export type CustomerInsights = {
+  summary: string;
+  primary_focus: "upsell" | "retention" | string;
+  recommendations: string[];
+  experience_note?: string;
+  source: string;
+  model_id?: string | null;
+  generated_at?: string | null;
+  bedrock_configured: boolean;
+  cached: boolean;
+};
+
+export const fetchCustomerInsights = (
+  id: number,
+  options?: { refresh?: boolean },
+) => {
+  const params = new URLSearchParams();
+  if (options?.refresh) params.set("refresh", "true");
+  const qs = params.toString();
+  return getJson<CustomerInsights>(
+    `/api/customers/${id}/insights${qs ? `?${qs}` : ""}`,
+  );
+};

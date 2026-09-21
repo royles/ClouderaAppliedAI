@@ -50,11 +50,15 @@ Optional environment variable:
 | `DWH_FCT_INVESTMENT_TRACK` | Regulatory market track performance |
 | `FCT_MATZAV_BITUACH` | Policy status, coverage, and surrender values |
 | `APP_CUSTOMER_CHURN_SCORES` | Churn probability and risk tier per customer ID |
+| `APP_CUSTOMER_INTERACTION_EVENTS` | Synthetic reviews, agent questions, and web searches |
+| `APP_CUSTOMER_AI_INSIGHTS` | Cached Bedrock (or fallback) customer summaries |
 
 ### Churn intelligence
 
-Features are built from warehouse behaviour, normalized with `StandardScaler`, and modeled
-with balanced logistic regression. Scores are stored in SQLite for the API and UI.
+Features are built from warehouse behaviour plus **interaction events** (reviews, agent
+questions, product/help searches), normalized with `StandardScaler`, and modeled with
+balanced logistic regression. Scores are stored in SQLite for the API and UI. Interaction
+aggregates also feed **Amazon Bedrock** insight prompts when configured.
 
 ```bash
 python 3_job-train-churn-model/train_churn.py

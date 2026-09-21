@@ -82,9 +82,52 @@ class ChurnInsight(BaseModel):
     scored_at: str | None = None
 
 
+class InteractionEventRow(BaseModel):
+    event_id: int
+    event_type: str
+    event_ts: str
+    channel: str | None = None
+    topic: str | None = None
+    query_or_title: str | None = None
+    rating: int | None = None
+    sentiment: float | None = None
+    resolved: bool | None = None
+    detail: str | None = None
+
+
+class InteractionSummary(BaseModel):
+    total_events: int = 0
+    events_last_90d: int = 0
+    avg_review_rating: float | None = None
+    unresolved_agent_questions: int = 0
+    help_search_share: float | None = None
+    last_event_ts: str | None = None
+    recent_highlights: list[str] = Field(default_factory=list)
+
+
 class CustomerDetailResponse(BaseModel):
     profile: CustomerProfile
     policies: list[PolicyRow]
     foreclosures: list[ForeclosureRow]
     investments: list[InvestmentSnapshot] = Field(default_factory=list)
     churn: ChurnInsight | None = None
+    interactions: list[InteractionEventRow] = Field(default_factory=list)
+    interaction_summary: InteractionSummary | None = None
+
+
+class CustomerInsightsResponse(BaseModel):
+    summary: str
+    primary_focus: str
+    recommendations: list[str] = Field(default_factory=list)
+    experience_note: str = ""
+    source: str
+    model_id: str | None = None
+    generated_at: str | None = None
+    bedrock_configured: bool = False
+    cached: bool = False
+
+
+class BedrockStatusResponse(BaseModel):
+    configured: bool
+    model_id: str
+    region: str

@@ -9,17 +9,25 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from customer360.api.deps import get_db
 from customer360.api.schemas import (
+    BedrockStatusResponse,
     ChurnInsight,
     CustomerDetailResponse,
+    CustomerInsightsResponse,
     CustomerProfile,
     CustomerSummary,
     DomainCount,
     ForeclosureRow,
     HealthResponse,
+    InteractionEventRow,
+    InteractionSummary,
     InvestmentSnapshot,
     OverviewResponse,
     PolicyRow,
 )
+from customer360.interactions.summary import load_interaction_bundle
+from customer360.bedrock.config import get_bedrock_settings
+from customer360.bedrock.client import is_bedrock_configured
+from customer360.insights.service import get_customer_insights
 from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE, normalize_segment
 from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
 from customer360.paths import default_db_path
@@ -58,6 +66,16 @@ def _fetch_churn(conn: sqlite3.Connection, customer_id: int) -> ChurnInsight | N
 @router.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
     return HealthResponse()
+
+
+@router.get("/bedrock/status", response_model=BedrockStatusResponse)
+def bedrock_status() -> BedrockStatusResponse:
+    settings = get_bedrock_settings()
+    return BedrockStatusResponse(
+        configured=is_bedrock_configured(),
+        model_id=settings.model_id,
+        region=settings.bedrock_region,
+    )
 
 
 @router.get("/overview", response_model=OverviewResponse)
@@ -233,10 +251,26 @@ def customer_detail(
         (customer_id,),
     ).fetchall()
 
+    interaction_bundle = load_interaction_bundle(conn, customer_id, limit=30)
+
     return CustomerDetailResponse(
         profile=CustomerProfile(**dict(profile_row)),
         policies=[PolicyRow(**dict(r)) for r in policies],
         foreclosures=[ForeclosureRow(**dict(r)) for r in foreclosures],
         investments=[InvestmentSnapshot(**dict(r)) for r in investments],
         churn=_fetch_churn(conn, customer_id),
+        interactions=[InteractionEventRow(**e) for e in interaction_bundle["events"]],
+        interaction_summary=InteractionSummary(**interaction_bundle["summary"]),
     )
+
+
+@router.get("/customers/{customer_id}/insights", response_model=CustomerInsightsResponse)
+def customer_insights(
+    customer_id: int,
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+    refresh: bool = Query(False, description="Bypass cache and regenerate insights"),
+) -> CustomerInsightsResponse:
+    result = get_customer_insights(conn, customer_id, refresh=refresh)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return CustomerInsightsResponse(**result)

@@ -23,7 +23,7 @@ from customer360.churn.features import (
 )
 from customer360.paths import default_db_path, project_root
 
-MODEL_VERSION = "churn-lr-v1"
+MODEL_VERSION = "churn-lr-v2"
 MODEL_DIR = project_root() / "data" / "models"
 MODEL_PATH = MODEL_DIR / "churn_pipeline.joblib"
 META_PATH = MODEL_DIR / "churn_model_meta.json"

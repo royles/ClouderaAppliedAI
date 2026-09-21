@@ -364,3 +364,91 @@ select.control {
 .churn-detail-row {
   margin: 0.5rem 0 0.75rem;
 }
+
+.btn {
+  border: 1px solid #0f3d5e;
+  background: #0f3d5e;
+  color: #fff;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.btn.secondary {
+  background: #fff;
+  color: #0f3d5e;
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.insights-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.focus-badge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 999px;
+}
+
+.focus-badge.retention {
+  background: #fdecea;
+  color: #b42318;
+}
+
+.focus-badge.upsell {
+  background: #e6f4ea;
+  color: #1e6b34;
+}
+
+.insights-summary {
+  font-size: 1.02rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.insights-subhead {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.insights-list {
+  margin: 0 0 1rem;
+  padding-left: 1.25rem;
+}
+
+.insights-list li {
+  margin-bottom: 0.35rem;
+}
+
+.insights-note {
+  border-left: 3px solid #0f3d5e;
+  padding-left: 0.75rem;
+  margin: 0;
+}
+
+.insights-note .label {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.interaction-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+  font-size: 0.92rem;
+}
+
+.warn-stat {
+  color: #9a5b00;
+}
