@@ -2405,3 +2405,286 @@ a.engagement-act-link {
   border-radius: 6px;
   border: 1px solid #f0dfa8;
 }
+
+.data-freshness-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  margin: 0 0 0.75rem;
+  padding: 0.45rem 0.75rem;
+  background: #eef4fa;
+  border: 1px solid #c5d9eb;
+  border-radius: 8px;
+  font-size: var(--chart-font-caption);
+  color: #5a6b7d;
+}
+
+.data-freshness-label {
+  font-weight: 600;
+  color: #0f3d5e;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+}
+
+.data-freshness-item strong {
+  font-weight: 600;
+  color: #1a2332;
+}
+
+.cohort-compare-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 1rem;
+  flex-wrap: wrap;
+}
+
+.cohort-compare-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #0f3d5e;
+}
+
+.cohort-compare-select {
+  min-width: 14rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid #c5d0dc;
+  font-size: 0.88rem;
+}
+
+.cohort-comparison-panel {
+  margin-bottom: 1rem;
+  padding: 0.85rem 1rem;
+  background: #fff;
+  border: 1px solid #c5d9eb;
+  border-radius: 10px;
+}
+
+.cohort-comparison-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.65rem;
+}
+
+.cohort-comparison-col-head,
+.cohort-comparison-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr 1fr 1fr;
+  gap: 0.5rem;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+
+.cohort-comparison-col-head {
+  font-weight: 600;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid #e6ebf0;
+}
+
+.cohort-comparison-primary-tag {
+  color: #0f6db8;
+  font-weight: 600;
+}
+
+.cohort-comparison-compare-tag {
+  color: #5a7a9a;
+  font-weight: 600;
+}
+
+.cohort-comparison-delta {
+  color: #0f3d5e;
+  font-size: 0.8rem;
+}
+
+.cohort-comparison-metric {
+  color: #5a6b7d;
+}
+
+.portfolio-kpi-action {
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.portfolio-kpi-action:hover,
+.portfolio-kpi-action:focus-visible {
+  border-color: #0f6db8;
+  box-shadow: 0 0 0 2px rgba(15, 109, 184, 0.15);
+  outline: none;
+}
+
+.kpi-action-hint {
+  color: #0f6db8;
+  font-weight: 500;
+}
+
+.playbook-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 35, 50, 0.45);
+  z-index: 200;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.playbook-drawer {
+  width: min(28rem, 100vw);
+  height: 100%;
+  background: #fff;
+  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.12);
+  padding: 1rem 1.1rem 1.5rem;
+  overflow-y: auto;
+}
+
+.playbook-drawer-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.playbook-drawer-head h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.15rem;
+}
+
+.playbook-close {
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #5a6b7d;
+}
+
+.playbook-queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.playbook-queue-item {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid #e6ebf0;
+}
+
+.playbook-queue-rank {
+  flex: 0 0 1.5rem;
+  font-weight: 700;
+  color: #0f6db8;
+}
+
+.playbook-customer-link {
+  font-weight: 600;
+  color: #0f3d5e;
+}
+
+.playbook-action-title {
+  margin: 0.35rem 0 0.15rem;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.playbook-view-all {
+  display: inline-block;
+  margin-top: 0.85rem;
+  font-weight: 600;
+}
+
+.product-class-block {
+  margin-top: 1.25rem;
+}
+
+.product-class-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+}
+
+.product-heatmap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.55rem;
+}
+
+.product-heatmap-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid rgba(15, 61, 94, 0.12);
+  text-decoration: none;
+  color: inherit;
+  min-height: 5.5rem;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.product-heatmap-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 61, 94, 0.12);
+}
+
+.product-heatmap-count {
+  font-size: 1.35rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.product-heatmap-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.product-heat-low {
+  background: #f0f6fc;
+  color: #3d5166;
+}
+
+.product-heat-med {
+  background: #d4e8f7;
+  color: #0f3d5e;
+}
+
+.product-heat-high {
+  background: #7eb8e0;
+  color: #062a42;
+}
+
+.product-heat-peak {
+  background: #0f6db8;
+  color: #fff;
+}
+
+.product-heat-peak .muted {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.product-heatmap-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: #5a6b7d;
+}
+
+.product-heat-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: 0.25rem;
+  vertical-align: middle;
+}

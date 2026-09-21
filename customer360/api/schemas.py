@@ -474,3 +474,59 @@ class KpiBenchmarkUpdateItem(BaseModel):
 
 class KpiBenchmarkBulkUpdateRequest(BaseModel):
     benchmarks: list[KpiBenchmarkUpdateItem] = Field(default_factory=list)
+
+
+class DataFreshnessResponse(BaseModel):
+    database_path: str
+    warehouse_loaded_at: str | None = None
+    customer_metrics_at: str | None = None
+    portfolio_cache_at: str | None = None
+    churn_scored_at: str | None = None
+    churn_customer_count: int = 0
+
+
+class ProductCatalogItem(BaseModel):
+    policy_type_code: int
+    policy_type_desc: str
+    customer_count: int
+    policy_count: int
+    active_policy_count: int
+
+
+class ProductClassGroup(BaseModel):
+    class_key: str
+    class_label: str
+    customer_count: int
+    policy_count: int
+    products: list[ProductCatalogItem] = Field(default_factory=list)
+
+
+class ProductCatalogResponse(BaseModel):
+    max_customer_count: int = 0
+    classes: list[ProductClassGroup] = Field(default_factory=list)
+
+
+class PlaybookAction(BaseModel):
+    action_code: str
+    title: str
+    detail: str
+
+
+class RetentionPlaybookItem(BaseModel):
+    customer_id: int
+    customer_key: str
+    customer_name: str
+    city_name: str | None = None
+    customer_value: float = 0
+    churn_probability: float | None = None
+    churn_risk_tier: str | None = None
+    value_at_risk: float = 0
+    recommended_action: PlaybookAction
+
+
+class RetentionPlaybookResponse(BaseModel):
+    segment: str
+    items: list[RetentionPlaybookItem] = Field(default_factory=list)
+    total: int = 0
+    limit: int = 25
+    offset: int = 0

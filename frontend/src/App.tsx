@@ -8,7 +8,11 @@ import {
   isCustomerArea,
   isEngagementArea,
   ENGAGEMENT_BASE,
+  isProductsArea,
+  PRODUCTS_BASE,
 } from "./appRoutes";
+import DataFreshnessStrip from "./components/DataFreshnessStrip";
+import ProductsPage from "./pages/ProductsPage";
 import AdminPage from "./pages/AdminPage";
 import DashboardPage from "./pages/DashboardPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
@@ -35,6 +39,7 @@ function AppSideNav() {
   const businessActive = isBusinessArea(location.pathname);
   const customerActive = isCustomerArea(location.pathname);
   const engagementActive = isEngagementArea(location.pathname);
+  const productsActive = isProductsArea(location.pathname);
   const adminActive = isAdminArea(location.pathname);
 
   return (
@@ -72,6 +77,16 @@ function AppSideNav() {
               Touchpoints, influence, and next best action
             </span>
           </Link>
+          <Link
+            to={PRODUCTS_BASE}
+            className={`app-side-tab${productsActive ? " is-active" : ""}`}
+            aria-current={productsActive ? "page" : undefined}
+          >
+            <span className="app-side-tab-title">Products</span>
+            <span className="app-side-tab-desc muted small">
+              Product heatmap and customer drill-down
+            </span>
+          </Link>
         </nav>
       </div>
       <div className="app-side-nav-footer">
@@ -105,12 +120,14 @@ export default function App() {
       <div className="app-body">
         <AppSideNav />
         <main className="main app-main">
+          <DataFreshnessStrip />
           <Routes>
             <Route path="/" element={<LegacyRootRedirect />} />
             <Route path={BUSINESS_BASE} element={<DashboardPage />} />
             <Route path={CUSTOMER_BASE} element={<CustomerHubPage />} />
             <Route path={`${CUSTOMER_BASE}/:customerId`} element={<CustomerDetailPage />} />
             <Route path={ENGAGEMENT_BASE} element={<EngagementHubPage />} />
+            <Route path={PRODUCTS_BASE} element={<ProductsPage />} />
             <Route path={ADMIN_BASE} element={<AdminPage />} />
             <Route path="/customers/:customerId" element={<LegacyCustomerRedirect />} />
             <Route path="*" element={<Navigate to={BUSINESS_BASE} replace />} />

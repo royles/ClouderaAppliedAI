@@ -40,7 +40,13 @@ from customer360.api.schemas import (
     KpiBenchmarkListResponse,
     KpiBenchmarkBulkUpdateRequest,
     EngagementHubResponse,
+    DataFreshnessResponse,
+    ProductCatalogResponse,
+    RetentionPlaybookResponse,
 )
+from customer360.api.data_freshness import fetch_data_freshness
+from customer360.api.product_catalog import fetch_product_catalog
+from customer360.api.retention_playbook import fetch_retention_playbook
 from customer360.api.engagement_hub import fetch_engagement_opportunities
 from customer360.api.policy_counts import policy_totals_for_segment
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
@@ -350,7 +356,9 @@ _INVESTMENT_COUNT_SELECT = """
 
 
 def _customer_list_where(
-    seg: str, q: str | None
+    seg: str,
+    q: str | None,
+    policy_type_code: int | None = None,
 ) -> tuple[str, list[object]]:
     segment_sql = SEGMENT_WHERE[seg]
     where = f"c.CURRENT_IND = 1 AND ({segment_sql})"
@@ -359,6 +367,15 @@ def _customer_list_where(
         where += " AND (c.CUSTOMER_NAME LIKE ? OR CAST(c.CUSTOMER_ID AS TEXT) LIKE ?)"
         like = f"%{q.strip()}%"
         params.extend([like, like])
+    if policy_type_code is not None:
+        where += """
+            AND EXISTS (
+                SELECT 1 FROM DWH_DIM_ALL_POLICY p
+                WHERE p.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
+                  AND p.POLICY_TYPE_CODE = ?
+            )
+        """
+        params.append(int(policy_type_code))
     return where, params
 
 
@@ -437,6 +454,33 @@ def warehouse_admin(
     return WarehouseAdminResponse(**data)
 
 
+@router.get("/data-freshness", response_model=DataFreshnessResponse)
+def data_freshness(
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+) -> DataFreshnessResponse:
+    db_path = resolve_sqlite_warehouse_path()
+    return DataFreshnessResponse(**fetch_data_freshness(conn, database_path=db_path))
+
+
+@router.get("/products/catalog", response_model=ProductCatalogResponse)
+def products_catalog(
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+) -> ProductCatalogResponse:
+    return ProductCatalogResponse(**fetch_product_catalog(conn))
+
+
+@router.get("/playbooks/retention", response_model=RetentionPlaybookResponse)
+def retention_playbook(
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+    segment: str | None = Query(None, description="Overview segment filter"),
+    limit: int = Query(25, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> RetentionPlaybookResponse:
+    return RetentionPlaybookResponse(
+        **fetch_retention_playbook(conn, segment=segment, limit=limit, offset=offset),
+    )
+
+
 @router.get("/customers", response_model=CustomerListResponse)
 def list_customers(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
@@ -463,10 +507,14 @@ def list_customers(
         None,
         description="Value component at as_of: total, investment, coverage, or at_risk",
     ),
+    policy_type_code: int | None = Query(
+        None,
+        description="Filter to customers holding this policy product type code",
+    ),
 ) -> CustomerListResponse:
     limit = min(max(1, limit), MAX_CUSTOMER_PAGE_SIZE)
     seg = normalize_segment(segment)
-    where_sql, params = _customer_list_where(seg, q)
+    where_sql, params = _customer_list_where(seg, q, policy_type_code)
 
     churn_join = ""
     churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"

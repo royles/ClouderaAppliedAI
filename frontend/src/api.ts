@@ -455,6 +455,7 @@ export const fetchCustomers = (options?: {
   offset?: number;
   asOf?: string | null;
   metric?: string | null;
+  policyTypeCode?: number | null;
 }) => {
   const params = new URLSearchParams();
   if (options?.q?.trim()) params.set("q", options.q.trim());
@@ -471,8 +472,85 @@ export const fetchCustomers = (options?: {
   if (options?.offset) params.set("offset", String(options.offset));
   if (options?.asOf) params.set("as_of", options.asOf);
   if (options?.metric) params.set("metric", options.metric);
+  if (options?.policyTypeCode != null) {
+    params.set("policy_type_code", String(options.policyTypeCode));
+  }
   const qs = params.toString();
   return getJson<CustomerList>(`/api/customers${qs ? `?${qs}` : ""}`);
+};
+
+export type DataFreshness = {
+  database_path: string;
+  warehouse_loaded_at?: string | null;
+  customer_metrics_at?: string | null;
+  portfolio_cache_at?: string | null;
+  churn_scored_at?: string | null;
+  churn_customer_count: number;
+};
+
+export const fetchDataFreshness = () => getJson<DataFreshness>("/api/data-freshness");
+
+export type ProductCatalogItem = {
+  policy_type_code: number;
+  policy_type_desc: string;
+  customer_count: number;
+  policy_count: number;
+  active_policy_count: number;
+};
+
+export type ProductClassGroup = {
+  class_key: string;
+  class_label: string;
+  customer_count: number;
+  policy_count: number;
+  products: ProductCatalogItem[];
+};
+
+export type ProductCatalog = {
+  max_customer_count: number;
+  classes: ProductClassGroup[];
+};
+
+export const fetchProductCatalog = () =>
+  getJson<ProductCatalog>("/api/products/catalog");
+
+export type RetentionPlaybookItem = {
+  customer_id: number;
+  customer_key: string;
+  customer_name: string;
+  city_name?: string | null;
+  customer_value: number;
+  churn_probability?: number | null;
+  churn_risk_tier?: string | null;
+  value_at_risk: number;
+  recommended_action: {
+    action_code: string;
+    title: string;
+    detail: string;
+  };
+};
+
+export type RetentionPlaybook = {
+  segment: string;
+  items: RetentionPlaybookItem[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export const fetchRetentionPlaybook = (opts?: {
+  segment?: CustomerSegment | null;
+  limit?: number;
+  offset?: number;
+}) => {
+  const params = new URLSearchParams();
+  if (opts?.segment && opts.segment !== "customers_all") {
+    params.set("segment", opts.segment);
+  }
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.offset != null) params.set("offset", String(opts.offset));
+  const qs = params.toString();
+  return getJson<RetentionPlaybook>(`/api/playbooks/retention${qs ? `?${qs}` : ""}`);
 };
 
 export const fetchCustomer = (id: number) =>

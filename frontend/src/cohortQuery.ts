@@ -46,6 +46,7 @@ export type CohortQueryState = {
   view: CustomerListView;
   asOf: string | null;
   metric: ChartValueMetric | null;
+  policyTypeCode: number | null;
 };
 
 export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
@@ -74,6 +75,10 @@ export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
 
   const pageSize = parsePageSize(params.get("page_size"));
 
+  const policyRaw = params.get("policy_type");
+  const policyParsed = policyRaw ? Number.parseInt(policyRaw, 10) : Number.NaN;
+  const policyTypeCode = Number.isFinite(policyParsed) ? policyParsed : null;
+
   return {
     segment,
     q: params.get("q") ?? "",
@@ -84,6 +89,7 @@ export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
     view,
     asOf,
     metric,
+    policyTypeCode,
   };
 }
 
@@ -110,6 +116,9 @@ export function cohortSearchString(state: Partial<CohortQueryState>): string {
   }
   if (state.asOf) params.set("as_of", state.asOf);
   if (state.metric) params.set("metric", state.metric);
+  if (state.policyTypeCode != null) {
+    params.set("policy_type", String(state.policyTypeCode));
+  }
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -126,6 +135,7 @@ export function patchCohortParams(
     view: CustomerListView | null;
     asOf: string | null;
     metric: ChartValueMetric | null;
+    policyTypeCode: number | null;
   }>,
 ): URLSearchParams {
   const next = new URLSearchParams(prev);
@@ -151,21 +161,39 @@ export function patchCohortParams(
   if ("view" in patch) apply("view", patch.view ?? null, "grid");
   if ("asOf" in patch) apply("as_of", patch.asOf ?? null);
   if ("metric" in patch) apply("metric", patch.metric ?? null);
+  if ("policyTypeCode" in patch) {
+    const code = patch.policyTypeCode;
+    apply("policy_type", code == null ? null : String(code));
+  }
   return next;
 }
 
-/** Business portfolio view: segment filter only. */
+/** Business portfolio view: primary cohort segment. */
 export function parseBusinessSegment(params: URLSearchParams): CustomerSegment {
   return parseCohortSearch(params).segment;
+}
+
+export function parseBusinessCompareSegment(
+  params: URLSearchParams,
+): CustomerSegment | null {
+  const raw = params.get("compare");
+  if (!raw || !VALID_SEGMENTS.has(raw)) return null;
+  const seg = raw as CustomerSegment;
+  return seg === "customers_all" ? null : seg;
 }
 
 export function patchBusinessSegment(
   prev: URLSearchParams,
   segment: CustomerSegment,
+  compare?: CustomerSegment | null,
 ): URLSearchParams {
   const next = new URLSearchParams();
   if (segment !== "customers_all") {
     next.set("segment", segment);
+  }
+  const compareSeg = compare === undefined ? parseBusinessCompareSegment(prev) : compare;
+  if (compareSeg && compareSeg !== "customers_all" && compareSeg !== segment) {
+    next.set("compare", compareSeg);
   }
   return next;
 }
