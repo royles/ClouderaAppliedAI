@@ -58,7 +58,9 @@ Optional environment variable:
 Features are built from warehouse behaviour plus **interaction events** (reviews, agent
 questions, product/help searches), normalized with `StandardScaler`, and modeled with
 balanced logistic regression. Scores are stored in SQLite for the API and UI. Interaction
-aggregates also feed **Amazon Bedrock** insight prompts when configured.
+aggregates also feed **Amazon Bedrock** insight prompts when configured. Clickable
+recommendation drafts (email, SMS, call scripts) are **Bedrock-generated** as well — templates
+are not used when Bedrock is available.
 
 ```bash
 python 3_job-train-churn-model/train_churn.py

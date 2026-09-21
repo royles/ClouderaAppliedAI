@@ -117,6 +117,10 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
           <div>
             <h2>AI customer insights</h2>
             <p className="muted small insights-subtitle">{subtitle}</p>
+            <p className="muted small">
+              Outreach drafts (email, SMS, call scripts) are also written by Bedrock when you
+              click an actionable recommendation.
+            </p>
           </div>
           <div className="toolbar">
             <button

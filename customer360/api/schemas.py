@@ -159,6 +159,10 @@ class InsightActionDraftResponse(BaseModel):
     recipient_name: str | None = None
     recipient_email: str | None = None
     recipient_phone: str | None = None
+    content_source: str | None = None
+    model_id: str | None = None
+    bedrock_required: bool = False
+    generation_error: str | None = None
 
 
 class SimulateSendRequest(BaseModel):

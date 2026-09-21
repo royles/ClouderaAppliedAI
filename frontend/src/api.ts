@@ -190,6 +190,10 @@ export type ActionDraft = {
   recipient_name?: string | null;
   recipient_email?: string | null;
   recipient_phone?: string | null;
+  content_source?: string | null;
+  model_id?: string | null;
+  bedrock_required?: boolean;
+  generation_error?: string | null;
 };
 
 export type SimulateSendResult = {

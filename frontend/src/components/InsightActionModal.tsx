@@ -79,11 +79,15 @@ export default function InsightActionModal({
           </button>
         </div>
 
-        {loading && <p className="muted">Drafting message from account data…</p>}
+        {loading && (
+          <p className="muted">Generating draft with Amazon Bedrock from account data…</p>
+        )}
         {error && <p className="error">{error}</p>}
 
         {draft && !draft.actionable && (
-          <p className="muted">{draft.message ?? "Not actionable."}</p>
+          <p className={draft.bedrock_required || draft.generation_error ? "error" : "muted"}>
+            {draft.message ?? "Not actionable."}
+          </p>
         )}
 
         {draft?.actionable && (
@@ -91,6 +95,14 @@ export default function InsightActionModal({
             <p className="muted small">
               Triggered by: <em>{recommendation}</em>
             </p>
+            {draft.content_source === "bedrock" && (
+              <p className="insights-meta">
+                <span className="source-badge source-bedrock">Drafted by Amazon Bedrock</span>
+                {draft.model_id && (
+                  <span className="muted small">Model: {draft.model_id}</span>
+                )}
+              </p>
+            )}
             <div className="draft-meta">
               <div>
                 <span className="label">To</span>
