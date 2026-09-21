@@ -34,9 +34,25 @@ body,
 
 .app-side-nav {
   flex: 0 0 min(15rem, 28vw);
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-height: 0;
   padding: 1.25rem 0.85rem 1.25rem 1.25rem;
   background: #e8eef4;
   border-right: 1px solid #d0dbe6;
+}
+
+.app-side-nav-body {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.app-side-nav-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid #c5d0dc;
 }
 
 .app-side-nav-heading {
@@ -149,6 +165,12 @@ body,
     padding: 0.75rem 1rem;
   }
 
+  .app-side-nav-footer {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    width: 100%;
+  }
+
   .app-side-tabs {
     flex-direction: row;
     flex-wrap: wrap;
@@ -156,6 +178,10 @@ body,
 
   .app-side-tab {
     flex: 1 1 12rem;
+  }
+
+  .app-side-tab-admin {
+    flex: 1 1 100%;
   }
 }
 

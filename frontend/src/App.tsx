@@ -35,39 +35,46 @@ function AppSideNav() {
 
   return (
     <aside className="app-side-nav" aria-label="Application areas">
-      <p className="app-side-nav-heading">Workspace</p>
-      <nav className="app-side-tabs">
-        <Link
-          to={BUSINESS_BASE}
-          className={`app-side-tab${businessActive ? " is-active" : ""}`}
-          aria-current={businessActive ? "page" : undefined}
-        >
-          <span className="app-side-tab-title">The business</span>
-          <span className="app-side-tab-desc muted small">
-            Book, cohorts, and portfolio KPIs
-          </span>
-        </Link>
-        <Link
-          to={CUSTOMER_BASE}
-          className={`app-side-tab${customerActive ? " is-active" : ""}`}
-          aria-current={customerActive ? "page" : undefined}
-        >
-          <span className="app-side-tab-title">The customer</span>
-          <span className="app-side-tab-desc muted small">
-            360 profile, insights, and outreach
-          </span>
-        </Link>
-        <Link
-          to={ADMIN_BASE}
-          className={`app-side-tab${adminActive ? " is-active" : ""}`}
-          aria-current={adminActive ? "page" : undefined}
-        >
-          <span className="app-side-tab-title">Data &amp; admin</span>
-          <span className="app-side-tab-desc muted small">
-            Tables, lineage, load times, quality
-          </span>
-        </Link>
-      </nav>
+      <div className="app-side-nav-body">
+        <p className="app-side-nav-heading">Workspace</p>
+        <nav className="app-side-tabs" aria-label="Workspace">
+          <Link
+            to={BUSINESS_BASE}
+            className={`app-side-tab${businessActive ? " is-active" : ""}`}
+            aria-current={businessActive ? "page" : undefined}
+          >
+            <span className="app-side-tab-title">The business</span>
+            <span className="app-side-tab-desc muted small">
+              Book, cohorts, and portfolio KPIs
+            </span>
+          </Link>
+          <Link
+            to={CUSTOMER_BASE}
+            className={`app-side-tab${customerActive ? " is-active" : ""}`}
+            aria-current={customerActive ? "page" : undefined}
+          >
+            <span className="app-side-tab-title">The customer</span>
+            <span className="app-side-tab-desc muted small">
+              360 profile, insights, and outreach
+            </span>
+          </Link>
+        </nav>
+      </div>
+      <div className="app-side-nav-footer">
+        <p className="app-side-nav-heading">Administration</p>
+        <nav className="app-side-tabs" aria-label="Administration">
+          <Link
+            to={ADMIN_BASE}
+            className={`app-side-tab app-side-tab-admin${adminActive ? " is-active" : ""}`}
+            aria-current={adminActive ? "page" : undefined}
+          >
+            <span className="app-side-tab-title">Data &amp; admin</span>
+            <span className="app-side-tab-desc muted small">
+              Health, warehouse, data source
+            </span>
+          </Link>
+        </nav>
+      </div>
     </aside>
   );
 }
