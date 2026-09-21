@@ -32,6 +32,8 @@ class CustomerSummary(BaseModel):
     last_login: str | None = None
     policy_count: int = 0
     investment_count: int = 0
+    churn_probability: float | None = None
+    churn_risk_tier: str | None = None
 
 
 class CustomerProfile(BaseModel):
@@ -73,8 +75,16 @@ class InvestmentSnapshot(BaseModel):
     fund_id: int | None = None
 
 
+class ChurnInsight(BaseModel):
+    churn_probability: float | None = None
+    churn_risk_tier: str | None = None
+    model_version: str | None = None
+    scored_at: str | None = None
+
+
 class CustomerDetailResponse(BaseModel):
     profile: CustomerProfile
     policies: list[PolicyRow]
     foreclosures: list[ForeclosureRow]
     investments: list[InvestmentSnapshot] = Field(default_factory=list)
+    churn: ChurnInsight | None = None

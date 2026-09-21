@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { CustomerDetail, fetchCustomer } from "../api";
+import ChurnBadge from "../ChurnBadge";
 import {
   formatCity,
   formatLastLogin,
@@ -77,6 +78,13 @@ export default function CustomerDetailPage() {
       </p>
       <section className="panel">
         <h1>{displayCustomerName(profile.customer_name)}</h1>
+        <div className="churn-detail-row">
+          <span className="label">Churn likelihood</span>
+          <ChurnBadge
+            probability={detail.churn?.churn_probability}
+            tier={detail.churn?.churn_risk_tier}
+          />
+        </div>
         <p className="muted small">
           City and last login are shown in full; other sensitive fields remain masked.
         </p>

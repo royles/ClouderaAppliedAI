@@ -1,5 +1,7 @@
 data/*.db
+data/models/
 __pycache__/
+*.egg-info/
 *.pyc
 .venv/
 frontend/node_modules/

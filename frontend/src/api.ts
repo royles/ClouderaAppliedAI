@@ -28,6 +28,8 @@ export type CustomerSummary = {
   last_login?: string | null;
   policy_count: number;
   investment_count: number;
+  churn_probability?: number | null;
+  churn_risk_tier?: string | null;
 };
 
 export type CustomerSortBy = "name" | "policy_count" | "investment_count";
@@ -62,6 +64,12 @@ export type CustomerDetail = {
     foreclosures_date?: string | null;
     portfolio_number?: number | null;
   }>;
+  churn?: {
+    churn_probability?: number | null;
+    churn_risk_tier?: string | null;
+    model_version?: string | null;
+    scored_at?: string | null;
+  } | null;
   investments: Array<{
     policy_num: number;
     snapshot_date: string;

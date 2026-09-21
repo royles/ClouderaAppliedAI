@@ -10,6 +10,7 @@ import {
   Overview,
   SortOrder,
 } from "../api";
+import ChurnBadge from "../ChurnBadge";
 import {
   formatCity,
   formatLastLogin,
@@ -232,12 +233,13 @@ export default function DashboardPage() {
                     Investments
                   </th>
                   <th>Last login</th>
+                  <th>Churn risk</th>
                 </tr>
               </thead>
               <tbody>
                 {customers.length === 0 ? (
                   <tr>
-                    <td colSpan={showRank ? 9 : 8} className="muted">
+                    <td colSpan={showRank ? 10 : 9} className="muted">
                       No customers match this filter.
                     </td>
                   </tr>
@@ -250,13 +252,23 @@ export default function DashboardPage() {
                           {displayCustomerName(c.customer_name)}
                         </Link>
                       </td>
-                      <td>{displayCustomerId(c.customer_id)}</td>
+                      <td>
+                        <Link to={`/customers/${c.customer_id}`}>
+                          {displayCustomerId(c.customer_id)}
+                        </Link>
+                      </td>
                       <td>{formatCity(c.city_name)}</td>
                       <td>{maskEmail(c.email)}</td>
                       <td>{maskPhone(c.mobile_no)}</td>
                       <td>{c.policy_count ?? 0}</td>
                       <td>{c.investment_count ?? 0}</td>
                       <td>{formatLastLogin(c.last_login)}</td>
+                      <td>
+                        <ChurnBadge
+                          probability={c.churn_probability}
+                          tier={c.churn_risk_tier}
+                        />
+                      </td>
                     </tr>
                   ))
                 )}

@@ -47,7 +47,7 @@ OVERVIEW_DOMAINS: list[tuple[str, str, str, str]] = [
         "with_investments",
         "Customers with policy investment track balances",
         """
-        SELECT COUNT(DISTINCT c.CUSTOMER_KEY)
+        SELECT COUNT(DISTINCT c.CUSTOMER_ID)
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
         INNER JOIN DWH_FCT_POLICY_INVESTMENT_TRACK pit ON pit.CUSTOMER_ID = c.CUSTOMER_ID
         WHERE c.CURRENT_IND = 1
@@ -71,7 +71,7 @@ OVERVIEW_DOMAINS: list[tuple[str, str, str, str]] = [
         "with_insurance_status",
         "Customers with matzav bituach coverage snapshots",
         """
-        SELECT COUNT(DISTINCT c.CUSTOMER_KEY)
+        SELECT COUNT(DISTINCT c.CUSTOMER_ID)
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
         INNER JOIN FCT_MATZAV_BITUACH m ON m.MS_MEVUTACH = c.CUSTOMER_ID
         WHERE c.CURRENT_IND = 1
@@ -84,7 +84,7 @@ SEGMENT_WHERE: dict[str, str] = {
     "with_policies": """
         EXISTS (
             SELECT 1 FROM DWH_DIM_ALL_POLICY p2
-            WHERE p2.CUSTOMER_KEY = c.CUSTOMER_KEY
+            WHERE p2.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
         )
     """,
     "with_foreclosures": """
@@ -102,7 +102,7 @@ SEGMENT_WHERE: dict[str, str] = {
     "with_market_products": """
         EXISTS (
             SELECT 1 FROM DWH_DIM_ALL_POLICY p2
-            WHERE p2.CUSTOMER_KEY = c.CUSTOMER_KEY
+            WHERE p2.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
               AND p2.MNG_COMPANY_CODE IN (1, 7, 8)
               AND p2.IS_ACTIVE = 1
         )

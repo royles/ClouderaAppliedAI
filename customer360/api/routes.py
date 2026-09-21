@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from customer360.api.deps import get_db
 from customer360.api.schemas import (
+    ChurnInsight,
     CustomerDetailResponse,
     CustomerProfile,
     CustomerSummary,
@@ -24,6 +25,34 @@ from customer360.api.sorting import normalize_sort_by, normalize_sort_order, ord
 from customer360.paths import default_db_path
 
 router = APIRouter(prefix="/api")
+
+
+def _churn_table_exists(conn: sqlite3.Connection) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_CHURN_SCORES'"
+    ).fetchone()
+    return row is not None
+
+
+def _fetch_churn(conn: sqlite3.Connection, customer_id: int) -> ChurnInsight | None:
+    if not _churn_table_exists(conn):
+        return None
+    row = conn.execute(
+        """
+        SELECT CHURN_PROBABILITY, CHURN_RISK_TIER, MODEL_VERSION, SCORED_AT
+        FROM APP_CUSTOMER_CHURN_SCORES
+        WHERE CUSTOMER_ID = ?
+        """,
+        (customer_id,),
+    ).fetchone()
+    if row is None:
+        return None
+    return ChurnInsight(
+        churn_probability=row["CHURN_PROBABILITY"],
+        churn_risk_tier=row["CHURN_RISK_TIER"],
+        model_version=row["MODEL_VERSION"],
+        scored_at=row["SCORED_AT"],
+    )
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -73,6 +102,12 @@ def list_customers(
     sort_key = normalize_sort_by(sort_by)
     order_key = normalize_sort_order(sort_order, sort_by=sort_key)
 
+    churn_join = ""
+    churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"
+    if _churn_table_exists(conn):
+        churn_join = "LEFT JOIN APP_CUSTOMER_CHURN_SCORES ch ON ch.CUSTOMER_ID = c.CUSTOMER_ID"
+        churn_cols = "ch.CHURN_PROBABILITY AS churn_probability, ch.CHURN_RISK_TIER AS churn_risk_tier"
+
     sql = f"""
         SELECT
             c.CUSTOMER_ID AS customer_id,
@@ -94,8 +129,10 @@ def list_customers(
                     FROM DWH_FCT_POLICY_INVESTMENT_TRACK pit
                     WHERE pit.CUSTOMER_ID = c.CUSTOMER_ID
                 )
-            ) AS investment_count
+            ) AS investment_count,
+            {churn_cols}
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
+        {churn_join}
         WHERE c.CURRENT_IND = 1 AND ({segment_sql})
     """
     params: list[object] = []
@@ -201,4 +238,5 @@ def customer_detail(
         policies=[PolicyRow(**dict(r)) for r in policies],
         foreclosures=[ForeclosureRow(**dict(r)) for r in foreclosures],
         investments=[InvestmentSnapshot(**dict(r)) for r in investments],
+        churn=_fetch_churn(conn, customer_id),
     )

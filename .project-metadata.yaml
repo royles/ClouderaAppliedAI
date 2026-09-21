@@ -55,6 +55,17 @@ tasks:
   - type: run_job
     entity_label: init_database
 
+  - type: create_job
+    name: Train Churn Model
+    entity_label: train_churn
+    script: 2_job-train-churn-model/train_churn.py
+    kernel: python3
+    cpu: 2
+    memory: 4
+
+  - type: run_job
+    entity_label: train_churn
+
   - type: start_application
     name: Customer 360 Dashboard
     subdomain: customer-360
