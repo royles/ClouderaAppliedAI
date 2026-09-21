@@ -48,6 +48,17 @@ class PortfolioKpis(BaseModel):
     book_growth_pct: float | None = None
 
 
+class KpiTargetProgress(BaseModel):
+    target: float
+    actual: float
+    progress_pct: float = Field(
+        description="Thermometer fill 0–100; higher-is-better uses actual/target."
+    )
+    status: str = Field(description="green, amber, or red")
+    direction: str = Field(default="higher", description="higher or lower")
+    amber_threshold: float | None = None
+
+
 class ChurnForecastPoint(BaseModel):
     period: str
     kind: str = "actual"
@@ -67,6 +78,7 @@ class InvestmentReturnPoint(BaseModel):
 class PortfolioAnalyticsResponse(BaseModel):
     segment: str
     kpis: PortfolioKpis
+    kpi_targets: dict[str, KpiTargetProgress] = Field(default_factory=dict)
     value_points: list[ValueHistoryPoint] = Field(default_factory=list)
     investment_returns: list[InvestmentReturnPoint] = Field(default_factory=list)
     churn_forecast: list[ChurnForecastPoint] = Field(default_factory=list)
@@ -346,3 +358,36 @@ class DataSourceTestResponse(BaseModel):
     backend_type: str
     message: str
     detail: str | None = None
+
+
+class KpiBenchmarkAdmin(BaseModel):
+    kpi_key: str
+    display_label: str
+    direction: str
+    target_value: float | None = None
+    amber_threshold: float
+    unit_kind: str
+    description: str | None = None
+    sort_order: int = 0
+    enabled: bool = True
+    updated_at: str | None = None
+
+
+class KpiBenchmarkListResponse(BaseModel):
+    benchmarks: list[KpiBenchmarkAdmin] = Field(default_factory=list)
+
+
+class KpiBenchmarkUpdateItem(BaseModel):
+    kpi_key: str
+    display_label: str | None = None
+    target_value: float | None = Field(
+        default=None,
+        description="Objective value; omit or null to use auto-computed default on The business.",
+    )
+    amber_threshold: float | None = None
+    enabled: bool | None = None
+    description: str | None = None
+
+
+class KpiBenchmarkBulkUpdateRequest(BaseModel):
+    benchmarks: list[KpiBenchmarkUpdateItem] = Field(default_factory=list)

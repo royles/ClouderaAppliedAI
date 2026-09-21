@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import AdminDataSourcePanel from "../components/AdminDataSourcePanel";
+import AdminConfigurationTabs from "../components/AdminConfigurationTabs";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { fetchWarehouseAdmin, WarehouseAdmin } from "../api";
 
@@ -79,17 +79,7 @@ export default function AdminPage() {
         </section>
       )}
 
-      <section className="panel admin-config-intro">
-        <h2>Configuration</h2>
-        <p className="muted small">
-          Expand a section to edit backend settings. Collapsed by default to keep the inventory
-          view uncluttered.
-        </p>
-      </section>
-
-      <div className="admin-config-accordions">
-        <AdminDataSourcePanel />
-      </div>
+      <AdminConfigurationTabs />
 
       {data && (
         <>

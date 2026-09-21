@@ -283,14 +283,47 @@ export type InvestmentReturnPoint = {
   cumulative_return_pct?: number | null;
 };
 
+export type KpiTargetProgress = {
+  target: number;
+  actual: number;
+  progress_pct: number;
+  status: string;
+  direction: string;
+  amber_threshold?: number | null;
+};
+
 export type PortfolioAnalytics = {
   segment: string;
   kpis: PortfolioKpis;
+  kpi_targets?: Record<string, KpiTargetProgress>;
   value_points: ValueHistoryPoint[];
   investment_returns: InvestmentReturnPoint[];
   churn_forecast: ChurnForecastPoint[];
   methodology_note: string;
 };
+
+export type KpiBenchmark = {
+  kpi_key: string;
+  display_label: string;
+  direction: string;
+  target_value?: number | null;
+  amber_threshold: number;
+  unit_kind: string;
+  description?: string | null;
+  sort_order: number;
+  enabled: boolean;
+  updated_at?: string | null;
+};
+
+export type KpiBenchmarkList = {
+  benchmarks: KpiBenchmark[];
+};
+
+export const fetchKpiBenchmarks = () =>
+  getJson<KpiBenchmarkList>("/api/admin/kpi-benchmarks");
+
+export const updateKpiBenchmarks = (benchmarks: Record<string, unknown>[]) =>
+  putJson<KpiBenchmarkList>("/api/admin/kpi-benchmarks", { benchmarks });
 
 export const fetchPortfolioAnalytics = (segment?: CustomerSegment | null) => {
   const params = new URLSearchParams();

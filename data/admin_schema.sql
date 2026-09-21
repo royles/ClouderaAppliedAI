@@ -19,3 +19,19 @@ CREATE TABLE IF NOT EXISTS APP_ADMIN_DATA_SOURCE (
     TRINO_USE_SSL       INTEGER NOT NULL DEFAULT 1,
     UPDATED_AT          TEXT NOT NULL
 );
+
+-- Business KPI objectives for The business thermometers (lookup / benchmark table)
+CREATE TABLE IF NOT EXISTS APP_ADMIN_KPI_BENCHMARK (
+    KPI_KEY             TEXT PRIMARY KEY,
+    DISPLAY_LABEL       TEXT NOT NULL,
+    DIRECTION           TEXT NOT NULL DEFAULT 'higher'
+                            CHECK (DIRECTION IN ('higher', 'lower')),
+    TARGET_VALUE        REAL,
+    AMBER_THRESHOLD     REAL NOT NULL DEFAULT 0.85,
+    UNIT_KIND           TEXT NOT NULL DEFAULT 'number'
+                            CHECK (UNIT_KIND IN ('money', 'integer', 'ratio', 'percent', 'number')),
+    DESCRIPTION         TEXT,
+    SORT_ORDER          INTEGER NOT NULL DEFAULT 0,
+    ENABLED             INTEGER NOT NULL DEFAULT 1,
+    UPDATED_AT          TEXT NOT NULL
+);

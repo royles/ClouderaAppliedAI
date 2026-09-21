@@ -12,6 +12,7 @@ from pathlib import Path
 
 from customer360.interactions.seed import build_interaction_events
 from customer360.admin_store import ensure_admin_schema
+from customer360.kpi_benchmarks import ensure_kpi_benchmark_catalog
 from customer360.paths import default_db_path, project_root, schema_path
 
 INTERACTIONS_SCHEMA = project_root() / "data" / "interactions_schema.sql"
@@ -528,7 +529,9 @@ def init_database(
             """
         ).fetchall()
 
-    ensure_admin_schema()
+    admin_conn = ensure_admin_schema()
+    ensure_kpi_benchmark_catalog(admin_conn)
+    admin_conn.close()
 
     print(f"Database written to {db_path}")
     for name, count in counts:

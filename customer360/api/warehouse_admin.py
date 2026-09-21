@@ -114,6 +114,22 @@ TABLE_CATALOG: list[dict] = [
         "description": "Precomputed portfolio KPIs and chart series per cohort segment.",
         "load_job": "churn train / scripts/refresh_api_caches.py",
     },
+    {
+        "table_name": "APP_ADMIN_KPI_BENCHMARK",
+        "layer": "application",
+        "domain": "Administration",
+        "role": "Configuration",
+        "description": "Business KPI objectives and amber thresholds for The business thermometers.",
+        "load_job": "Admin UI / seed defaults",
+    },
+    {
+        "table_name": "APP_ADMIN_DATA_SOURCE",
+        "layer": "application",
+        "domain": "Administration",
+        "role": "Configuration",
+        "description": "Warehouse backend settings (SQLite, CDW JDBC, Iceberg).",
+        "load_job": "Admin UI",
+    },
 ]
 
 RELATIONSHIPS: list[dict] = [

@@ -36,6 +36,9 @@ from customer360.api.schemas import (
     DataSourceUpdateRequest,
     DataSourceTestRequest,
     DataSourceTestResponse,
+    KpiBenchmarkAdmin,
+    KpiBenchmarkListResponse,
+    KpiBenchmarkBulkUpdateRequest,
 )
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
 from customer360.api.value_history import (
@@ -54,6 +57,8 @@ from customer360.api.sorting import normalize_sort_by, normalize_sort_order, ord
 from customer360.metrics_refresh import customer_metrics_populated
 from customer360.paths import default_db_path
 from customer360.api.warehouse_admin import fetch_warehouse_admin
+from customer360.business_kpi_targets import build_kpi_targets
+from customer360.kpi_benchmarks import benchmark_for_api, list_kpi_benchmarks, save_kpi_benchmarks
 from customer360.data_source import (
     DataSourceConfig,
     active_backend_summary,
@@ -114,6 +119,15 @@ def bedrock_status() -> BedrockStatusResponse:
     )
 
 
+def _portfolio_analytics_response(payload: dict) -> PortfolioAnalyticsResponse:
+    enriched = dict(payload)
+    enriched["kpi_targets"] = build_kpi_targets(
+        enriched.get("kpis", {}),
+        enriched.get("value_points", []),
+    )
+    return PortfolioAnalyticsResponse(**enriched)
+
+
 @router.get("/portfolio-analytics", response_model=PortfolioAnalyticsResponse)
 def portfolio_analytics(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
@@ -135,9 +149,26 @@ def portfolio_analytics(
             (seg,),
         ).fetchone()
         if cached and cached[0]:
-            return PortfolioAnalyticsResponse(**json.loads(cached[0]))
+            return _portfolio_analytics_response(json.loads(cached[0]))
     data = fetch_portfolio_analytics(conn, segment=seg)
-    return PortfolioAnalyticsResponse(**data)
+    return _portfolio_analytics_response(data)
+
+
+@router.get("/admin/kpi-benchmarks", response_model=KpiBenchmarkListResponse)
+def get_kpi_benchmarks() -> KpiBenchmarkListResponse:
+    rows = list_kpi_benchmarks()
+    return KpiBenchmarkListResponse(
+        benchmarks=[KpiBenchmarkAdmin(**benchmark_for_api(r)) for r in rows]
+    )
+
+
+@router.put("/admin/kpi-benchmarks", response_model=KpiBenchmarkListResponse)
+def put_kpi_benchmarks(body: KpiBenchmarkBulkUpdateRequest) -> KpiBenchmarkListResponse:
+    updates = [item.model_dump(exclude_unset=True) for item in body.benchmarks]
+    rows = save_kpi_benchmarks(updates)
+    return KpiBenchmarkListResponse(
+        benchmarks=[KpiBenchmarkAdmin(**benchmark_for_api(r)) for r in rows]
+    )
 
 
 @router.get("/value-history", response_model=ValueHistoryResponse)

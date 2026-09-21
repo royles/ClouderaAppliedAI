@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
 import {
   DataSourceConfig,
   fetchDataSourceConfig,
@@ -85,7 +85,11 @@ function buildUpdatePayload(form: FormState): Record<string, unknown> {
   return payload;
 }
 
-export default function AdminDataSourcePanel() {
+type Props = {
+  layout?: "accordion" | "embedded";
+};
+
+export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -156,26 +160,27 @@ export default function AdminDataSourcePanel() {
     ? "Loading…"
     : meta?.backend_label ?? form?.backend_type ?? "Not configured";
 
-  if (loading || !form) {
+  const wrap = (body: ReactNode) => {
+    if (layout === "embedded") {
+      return <div className="admin-datasource-embedded">{body}</div>;
+    }
     return (
       <AdminAccordionSection
         id="admin-warehouse-backend"
         title="Warehouse backend"
         meta={accordionMeta}
-        description="Choose where Customer 360 reads warehouse data. Settings are stored in the local control database."
+        description="Choose where Customer 360 reads warehouse data. Admin settings are always stored in the local control database; API routes use SQLite until CDW or Iceberg routing is enabled."
       >
-        <p className="muted small">Loading backend configuration…</p>
+        {body}
       </AdminAccordionSection>
     );
+  };
+
+  if (loading || !form) {
+    return wrap(<p className="muted small">Loading backend configuration…</p>);
   }
 
-  return (
-    <AdminAccordionSection
-      id="admin-warehouse-backend"
-      title="Warehouse backend"
-      meta={accordionMeta}
-      description="Choose where Customer 360 reads warehouse data. Admin settings are always stored in the local control database; API routes use SQLite until CDW or Iceberg routing is enabled."
-    >
+  return wrap(
       <div className="admin-datasource">
       {meta?.api_routing_note && (
         <p className="muted small admin-datasource-note">{meta.api_routing_note}</p>
@@ -354,7 +359,6 @@ export default function AdminDataSourcePanel() {
           <p className="muted small">Last updated {new Date(meta.updated_at).toLocaleString()}</p>
         )}
       </form>
-      </div>
-    </AdminAccordionSection>
+      </div>,
   );
 }
