@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import {
   CustomerSegment,
   CustomerSortBy,
@@ -13,17 +13,14 @@ import {
   ValueHistoryPoint,
 } from "../api";
 import Breadcrumbs from "../components/Breadcrumbs";
-import ChurnBadge from "../ChurnBadge";
+import CustomerCardGrid from "../components/CustomerCardGrid";
+import CustomerListTable from "../components/CustomerListTable";
 import CustomerValueChart from "../components/CustomerValueChart";
-import { DASHBOARD_PAGE_SIZE, parseDashboardSearch } from "../dashboardUrl";
 import {
-  formatCity,
-  formatLastLogin,
-  displayCustomerId,
-  maskEmail,
-  displayCustomerName,
-  maskPhone,
-} from "../pii";
+  CustomerListView,
+  DASHBOARD_PAGE_SIZE,
+  parseDashboardSearch,
+} from "../dashboardUrl";
 
 function patchDashboardParams(
   prev: URLSearchParams,
@@ -33,6 +30,7 @@ function patchDashboardParams(
     sortBy: CustomerSortBy;
     sortOrder: SortOrder;
     page: number | null;
+    view: CustomerListView | null;
   }>,
 ): URLSearchParams {
   const next = new URLSearchParams(prev);
@@ -48,6 +46,7 @@ function patchDashboardParams(
     const p = patch.page;
     apply("page", p == null || p <= 1 ? null : String(p));
   }
+  if ("view" in patch) apply("view", patch.view ?? null, "grid");
   return next;
 }
 
@@ -58,7 +57,7 @@ export default function DashboardPage() {
     () => parseDashboardSearch(searchParams),
     [searchParams],
   );
-  const { segment, sortBy, sortOrder, page } = urlState;
+  const { segment, sortBy, sortOrder, page, view } = urlState;
 
   const [overview, setOverview] = useState<Overview | null>(null);
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
@@ -261,9 +260,10 @@ export default function DashboardPage() {
     setRankBy(by);
   };
 
-  const sortIndicator = (by: CustomerSortBy) => {
-    if (sortBy !== by) return "";
-    return sortOrder === "desc" ? " ↓" : " ↑";
+  const setListView = (next: CustomerListView) => {
+    setSearchParams((prev) => patchDashboardParams(prev, { view: next }), {
+      replace: true,
+    });
   };
 
   const pageCount = Math.max(1, Math.ceil(listTotal / DASHBOARD_PAGE_SIZE));
@@ -400,108 +400,66 @@ export default function DashboardPage() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <div className="toolbar-item">
+              <span className="toolbar-label-static" id="customer-view-label">
+                Layout
+              </span>
+              <div
+                className="view-toggle"
+                role="group"
+                aria-labelledby="customer-view-label"
+              >
+                <button
+                  type="button"
+                  className={`view-toggle-btn${view === "grid" ? " is-active" : ""}`}
+                  aria-pressed={view === "grid"}
+                  onClick={() => setListView("grid")}
+                >
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  className={`view-toggle-btn${view === "table" ? " is-active" : ""}`}
+                  aria-pressed={view === "table"}
+                  onClick={() => setListView("table")}
+                >
+                  Table
+                </button>
+              </div>
+            </div>
           </div>
         </div>
         {error && <p className="error">{error}</p>}
-        <div className={`table-wrap${tableLoading ? " table-loading" : ""}`}>
+        <div
+          className={`customer-list-wrap${tableLoading ? " customer-list-loading" : ""}${
+            view === "table" ? " customer-list-wrap-table" : ""
+          }`}
+        >
           {tableLoading && (
-            <p className="table-loading-label muted">Updating table…</p>
+            <p className="table-loading-label muted">
+              Updating {view === "grid" ? "cards" : "table"}…
+            </p>
           )}
-          <table className="table table-interactive">
-            <thead>
-              <tr>
-                {showRank && <th>#</th>}
-                <th>
-                  <button
-                    type="button"
-                    className="th-sort-btn"
-                    onClick={() => toggleColumnSort("name")}
-                  >
-                    Name{sortIndicator("name")}
-                  </button>
-                </th>
-                <th>ID</th>
-                <th>City</th>
-                <th>Email</th>
-                <th>Mobile</th>
-                <th>
-                  <button
-                    type="button"
-                    className={`th-sort-btn${sortBy === "policy_count" ? " th-sorted" : ""}`}
-                    onClick={() => toggleColumnSort("policy_count")}
-                  >
-                    Policies{sortIndicator("policy_count")}
-                  </button>
-                </th>
-                <th>
-                  <button
-                    type="button"
-                    className={`th-sort-btn${sortBy === "investment_count" ? " th-sorted" : ""}`}
-                    onClick={() => toggleColumnSort("investment_count")}
-                  >
-                    Investments{sortIndicator("investment_count")}
-                  </button>
-                </th>
-                <th>Last login</th>
-                <th>
-                  <button
-                    type="button"
-                    className={`th-sort-btn${sortBy === "churn_risk" ? " th-sorted" : ""}`}
-                    onClick={() => toggleColumnSort("churn_risk")}
-                  >
-                    Churn risk{sortIndicator("churn_risk")}
-                  </button>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {customers.length === 0 ? (
-                <tr>
-                  <td colSpan={showRank ? 10 : 9} className="muted">
-                    No customers match this filter.
-                  </td>
-                </tr>
-              ) : (
-                customers.map((c, index) => (
-                  <tr key={c.customer_id} className="table-row-click">
-                    {showRank && (
-                      <td className="rank-cell">
-                        {showingFrom + index}
-                      </td>
-                    )}
-                    <td>
-                      <Link
-                        to={`/customers/${c.customer_id}`}
-                        state={{ dashboardReturn }}
-                      >
-                        {displayCustomerName(c.customer_name)}
-                      </Link>
-                    </td>
-                    <td>
-                      <Link
-                        to={`/customers/${c.customer_id}`}
-                        state={{ dashboardReturn }}
-                      >
-                        {displayCustomerId(c.customer_id)}
-                      </Link>
-                    </td>
-                    <td>{formatCity(c.city_name)}</td>
-                    <td>{maskEmail(c.email)}</td>
-                    <td>{maskPhone(c.mobile_no)}</td>
-                    <td>{c.policy_count ?? 0}</td>
-                    <td>{c.investment_count ?? 0}</td>
-                    <td>{formatLastLogin(c.last_login)}</td>
-                    <td>
-                      <ChurnBadge
-                        probability={c.churn_probability}
-                        tier={c.churn_risk_tier}
-                      />
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+          {view === "grid" ? (
+            <CustomerCardGrid
+              customers={customers}
+              showRank={showRank}
+              rankStart={showingFrom}
+              dashboardReturn={dashboardReturn}
+            />
+          ) : (
+            <div className="table-wrap">
+              <CustomerListTable
+                customers={customers}
+                showRank={showRank}
+                rankStart={showingFrom}
+                dashboardReturn={dashboardReturn}
+                sortBy={sortBy}
+                sortOrder={sortOrder}
+                onToggleColumnSort={toggleColumnSort}
+              />
+            </div>
+          )}
         </div>
         <div className="table-footer">
           <p className="muted small">

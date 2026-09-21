@@ -18,12 +18,15 @@ const VALID_SORT: CustomerSortBy[] = [
 
 export const DASHBOARD_PAGE_SIZE = 50;
 
+export type CustomerListView = "grid" | "table";
+
 export type DashboardUrlState = {
   segment: CustomerSegment;
   q: string;
   sortBy: CustomerSortBy;
   sortOrder: SortOrder;
   page: number;
+  view: CustomerListView;
 };
 
 export function parseDashboardSearch(params: URLSearchParams): DashboardUrlState {
@@ -43,12 +46,16 @@ export function parseDashboardSearch(params: URLSearchParams): DashboardUrlState
   const pageRaw = Number.parseInt(params.get("page") ?? "1", 10);
   const page = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
 
+  const viewRaw = params.get("view");
+  const view: CustomerListView = viewRaw === "table" ? "table" : "grid";
+
   return {
     segment,
     q: params.get("q") ?? "",
     sortBy,
     sortOrder,
     page,
+    view,
   };
 }
 
@@ -66,6 +73,9 @@ export function dashboardSearchString(state: Partial<DashboardUrlState>): string
   }
   if (state.page && state.page > 1) {
     params.set("page", String(state.page));
+  }
+  if (state.view === "table") {
+    params.set("view", "table");
   }
   const qs = params.toString();
   return qs ? `?${qs}` : "";
