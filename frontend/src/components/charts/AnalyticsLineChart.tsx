@@ -12,7 +12,12 @@ import {
   seriesHasPoints,
 } from "./analyticsChartUtils";
 import ChartFloatingTooltip from "./ChartFloatingTooltip";
-import { ChartTooltipPosition, indexFromSvgX, svgPointFromClient } from "./chartPointer";
+import {
+  chartPointerFromSvgEvent,
+  ChartTooltipPosition,
+  svgPointFromClient,
+  xForIndex,
+} from "./chartPointer";
 
 export type ChartPointMeta = {
   period: string;
@@ -32,17 +37,6 @@ type Props = {
   interactive?: boolean;
   onPeriodSelect?: (selection: { period: string; kind?: string }) => void;
 };
-
-function xForIndex(
-  index: number,
-  pointCount: number,
-  width: number,
-  padX: number,
-): number {
-  if (pointCount <= 1) return padX;
-  const stepX = (width - padX * 2) / (pointCount - 1);
-  return padX + index * stepX;
-}
 
 function isPeriodSelectable(meta: ChartPointMeta): boolean {
   return meta.kind !== "forecast";
@@ -90,8 +84,10 @@ export default function AnalyticsLineChart({
   const padX = 44;
   const padY = 22;
   const canvasRef = useRef<HTMLDivElement>(null);
+  const svgRef = useRef<SVGSVGElement>(null);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [tooltipPos, setTooltipPos] = useState<ChartTooltipPosition | null>(null);
+  const [crosshairSvgX, setCrosshairSvgX] = useState<number | null>(null);
 
   const visibleSeries = useMemo(
     () => series.filter((s) => seriesHasPoints(s.values)),
@@ -116,21 +112,20 @@ export default function AnalyticsLineChart({
   const clearHover = useCallback(() => {
     setActiveIndex(null);
     setTooltipPos(null);
+    setCrosshairSvgX(null);
   }, []);
 
   const handlePlotMove = useCallback(
-    (e: ReactMouseEvent<SVGRectElement | SVGSVGElement>) => {
-      const idx = pickIndexFromEvent(e);
-      const canvas = canvasRef.current;
-      if (idx == null || !canvas) return;
-      setActiveIndex(idx);
-      const rect = canvas.getBoundingClientRect();
-      setTooltipPos({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
+    (e: ReactMouseEvent<SVGRectElement>) => {
+      const svg = svgRef.current;
+      if (!svg) return;
+      const hit = chartPointerFromSvgEvent(e, svg, points.length, width, padX);
+      if (!hit) return;
+      setActiveIndex(hit.index);
+      setTooltipPos(hit.position);
+      setCrosshairSvgX(hit.svgX);
     },
-    [pickIndexFromEvent],
+    [points.length, width, padX],
   );
 
   const handlePlotClick = useCallback(
@@ -194,8 +189,6 @@ export default function AnalyticsLineChart({
   const plotWidth = width - padX * 2;
   const plotHeight = height - padY * 2;
 
-  const crosshairX =
-    activeIndex != null ? xForIndex(activeIndex, points.length, width, padX) : null;
   const crosshairSelectable =
     activeIndex != null && isPeriodSelectable(points[activeIndex]);
 
@@ -210,18 +203,8 @@ export default function AnalyticsLineChart({
         </p>
       )}
       <div ref={canvasRef} className="value-chart-canvas">
-        {active && (
-          <ChartFloatingTooltip canvasRef={canvasRef} position={tooltipPos}>
-            <strong>
-              {formatPeriodLabel(active.period)}
-              {active.kind === "forecast" ? " (forecast)" : ""}
-            </strong>
-            {active.tooltipLines.map((line) => (
-              <span key={line}>{line}</span>
-            ))}
-          </ChartFloatingTooltip>
-        )}
         <svg
+          ref={svgRef}
           className={`value-chart-svg analytics-chart-svg${interactive ? " analytics-chart-svg-interactive" : ""}`}
           viewBox={`0 0 ${width} ${height}`}
           preserveAspectRatio="xMidYMid meet"
@@ -280,26 +263,15 @@ export default function AnalyticsLineChart({
               />
             );
           })}
-          {crosshairX != null && interactive && (
-            <>
-              <line
-                x1={crosshairX}
-                y1={padY}
-                x2={crosshairX}
-                y2={height - padY}
-                className="chart-crosshair"
-                pointerEvents="none"
-              />
-              {activeIndex != null && crosshairSelectable && (
-                <circle
-                  cx={crosshairX}
-                  cy={padY + plotHeight / 2}
-                  r={4}
-                  className="chart-crosshair-dot"
-                  pointerEvents="none"
-                />
-              )}
-            </>
+          {crosshairSvgX != null && (
+            <line
+              x1={crosshairSvgX}
+              y1={padY}
+              x2={crosshairSvgX}
+              y2={height - padY}
+              className="chart-crosshair"
+              pointerEvents="none"
+            />
           )}
           {points.map((p, i) => {
             const x = xForIndex(i, points.length, width, padX);
@@ -338,6 +310,17 @@ export default function AnalyticsLineChart({
           />
         </svg>
       </div>
+      {active && tooltipPos && (
+        <ChartFloatingTooltip position={tooltipPos}>
+          <strong>
+            {formatPeriodLabel(active.period)}
+            {active.kind === "forecast" ? " (forecast)" : ""}
+          </strong>
+          {active.tooltipLines.map((line) => (
+            <span key={line}>{line}</span>
+          ))}
+        </ChartFloatingTooltip>
+      )}
       <ul className="chart-legend chart-legend-compact">
         {visibleSeries.map((s) => (
           <li key={s.id}>

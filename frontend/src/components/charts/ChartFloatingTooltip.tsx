@@ -1,26 +1,39 @@
-import { ReactNode, RefObject } from "react";
+import { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { ChartTooltipPosition, computeTooltipFlip } from "./chartPointer";
 
 type Props = {
-  canvasRef: RefObject<HTMLElement | null>;
   position: ChartTooltipPosition | null;
   children: ReactNode;
 };
 
-export default function ChartFloatingTooltip({
-  canvasRef,
-  position,
-  children,
-}: Props) {
-  if (!position) return null;
-  const { flipX, flipY } = computeTooltipFlip(canvasRef.current, position);
-  return (
+const OFFSET = 12;
+
+export default function ChartFloatingTooltip({ position, children }: Props) {
+  if (!position || typeof document === "undefined") return null;
+  const { flipX, flipY } = computeTooltipFlip(position);
+  let transform = `translate(${OFFSET}px, ${OFFSET}px)`;
+  if (flipX && flipY) {
+    transform = `translate(calc(-100% - ${OFFSET}px), calc(-100% - ${OFFSET}px))`;
+  } else if (flipX) {
+    transform = `translate(calc(-100% - ${OFFSET}px), ${OFFSET}px)`;
+  } else if (flipY) {
+    transform = `translate(${OFFSET}px, calc(-100% - ${OFFSET}px))`;
+  }
+
+  return createPortal(
     <div
-      className={`chart-tooltip-floating${flipX ? " flip-x" : ""}${flipY ? " flip-y" : ""}`}
-      style={{ left: position.x, top: position.y }}
+      className="chart-tooltip-floating"
+      style={{
+        position: "fixed",
+        left: position.clientX,
+        top: position.clientY,
+        transform,
+      }}
       role="tooltip"
     >
       {children}
-    </div>
+    </div>,
+    document.body,
   );
 }

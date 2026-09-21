@@ -7,7 +7,11 @@ import {
   ExtendedValuePoint,
 } from "../customerValueChurnForecast";
 import ChartFloatingTooltip from "./charts/ChartFloatingTooltip";
-import { chartPointerFromSvgEvent, ChartTooltipPosition } from "./charts/chartPointer";
+import {
+  chartPointerFromSvgEvent,
+  ChartTooltipPosition,
+  xForIndex,
+} from "./charts/chartPointer";
 
 type Props = {
   title: string;
@@ -117,6 +121,7 @@ export default function CustomerValueChart({
   const [canvasSize, setCanvasSize] = useState({ width: 640, height: 168 });
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [tooltipPos, setTooltipPos] = useState<ChartTooltipPosition | null>(null);
+  const [crosshairSvgX, setCrosshairSvgX] = useState<number | null>(null);
 
   useEffect(() => {
     if (!fillContainer || !canvasRef.current) return;
@@ -242,20 +247,24 @@ export default function CustomerValueChart({
   const clearHover = useCallback(() => {
     setActiveIndex(null);
     setTooltipPos(null);
+    setCrosshairSvgX(null);
   }, []);
 
   const handlePlotPointer = useCallback(
-    (e: ReactMouseEvent<SVGSVGElement>) => {
+    (e: ReactMouseEvent<SVGRectElement>) => {
       const svg = svgRef.current;
-      const canvas = canvasRef.current;
-      if (!svg || !canvas || pointCount === 0) return;
-      const hit = chartPointerFromSvgEvent(e, svg, canvas, pointCount, width, padX);
+      if (!svg || pointCount === 0) return;
+      const hit = chartPointerFromSvgEvent(e, svg, pointCount, width, padX);
       if (!hit) return;
       setActiveIndex(hit.index);
       setTooltipPos(hit.position);
+      setCrosshairSvgX(hit.svgX);
     },
     [pointCount, width, padX],
   );
+
+  const plotWidth = Math.max(0, width - padX * 2);
+  const plotHeight = Math.max(0, height - padY * 2);
 
   return (
     <div className={wrapClass}>
@@ -297,24 +306,6 @@ export default function CustomerValueChart({
         ref={canvasRef}
         className={`value-chart-canvas${fillContainer ? " value-chart-canvas-fill" : ""}`}
       >
-        {active && (
-          <ChartFloatingTooltip canvasRef={canvasRef} position={tooltipPos}>
-            <strong>
-              {formatPeriodLabel(active.period)}
-              {active.kind === "forecast" ? " (projected)" : ""}
-            </strong>
-            <span>Total {formatTooltipMoney(active.total_value)}</span>
-            {active.kind === "actual" && (
-              <>
-                <span>Investments {formatTooltipMoney(active.investment_value)}</span>
-                <span>Coverage {formatTooltipMoney(active.coverage_value)}</span>
-              </>
-            )}
-            {active.is_predicted_lapse && (
-              <span className="warn-stat">Predicted lapse — value at ₪0</span>
-            )}
-          </ChartFloatingTooltip>
-        )}
         <svg
           ref={svgRef}
           className="value-chart-svg"
@@ -326,17 +317,7 @@ export default function CustomerValueChart({
               ? "Customer value over time with churn lapse forecast"
               : "Customer value over time"
           }
-          onMouseMove={handlePlotPointer}
-          onMouseLeave={clearHover}
         >
-          <rect
-            x={padX}
-            y={padY}
-            width={Math.max(0, width - padX * 2)}
-            height={Math.max(0, height - padY * 2)}
-            fill="transparent"
-            aria-hidden
-          />
           <line
             x1={padX}
             y1={height - padY}
@@ -395,6 +376,16 @@ export default function CustomerValueChart({
               );
             })()
           )}
+          {crosshairSvgX != null && (
+            <line
+              x1={crosshairSvgX}
+              y1={padY}
+              x2={crosshairSvgX}
+              y2={height - padY}
+              className="chart-crosshair"
+              pointerEvents="none"
+            />
+          )}
           {displayPoints.map((p, i) => {
             const { x, y } = pointCoords(
               i,
@@ -417,16 +408,15 @@ export default function CustomerValueChart({
                   className="chart-hit"
                   onFocus={(e) => {
                     setActiveIndex(i);
-                    const canvas = canvasRef.current;
                     const target = e.currentTarget;
-                    if (canvas && target) {
-                      const cRect = canvas.getBoundingClientRect();
-                      const tRect = target.getBoundingClientRect();
-                      setTooltipPos({
-                        x: tRect.left - cRect.left + tRect.width / 2,
-                        y: tRect.top - cRect.top,
-                      });
-                    }
+                    const tRect = target.getBoundingClientRect();
+                    setTooltipPos({
+                      clientX: tRect.left + tRect.width / 2,
+                      clientY: tRect.top,
+                    });
+                    setCrosshairSvgX(
+                      xForIndex(i, displayPoints.length, width, padX),
+                    );
                   }}
                   onBlur={clearHover}
                   tabIndex={0}
@@ -460,8 +450,36 @@ export default function CustomerValueChart({
               </g>
             );
           })}
+          <rect
+            x={padX}
+            y={padY}
+            width={plotWidth}
+            height={plotHeight}
+            className="chart-plot-hit"
+            onMouseMove={handlePlotPointer}
+            onMouseLeave={clearHover}
+          />
         </svg>
       </div>
+
+      {active && tooltipPos && (
+        <ChartFloatingTooltip position={tooltipPos}>
+          <strong>
+            {formatPeriodLabel(active.period)}
+            {active.kind === "forecast" ? " (projected)" : ""}
+          </strong>
+          <span>Total {formatTooltipMoney(active.total_value)}</span>
+          {active.kind === "actual" && (
+            <>
+              <span>Investments {formatTooltipMoney(active.investment_value)}</span>
+              <span>Coverage {formatTooltipMoney(active.coverage_value)}</span>
+            </>
+          )}
+          {active.is_predicted_lapse && (
+            <span className="warn-stat">Predicted lapse — value at ₪0</span>
+          )}
+        </ChartFloatingTooltip>
+      )}
 
       <ul className="chart-legend">
         <li>
