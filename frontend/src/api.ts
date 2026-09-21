@@ -3,6 +3,8 @@ export type DomainCount = {
   row_count: number;
   filter_key: string;
   description?: string;
+  policy_total?: number | null;
+  policy_active?: number | null;
 };
 
 export type CustomerSegment =
@@ -256,6 +258,8 @@ export const testDataSourceConnection = (config?: Record<string, unknown>) =>
 
 export type PortfolioKpis = {
   active_customers: number;
+  total_policies: number;
+  active_policies: number;
   total_book_value: number;
   avg_customer_value: number;
   avg_policies_per_customer: number;

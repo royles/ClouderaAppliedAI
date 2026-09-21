@@ -15,6 +15,14 @@ class DomainCount(BaseModel):
     row_count: int
     filter_key: str
     description: str = ""
+    policy_total: int | None = Field(
+        default=None,
+        description="Policy dimension rows for customers in this card's cohort",
+    )
+    policy_active: int | None = Field(
+        default=None,
+        description="Active policies (IS_ACTIVE=1) in the same cohort",
+    )
 
 
 class OverviewResponse(BaseModel):
@@ -37,6 +45,8 @@ class ValueHistoryResponse(BaseModel):
 
 class PortfolioKpis(BaseModel):
     active_customers: int = 0
+    total_policies: int = 0
+    active_policies: int = 0
     total_book_value: float = 0
     avg_customer_value: float = 0
     avg_policies_per_customer: float = 0

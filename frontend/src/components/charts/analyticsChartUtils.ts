@@ -117,9 +117,14 @@ export function seriesHasPoints(values: (number | null)[]): boolean {
   return values.some((v) => v != null);
 }
 
+export type ChartValueFormat = "money" | "percent" | "count";
+
 export type ChartSeries = {
   id: string;
   visualKey: SeriesVisualKey;
   label: string;
   values: (number | null)[];
+  /** When set with a different primary valueFormat, uses the right-hand scale. */
+  axis?: "primary" | "secondary";
+  valueFormat?: ChartValueFormat;
 };

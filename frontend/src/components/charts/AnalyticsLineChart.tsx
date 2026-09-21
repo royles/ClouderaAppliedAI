@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import {
   ChartSeries,
+  ChartValueFormat,
   SERIES_VISUAL,
   formatAxisCount,
   formatAxisMoney,
@@ -37,6 +38,41 @@ type Props = {
   interactive?: boolean;
   onPeriodSelect?: (selection: { period: string; kind?: string }) => void;
 };
+
+function boundsForValues(
+  values: number[],
+  format: ChartValueFormat,
+): { minY: number; maxY: number } {
+  if (values.length === 0) {
+    return { minY: 0, maxY: 1 };
+  }
+  const rawMin = Math.min(...values);
+  const rawMax = Math.max(...values);
+  const pad =
+    (rawMax - rawMin) * 0.08 ||
+    (format === "percent" ? 1 : format === "count" ? 1 : rawMax * 0.05 || 1);
+  const minY =
+    format === "percent"
+      ? rawMin - pad
+      : format === "count"
+        ? Math.max(0, rawMin - pad)
+        : rawMin * 0.92;
+  const maxY =
+    format === "percent"
+      ? rawMax + pad
+      : format === "count"
+        ? rawMax + pad
+        : rawMax * 1.05;
+  return { minY, maxY };
+}
+
+function formatForKind(kind: ChartValueFormat) {
+  return kind === "percent"
+    ? formatAxisPct
+    : kind === "count"
+      ? formatAxisCount
+      : formatAxisMoney;
+}
 
 function isPeriodSelectable(meta: ChartPointMeta): boolean {
   return meta.kind !== "forecast";
@@ -158,32 +194,28 @@ export default function AnalyticsLineChart({
     );
   }
 
-  const flat = visibleSeries.flatMap((s) =>
+  const usesDualAxis = visibleSeries.some((s) => (s.axis ?? "primary") === "secondary");
+  const primarySeries = visibleSeries.filter((s) => (s.axis ?? "primary") === "primary");
+  const secondarySeries = visibleSeries.filter((s) => s.axis === "secondary");
+  const primaryFlat = primarySeries.flatMap((s) =>
     s.values.filter((v): v is number => v != null),
   );
-  const rawMin = Math.min(...flat);
-  const rawMax = Math.max(...flat);
-  const pad =
-    (rawMax - rawMin) * 0.08 ||
-    (valueFormat === "percent" ? 1 : valueFormat === "count" ? 1 : rawMax * 0.05 || 1);
-  const minY =
-    valueFormat === "percent"
-      ? rawMin - pad
-      : valueFormat === "count"
-        ? Math.max(0, rawMin - pad)
-        : rawMin * 0.92;
-  const maxY =
-    valueFormat === "percent"
-      ? rawMax + pad
-      : valueFormat === "count"
-        ? rawMax + pad
-        : rawMax * 1.05;
-  const formatAxis =
-    valueFormat === "percent"
-      ? formatAxisPct
-      : valueFormat === "count"
-        ? formatAxisCount
-        : formatAxisMoney;
+  const primaryFormat =
+    primarySeries[0]?.valueFormat ?? valueFormat;
+  const { minY, maxY } = boundsForValues(primaryFlat, primaryFormat);
+  const formatAxis = formatForKind(primaryFormat);
+
+  let secondaryBounds: { minY: number; maxY: number } | null = null;
+  let formatSecondaryAxis = formatAxisCount;
+  if (usesDualAxis && secondarySeries.length > 0) {
+    const secondaryFlat = secondarySeries.flatMap((s) =>
+      s.values.filter((v): v is number => v != null),
+    );
+    const secondaryFormat =
+      secondarySeries[0]?.valueFormat ?? ("count" as ChartValueFormat);
+    secondaryBounds = boundsForValues(secondaryFlat, secondaryFormat);
+    formatSecondaryAxis = formatForKind(secondaryFormat);
+  }
   const active = activeIndex != null ? points[activeIndex] : null;
 
   const plotWidth = width - padX * 2;
@@ -244,9 +276,39 @@ export default function AnalyticsLineChart({
           >
             {formatAxis(minY)}
           </text>
+          {secondaryBounds && (
+            <>
+              <text
+                x={width - padX + 8}
+                y={padY}
+                className="chart-axis-label chart-axis-label-right"
+                textAnchor="start"
+              >
+                {formatSecondaryAxis(secondaryBounds.maxY)}
+              </text>
+              <text
+                x={width - padX + 8}
+                y={height - padY}
+                className="chart-axis-label chart-axis-label-right"
+                textAnchor="start"
+              >
+                {formatSecondaryAxis(secondaryBounds.minY)}
+              </text>
+            </>
+          )}
           {visibleSeries.map((s) => {
             const v = SERIES_VISUAL[s.visualKey];
-            const d = linePath(s.values, width, height, padX, padY, minY, maxY);
+            const isSecondary = s.axis === "secondary";
+            const scale = isSecondary && secondaryBounds ? secondaryBounds : { minY, maxY };
+            const d = linePath(
+              s.values,
+              width,
+              height,
+              padX,
+              padY,
+              scale.minY,
+              scale.maxY,
+            );
             if (!d) return null;
             return (
               <path

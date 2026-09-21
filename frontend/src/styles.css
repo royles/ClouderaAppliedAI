@@ -397,6 +397,18 @@ select.control {
   color: #5a6b7d;
 }
 
+.stat-policy-foot {
+  margin-top: 0.35rem;
+  font-size: max(8pt, 0.78rem);
+  line-height: 1.3;
+  color: #4a5568;
+  font-weight: 600;
+}
+
+.chart-axis-label-right {
+  fill: #1e6b34;
+}
+
 .view-toggle {
   display: inline-flex;
   border: 1px solid #c5d0dc;

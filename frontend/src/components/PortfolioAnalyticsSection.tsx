@@ -147,6 +147,12 @@ export default function PortfolioAnalyticsSection({
           loading={loading}
         />
         <PortfolioKpiCard
+          label="Policy records"
+          value={(kpis?.total_policies ?? 0).toLocaleString()}
+          sub={`${(kpis?.active_policies ?? 0).toLocaleString()} active · avg ${(kpis?.avg_policies_per_customer ?? 0).toFixed(1)} / customer`}
+          loading={loading}
+        />
+        <PortfolioKpiCard
           label="Avg customer value"
           value={formatMoneyIls(kpis?.avg_customer_value)}
           progress={progress("avg_customer_value")}
@@ -186,14 +192,6 @@ export default function PortfolioAnalyticsSection({
           }
           loading={loading}
         />
-        <div className="portfolio-kpi">
-          <div className="portfolio-kpi-head">
-            <span className="label portfolio-kpi-label">Avg policies / customer</span>
-            <strong className="portfolio-kpi-value">
-              {loading ? "…" : (kpis?.avg_policies_per_customer ?? 0).toFixed(1)}
-            </strong>
-          </div>
-        </div>
       </div>
 
       <div

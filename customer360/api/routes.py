@@ -40,6 +40,7 @@ from customer360.api.schemas import (
     KpiBenchmarkListResponse,
     KpiBenchmarkBulkUpdateRequest,
 )
+from customer360.api.policy_counts import policy_totals_for_segment
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
 from customer360.api.portfolio_objectives import fetch_objective_trends
 from customer360.metrics_refresh import ensure_metrics_schema
@@ -261,23 +262,29 @@ def overview(conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> OverviewRe
                 (filter_key,),
             ).fetchone()
             row_count = int(row[0]) if row else int(conn.execute(count_sql).fetchone()[0])
+            total_policies, active_policies = policy_totals_for_segment(conn, filter_key)
             domains.append(
                 DomainCount(
                     domain=label,
                     row_count=row_count,
                     filter_key=filter_key,
                     description=description,
+                    policy_total=total_policies,
+                    policy_active=active_policies,
                 )
             )
     else:
         for label, filter_key, description, count_sql in OVERVIEW_DOMAINS:
             row_count = conn.execute(count_sql).fetchone()[0]
+            total_policies, active_policies = policy_totals_for_segment(conn, filter_key)
             domains.append(
                 DomainCount(
                     domain=label,
                     row_count=row_count,
                     filter_key=filter_key,
                     description=description,
+                    policy_total=total_policies,
+                    policy_active=active_policies,
                 )
             )
     return OverviewResponse(

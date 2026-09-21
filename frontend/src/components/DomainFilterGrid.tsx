@@ -52,6 +52,14 @@ export default function DomainFilterGrid({
                   {(d.row_count ?? 0).toLocaleString()}
                 </div>
                 <div className="stat-label">{d.domain}</div>
+                {d.policy_total != null && d.policy_total > 0 && (
+                  <div className="stat-policy-foot">
+                    {d.policy_total.toLocaleString()} policies
+                    {d.policy_active != null
+                      ? ` · ${d.policy_active.toLocaleString()} active`
+                      : ""}
+                  </div>
+                )}
               </button>
             );
           })}

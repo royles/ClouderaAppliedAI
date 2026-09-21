@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from datetime import date
 
+from customer360.api.policy_counts import policy_totals_for_segment
 from customer360.api.portfolio_objectives import BOOK_WIDE_SEGMENT
 from customer360.api.segments import SEGMENT_WHERE, normalize_segment
 from customer360.api.value_history import CUSTOMER_VALUE_SQL, fetch_value_history
@@ -78,9 +79,12 @@ def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
     weighted_churn = float(row["weighted_churn_probability"] or 0)
     high_risk_book = float(row["high_risk_book_value"] or 0)
     retention = None if not _churn_table_exists(conn) else round(1.0 - weighted_churn, 4)
+    total_policies, active_policies = policy_totals_for_segment(conn, segment)
 
     return {
         "active_customers": int(row["active_customers"] or 0),
+        "total_policies": total_policies,
+        "active_policies": active_policies,
         "total_book_value": round(total_book, 2),
         "avg_customer_value": round(float(row["avg_customer_value"] or 0), 2),
         "avg_policies_per_customer": round(float(row["avg_policies_per_customer"] or 0), 2),

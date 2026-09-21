@@ -28,7 +28,7 @@ export default function BookValueChart({
   return (
     <AnalyticsLineChart
       title="Book value"
-      subtitle="Total customer value — investments plus coverage & savings."
+      subtitle="Customer book value (sum of each customer's policies) — investments plus coverage & savings."
       points={points}
       loading={loading}
       series={[

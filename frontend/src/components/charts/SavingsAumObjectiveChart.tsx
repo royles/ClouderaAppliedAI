@@ -21,7 +21,7 @@ export default function SavingsAumObjectiveChart({ series, loading }: Props) {
   return (
     <AnalyticsLineChart
       title="Long-term savings (AUM)"
-      subtitle="Pension, provident & savings accumulation — Migdal profitable growth pillar."
+      subtitle="AUM (left) and savings policy count (right) — multiple policies per saver are normal."
       points={points}
       loading={loading}
       interactive={false}
@@ -31,6 +31,16 @@ export default function SavingsAumObjectiveChart({ series, loading }: Props) {
           visualKey: "obj-aum",
           label: "Accumulation",
           values: series.map((p) => p.accumulation_total),
+          axis: "primary",
+          valueFormat: "money",
+        },
+        {
+          id: "savings-policies",
+          visualKey: "obj-policies",
+          label: "Savings policies",
+          values: series.map((p) => p.savings_policies),
+          axis: "secondary",
+          valueFormat: "count",
         },
       ]}
       emptyMessage="No savings snapshot history for the active book yet."
