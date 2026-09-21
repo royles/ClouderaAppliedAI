@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ChartSeries,
+  SERIES_VISUAL,
   formatAxisMoney,
   formatAxisPct,
   formatPeriodLabel,
   formatTooltipMoney,
   linePath,
+  seriesHasPoints,
 } from "./analyticsChartUtils";
 
 export type ChartPointMeta = {
@@ -25,6 +27,31 @@ type Props = {
   emptyMessage?: string;
 };
 
+function LegendSwatch({ visualKey }: { visualKey: ChartSeries["visualKey"] }) {
+  const v = SERIES_VISUAL[visualKey];
+  return (
+    <svg
+      className="legend-swatch-svg"
+      width="22"
+      height="8"
+      aria-hidden
+      focusable="false"
+    >
+      <line
+        x1="0"
+        y1="4"
+        x2="22"
+        y2="4"
+        stroke={v.stroke}
+        strokeWidth={v.strokeWidth}
+        strokeDasharray={v.strokeDasharray}
+        opacity={v.opacity ?? 1}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export default function AnalyticsLineChart({
   title,
   subtitle,
@@ -41,6 +68,11 @@ export default function AnalyticsLineChart({
   const padY = 22;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
+  const visibleSeries = useMemo(
+    () => series.filter((s) => seriesHasPoints(s.values)),
+    [series],
+  );
+
   if (loading) {
     return (
       <div className="analytics-chart-panel">
@@ -50,7 +82,7 @@ export default function AnalyticsLineChart({
     );
   }
 
-  if (points.length === 0) {
+  if (points.length === 0 || visibleSeries.length === 0) {
     return (
       <div className="analytics-chart-panel">
         <h3 className="analytics-chart-title">{title}</h3>
@@ -59,7 +91,9 @@ export default function AnalyticsLineChart({
     );
   }
 
-  const flat = series.flatMap((s) => s.values.filter((v): v is number => v != null));
+  const flat = visibleSeries.flatMap((s) =>
+    s.values.filter((v): v is number => v != null),
+  );
   const rawMin = Math.min(...flat);
   const rawMax = Math.max(...flat);
   const pad = (rawMax - rawMin) * 0.08 || (valueFormat === "percent" ? 1 : rawMax * 0.05 || 1);
@@ -67,6 +101,11 @@ export default function AnalyticsLineChart({
   const maxY = valueFormat === "percent" ? rawMax + pad : rawMax * 1.05;
   const formatAxis = valueFormat === "percent" ? formatAxisPct : formatAxisMoney;
   const active = activeIndex != null ? points[activeIndex] : null;
+
+  const anchorSeries =
+    visibleSeries.find((s) => s.visualKey === "book-total") ??
+    visibleSeries.find((s) => s.visualKey === "churn-book-actual") ??
+    visibleSeries[0];
 
   return (
     <div className="analytics-chart-panel">
@@ -125,22 +164,35 @@ export default function AnalyticsLineChart({
           >
             {formatAxis(minY)}
           </text>
-          {series.map((s) => (
-            <path
-              key={s.id}
-              d={linePath(s.values, width, height, padX, padY, minY, maxY)}
-              className={`chart-line ${s.className}${s.dashed ? " chart-line-dashed" : ""}`}
-              fill="none"
-            />
-          ))}
+          {visibleSeries.map((s) => {
+            const v = SERIES_VISUAL[s.visualKey];
+            const d = linePath(s.values, width, height, padX, padY, minY, maxY);
+            if (!d) return null;
+            return (
+              <path
+                key={s.id}
+                d={d}
+                fill="none"
+                stroke={v.stroke}
+                strokeWidth={v.strokeWidth}
+                strokeDasharray={v.strokeDasharray}
+                opacity={v.opacity ?? 1}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          })}
           {points.map((p, i) => {
             const stepX =
               points.length > 1 ? (width - padX * 2) / (points.length - 1) : 0;
             const x = padX + i * stepX;
-            const anchor = series[0]?.values[i] ?? 0;
+            const anchor = anchorSeries?.values[i];
             const y =
-              padY +
-              (height - padY * 2) * (1 - ((anchor ?? 0) - minY) / (maxY - minY || 1));
+              anchor != null
+                ? padY +
+                  (height - padY * 2) * (1 - (anchor - minY) / (maxY - minY || 1))
+                : height - padY;
             const showLabel =
               i === 0 ||
               i === points.length - 1 ||
@@ -172,9 +224,9 @@ export default function AnalyticsLineChart({
         </svg>
       </div>
       <ul className="chart-legend chart-legend-compact">
-        {series.map((s) => (
+        {visibleSeries.map((s) => (
           <li key={s.id}>
-            <span className={`swatch ${s.className.replace("chart-line-", "swatch-")}`} />{" "}
+            <LegendSwatch visualKey={s.visualKey} />
             {s.label}
           </li>
         ))}

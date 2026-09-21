@@ -13,7 +13,7 @@ export default function InvestmentReturnsChart({ series, loading }: Props) {
     tooltipLines: [
       moneyTooltip("Balance", p.investment_balance),
       pctTooltip("Period return", p.period_return_pct),
-      pctTooltip("Cumulative", p.cumulative_return_pct),
+      pctTooltip("Cumulative return", p.cumulative_return_pct),
     ],
   }));
 
@@ -31,23 +31,22 @@ export default function InvestmentReturnsChart({ series, loading }: Props) {
           ? [
               {
                 id: "cum",
-                label: "Cumulative return",
-                className: "chart-line-investment",
+                visualKey: "return-cumulative",
+                label: "Cumulative return %",
                 values: series.map((p) => p.cumulative_return_pct ?? null),
               },
               {
                 id: "period",
-                label: "Period return",
-                className: "chart-line-retained",
+                visualKey: "return-period",
+                label: "Period return %",
                 values: series.map((p) => p.period_return_pct ?? null),
-                dashed: true,
               },
             ]
           : [
               {
                 id: "balance",
+                visualKey: "return-balance",
                 label: "Investment balance",
-                className: "chart-line-investment",
                 values: series.map((p) => p.investment_balance),
               },
             ]

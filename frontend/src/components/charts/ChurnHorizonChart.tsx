@@ -29,9 +29,9 @@ export default function ChurnHorizonChart({ series, loading }: Props) {
     period: p.period,
     kind: p.kind,
     tooltipLines: [
-      moneyTooltip("Book", p.total_book_value),
-      moneyTooltip("At risk", p.value_at_risk),
-      moneyTooltip("Retained", p.expected_retained_value),
+      moneyTooltip("Total book", p.total_book_value),
+      moneyTooltip("Expected retained", p.expected_retained_value),
+      moneyTooltip("Value at risk", p.value_at_risk),
       `Retention ${((p.implied_retention_rate ?? 0) * 100).toFixed(1)}%`,
     ],
   }));
@@ -39,36 +39,34 @@ export default function ChurnHorizonChart({ series, loading }: Props) {
   return (
     <AnalyticsLineChart
       title="Churn horizon"
-      subtitle="Value at risk, retained book, and 12-month lapse forecast (right of divider)."
+      subtitle="Retained vs at-risk value; dashed blue = survival forecast of total book."
       points={points}
       loading={loading}
       forecastDividerIndex={forecastStart}
       series={[
         {
+          id: "book",
+          visualKey: "churn-book-actual",
+          label: "Total book (actual)",
+          values: bookActual,
+        },
+        {
           id: "retained",
-          label: "Expected retained",
-          className: "chart-line-retained",
+          visualKey: "churn-retained",
+          label: "Expected retained value",
           values: series.map((p) => p.expected_retained_value),
         },
         {
           id: "risk",
-          label: "Value at risk",
-          className: "chart-line-risk",
+          visualKey: "churn-at-risk",
+          label: "Value at churn risk",
           values: series.map((p) => p.value_at_risk),
-          dashed: true,
-        },
-        {
-          id: "book",
-          label: "Total book (actual)",
-          className: "chart-line-total",
-          values: bookActual,
         },
         {
           id: "book-f",
-          label: "Retained book (forecast)",
-          className: "chart-line-forecast",
+          visualKey: "churn-book-forecast",
+          label: "Projected book (forecast)",
           values: bookForecast,
-          dashed: true,
         },
       ]}
       emptyMessage="No churn horizon data for this cohort."

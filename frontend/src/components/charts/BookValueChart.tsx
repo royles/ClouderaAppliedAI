@@ -11,7 +11,7 @@ export default function BookValueChart({ history, loading }: Props) {
     period: p.period,
     kind: "actual" as const,
     tooltipLines: [
-      moneyTooltip("Total", p.total_value),
+      moneyTooltip("Total book", p.total_value),
       moneyTooltip("Investments", p.investment_value),
       moneyTooltip("Coverage", p.coverage_value),
     ],
@@ -26,22 +26,21 @@ export default function BookValueChart({ history, loading }: Props) {
       series={[
         {
           id: "total",
+          visualKey: "book-total",
           label: "Total book",
-          className: "chart-line-total",
           values: history.map((p) => p.total_value),
         },
         {
           id: "investment",
+          visualKey: "book-investment",
           label: "Investments",
-          className: "chart-line-investment",
           values: history.map((p) => p.investment_value),
         },
         {
           id: "coverage",
-          label: "Coverage",
-          className: "chart-line-coverage",
+          visualKey: "book-coverage",
+          label: "Coverage & savings",
           values: history.map((p) => p.coverage_value),
-          dashed: true,
         },
       ]}
       emptyMessage="No book history for this cohort."

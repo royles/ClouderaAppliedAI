@@ -951,6 +951,18 @@ select.control {
   margin-top: 0.35rem;
 }
 
+.chart-legend-compact li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.legend-swatch-svg {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 .chart-line-dashed {
   stroke-dasharray: 5 3;
 }
