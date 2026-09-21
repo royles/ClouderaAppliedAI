@@ -7,7 +7,10 @@ import { cohortSearchString } from "../cohortQuery";
 import { formatMoneyIls } from "../formatMoney";
 import BookValueChart from "./charts/BookValueChart";
 import ChurnHorizonChart from "./charts/ChurnHorizonChart";
+import EngagementObjectiveChart from "./charts/EngagementObjectiveChart";
 import InvestmentReturnsChart from "./charts/InvestmentReturnsChart";
+import PremiumMomentumChart from "./charts/PremiumMomentumChart";
+import SavingsAumObjectiveChart from "./charts/SavingsAumObjectiveChart";
 import PortfolioKpiCard from "./PortfolioKpiCard";
 
 type Props = {
@@ -207,6 +210,30 @@ export default function PortfolioAnalyticsSection({
           loading={chartLoading}
           interactive={chartInteractive}
           onPeriodSelect={goToCustomerList("at_risk")}
+        />
+      </div>
+
+      <div className="portfolio-objectives-head">
+        <h2 className="subsection-title">Strategic objective trends</h2>
+        <p className="muted small">
+          {data?.objectives_note ??
+            "Trends mapped to long-term savings growth, insurance premium momentum, and customer engagement."}
+        </p>
+      </div>
+      <div
+        className={`portfolio-charts-grid portfolio-objectives-grid${refreshing ? " portfolio-charts-refreshing" : ""}`}
+      >
+        <SavingsAumObjectiveChart
+          series={data?.savings_aum_trend ?? []}
+          loading={chartLoading}
+        />
+        <PremiumMomentumChart
+          series={data?.premium_momentum_trend ?? []}
+          loading={chartLoading}
+        />
+        <EngagementObjectiveChart
+          series={data?.engagement_trend ?? []}
+          loading={chartLoading}
         />
       </div>
       {refreshing && (

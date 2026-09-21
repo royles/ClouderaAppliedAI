@@ -75,6 +75,26 @@ class InvestmentReturnPoint(BaseModel):
     cumulative_return_pct: float | None = None
 
 
+class SavingsAumTrendPoint(BaseModel):
+    period: str
+    accumulation_total: float = 0
+    active_savers: int = 0
+    savings_policies: int = 0
+
+
+class PremiumMomentumPoint(BaseModel):
+    period: str
+    active_policy_count: int = 0
+    monthly_premium_total: float = 0
+
+
+class EngagementTrendPoint(BaseModel):
+    period: str
+    interaction_events: int = 0
+    digital_touchpoints: int = 0
+    review_events: int = 0
+
+
 class PortfolioAnalyticsResponse(BaseModel):
     segment: str
     kpis: PortfolioKpis
@@ -83,6 +103,10 @@ class PortfolioAnalyticsResponse(BaseModel):
     investment_returns: list[InvestmentReturnPoint] = Field(default_factory=list)
     churn_forecast: list[ChurnForecastPoint] = Field(default_factory=list)
     methodology_note: str = ""
+    objectives_note: str = ""
+    savings_aum_trend: list[SavingsAumTrendPoint] = Field(default_factory=list)
+    premium_momentum_trend: list[PremiumMomentumPoint] = Field(default_factory=list)
+    engagement_trend: list[EngagementTrendPoint] = Field(default_factory=list)
 
 
 class CustomerSummary(BaseModel):

@@ -27,6 +27,16 @@ export function formatAxisPct(n: number) {
   return `${n.toFixed(1)}%`;
 }
 
+export function formatAxisCount(n: number) {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 10_000) return `${(n / 1_000).toFixed(0)}K`;
+  return String(Math.round(n));
+}
+
+export function formatTooltipCount(n: number) {
+  return n.toLocaleString();
+}
+
 /** Shared stroke styles — legend swatches use the same tokens as chart paths. */
 export type SeriesVisualKey =
   | "book-total"
@@ -38,7 +48,13 @@ export type SeriesVisualKey =
   | "churn-book-forecast"
   | "return-cumulative"
   | "return-period"
-  | "return-balance";
+  | "return-balance"
+  | "obj-aum"
+  | "obj-savers"
+  | "obj-premium"
+  | "obj-policies"
+  | "obj-engagement"
+  | "obj-digital";
 
 export const SERIES_VISUAL: Record<
   SeriesVisualKey,
@@ -59,6 +75,12 @@ export const SERIES_VISUAL: Record<
   "return-cumulative": { stroke: "#0f6db8", strokeWidth: 2 },
   "return-period": { stroke: "#c47a0a", strokeWidth: 1.5, strokeDasharray: "4 3" },
   "return-balance": { stroke: "#0f6db8", strokeWidth: 2 },
+  "obj-aum": { stroke: "#0f3d5e", strokeWidth: 2 },
+  "obj-savers": { stroke: "#5a7a9a", strokeWidth: 1.5, strokeDasharray: "4 3" },
+  "obj-premium": { stroke: "#0f6db8", strokeWidth: 2 },
+  "obj-policies": { stroke: "#1e6b34", strokeWidth: 1.5, strokeDasharray: "5 3" },
+  "obj-engagement": { stroke: "#0f3d5e", strokeWidth: 2 },
+  "obj-digital": { stroke: "#c47a0a", strokeWidth: 1.5, strokeDasharray: "4 3" },
 };
 
 export function linePath(

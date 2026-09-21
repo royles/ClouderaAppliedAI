@@ -292,6 +292,26 @@ export type KpiTargetProgress = {
   amber_threshold?: number | null;
 };
 
+export type SavingsAumTrendPoint = {
+  period: string;
+  accumulation_total: number;
+  active_savers: number;
+  savings_policies: number;
+};
+
+export type PremiumMomentumPoint = {
+  period: string;
+  active_policy_count: number;
+  monthly_premium_total: number;
+};
+
+export type EngagementTrendPoint = {
+  period: string;
+  interaction_events: number;
+  digital_touchpoints: number;
+  review_events: number;
+};
+
 export type PortfolioAnalytics = {
   segment: string;
   kpis: PortfolioKpis;
@@ -300,6 +320,10 @@ export type PortfolioAnalytics = {
   investment_returns: InvestmentReturnPoint[];
   churn_forecast: ChurnForecastPoint[];
   methodology_note: string;
+  objectives_note?: string;
+  savings_aum_trend?: SavingsAumTrendPoint[];
+  premium_momentum_trend?: PremiumMomentumPoint[];
+  engagement_trend?: EngagementTrendPoint[];
 };
 
 export type KpiBenchmark = {

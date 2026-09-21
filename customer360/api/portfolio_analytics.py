@@ -8,6 +8,7 @@ from datetime import date
 from customer360.api.segments import SEGMENT_WHERE, normalize_segment
 from customer360.api.value_history import CUSTOMER_VALUE_SQL, fetch_value_history
 from customer360.business_kpi_targets import build_kpi_targets
+from customer360.api.portfolio_objectives import fetch_objective_trends
 
 METHODOLOGY_NOTE = (
     "Churn-aware metrics treat ML scores as 12-month lapse probability (common for "
@@ -209,6 +210,8 @@ def fetch_portfolio_analytics(
     )
     investment_returns = _build_investment_returns(value_points)
 
+    objectives = fetch_objective_trends(conn, segment=seg)
+
     return {
         "segment": seg,
         "kpis": kpis,
@@ -217,4 +220,5 @@ def fetch_portfolio_analytics(
         "investment_returns": investment_returns,
         "churn_forecast": churn_forecast,
         "methodology_note": METHODOLOGY_NOTE,
+        **objectives,
     }

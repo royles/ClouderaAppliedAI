@@ -3,9 +3,11 @@ import type { MouseEvent as ReactMouseEvent } from "react";
 import {
   ChartSeries,
   SERIES_VISUAL,
+  formatAxisCount,
   formatAxisMoney,
   formatAxisPct,
   formatPeriodLabel,
+  formatTooltipCount,
   formatTooltipMoney,
   linePath,
   seriesHasPoints,
@@ -23,7 +25,7 @@ type Props = {
   points: ChartPointMeta[];
   series: ChartSeries[];
   loading?: boolean;
-  valueFormat?: "money" | "percent";
+  valueFormat?: "money" | "percent" | "count";
   forecastDividerIndex?: number;
   emptyMessage?: string;
   interactive?: boolean;
@@ -169,10 +171,27 @@ export default function AnalyticsLineChart({
   );
   const rawMin = Math.min(...flat);
   const rawMax = Math.max(...flat);
-  const pad = (rawMax - rawMin) * 0.08 || (valueFormat === "percent" ? 1 : rawMax * 0.05 || 1);
-  const minY = valueFormat === "percent" ? rawMin - pad : rawMin * 0.92;
-  const maxY = valueFormat === "percent" ? rawMax + pad : rawMax * 1.05;
-  const formatAxis = valueFormat === "percent" ? formatAxisPct : formatAxisMoney;
+  const pad =
+    (rawMax - rawMin) * 0.08 ||
+    (valueFormat === "percent" ? 1 : valueFormat === "count" ? 1 : rawMax * 0.05 || 1);
+  const minY =
+    valueFormat === "percent"
+      ? rawMin - pad
+      : valueFormat === "count"
+        ? Math.max(0, rawMin - pad)
+        : rawMin * 0.92;
+  const maxY =
+    valueFormat === "percent"
+      ? rawMax + pad
+      : valueFormat === "count"
+        ? rawMax + pad
+        : rawMax * 1.05;
+  const formatAxis =
+    valueFormat === "percent"
+      ? formatAxisPct
+      : valueFormat === "count"
+        ? formatAxisCount
+        : formatAxisMoney;
   const active = activeIndex != null ? points[activeIndex] : null;
 
   const plotWidth = width - padX * 2;
