@@ -172,9 +172,6 @@ export default function CustomerDetailPage() {
             <div>{formatLastLogin(profile.last_login)}</div>
           </div>
         </div>
-      </section>
-
-      <section className="panel">
         <CustomerValueChart
           title="Lifetime value trajectory"
           subtitle="Monthly investment accumulation plus coverage and savings snapshots for this customer."

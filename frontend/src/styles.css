@@ -70,6 +70,14 @@ body,
   margin-top: 0;
 }
 
+.subsection-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #0f3d5e;
+  line-height: 1.35;
+}
+
 .panel-head {
   display: flex;
   flex-wrap: wrap;
@@ -436,13 +444,16 @@ select.control {
 }
 
 .insights-summary {
-  font-size: 1.02rem;
+  font-size: 0.95rem;
   margin: 0.5rem 0 1rem;
+  line-height: 1.5;
 }
 
 .insights-subhead {
   font-size: 1rem;
+  font-weight: 600;
   margin: 0 0 0.5rem;
+  color: #0f3d5e;
 }
 
 .insights-list {
@@ -482,7 +493,7 @@ select.control {
   border: none;
   padding: 0;
   font: inherit;
-  color: #0f6bae;
+  color: #0f6db8;
   text-align: left;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -553,53 +564,60 @@ select.control {
 }
 
 .value-chart-wrap {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid #e2e8f0;
   width: 100%;
 }
 
-.value-chart-head {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 0.75rem;
+.value-chart-wrap.in-panel {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e6ebf0;
 }
 
-.value-chart-title {
-  margin: 0 0 0.25rem;
-  font-size: 1.05rem;
+.value-chart-head {
+  margin-bottom: 0.5rem;
+}
+
+.value-chart-head.panel-head {
+  margin-bottom: 0.65rem;
 }
 
 .value-chart-kpi {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 0.15rem;
-  font-size: 0.92rem;
+  gap: 0.1rem;
+  font-size: 0.85rem;
+  text-align: right;
 }
 
 .value-chart-kpi strong {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
+  font-weight: 700;
   color: #0f3d5e;
 }
 
 .delta-up {
   color: #1e6b34;
-  font-size: 0.85rem;
 }
 
 .delta-down {
   color: #b42318;
-  font-size: 0.85rem;
+}
+
+.value-chart-canvas {
+  background: #f7fafc;
+  border: 1px solid #e6ebf0;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem 0.15rem;
 }
 
 .value-chart-svg {
   width: 100%;
-  max-width: 100%;
+  max-width: 40rem;
   height: auto;
+  max-height: 10.5rem;
   display: block;
+  margin: 0 auto;
 }
 
 .chart-axis {
@@ -610,52 +628,56 @@ select.control {
 .chart-axis-label,
 .chart-x-label {
   fill: #5a6b7d;
-  font-size: 11px;
+  font-size: 9px;
+  font-family: "Segoe UI", system-ui, sans-serif;
 }
 
 .chart-line {
-  stroke-width: 2.5;
+  stroke-width: 1.25;
   stroke-linecap: round;
   stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .chart-line-total {
   stroke: #0f3d5e;
-  stroke-width: 3;
+  stroke-width: 1.5;
 }
 
 .chart-line-investment {
   stroke: #0f6db8;
+  stroke-width: 1.25;
 }
 
 .chart-line-coverage {
-  stroke: #6b7280;
-  stroke-dasharray: 6 4;
+  stroke: #8a96a3;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
 }
 
 .chart-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
+  gap: 0.5rem 1rem;
   list-style: none;
-  margin: 0.75rem 0 0;
+  margin: 0.5rem 0 0;
   padding: 0;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #5a6b7d;
 }
 
 .swatch {
   display: inline-block;
-  width: 12px;
-  height: 3px;
-  border-radius: 2px;
-  margin-right: 0.35rem;
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  margin-right: 0.3rem;
   vertical-align: middle;
 }
 
 .swatch-total {
   background: #0f3d5e;
-  height: 4px;
+  height: 2px;
 }
 
 .swatch-investment {
@@ -663,5 +685,5 @@ select.control {
 }
 
 .swatch-coverage {
-  background: #6b7280;
+  background: #8a96a3;
 }

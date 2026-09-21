@@ -117,10 +117,6 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
           <div>
             <h2>AI customer insights</h2>
             <p className="muted small insights-subtitle">{subtitle}</p>
-            <p className="muted small">
-              Outreach drafts (email, SMS, call scripts) are also written by Bedrock when you
-              click an actionable recommendation.
-            </p>
           </div>
           <div className="toolbar">
             <button
@@ -178,7 +174,7 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
 
             <p className="insights-summary">{insights.summary}</p>
 
-            <h3 className="insights-subhead">Recommended actions</h3>
+            <h2 className="insights-subhead">Recommended actions</h2>
             <ul className="insights-list">
               {insights.recommendations.map((item, idx) => {
                 const meta = actionMeta[idx];

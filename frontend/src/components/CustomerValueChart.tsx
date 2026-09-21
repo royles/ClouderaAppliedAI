@@ -51,25 +51,25 @@ export default function CustomerValueChart({
   points,
   loading,
 }: Props) {
-  const width = 720;
-  const height = 260;
-  const padX = 48;
-  const padY = 28;
+  const width = 640;
+  const height = 168;
+  const padX = 44;
+  const padY = 22;
 
   if (loading) {
     return (
-      <div className="value-chart-wrap">
-        <h3 className="value-chart-title">{title}</h3>
-        <p className="muted">Loading value history…</p>
+      <div className="value-chart-wrap in-panel">
+        <h2 className="subsection-title">{title}</h2>
+        <p className="muted small">Loading value history…</p>
       </div>
     );
   }
 
   if (points.length === 0) {
     return (
-      <div className="value-chart-wrap">
-        <h3 className="value-chart-title">{title}</h3>
-        <p className="muted">No historical value snapshots for this selection.</p>
+      <div className="value-chart-wrap in-panel">
+        <h2 className="subsection-title">{title}</h2>
+        <p className="muted small">No historical value snapshots for this selection.</p>
       </div>
     );
   }
@@ -87,16 +87,16 @@ export default function CustomerValueChart({
   const deltaPct = first > 0 ? (delta / first) * 100 : 0;
 
   return (
-    <div className="value-chart-wrap">
-      <div className="value-chart-head">
+    <div className="value-chart-wrap in-panel">
+      <div className="panel-head value-chart-head">
         <div>
-          <h3 className="value-chart-title">{title}</h3>
+          <h2 className="subsection-title">{title}</h2>
           {subtitle && <p className="muted small">{subtitle}</p>}
         </div>
         <div className="value-chart-kpi">
           <span className="label">Latest total</span>
           <strong>{formatAxisMoney(last)}</strong>
-          <span className={delta >= 0 ? "delta-up" : "delta-down"}>
+          <span className={`small ${delta >= 0 ? "delta-up" : "delta-down"}`}>
             {delta >= 0 ? "+" : ""}
             {formatAxisMoney(delta)} ({deltaPct >= 0 ? "+" : ""}
             {deltaPct.toFixed(1)}%) vs start
@@ -104,9 +104,11 @@ export default function CustomerValueChart({
         </div>
       </div>
 
+      <div className="value-chart-canvas">
       <svg
         className="value-chart-svg"
         viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="xMidYMid meet"
         role="img"
         aria-label="Customer value over time"
       >
@@ -151,7 +153,7 @@ export default function CustomerValueChart({
             <text
               key={p.period}
               x={x}
-              y={height - 8}
+              y={height - 6}
               className="chart-x-label"
               textAnchor="middle"
             >
@@ -160,6 +162,7 @@ export default function CustomerValueChart({
           );
         })}
       </svg>
+      </div>
 
       <ul className="chart-legend">
         <li>
