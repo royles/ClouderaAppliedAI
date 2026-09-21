@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-"""Local CLI wrapper — prefer 2_job-init-database/init_database.py on Cloudera AI."""
+"""CAI job: build the SQLite Customer 360 warehouse from DDS-aligned schema."""
 
 from __future__ import annotations
 
@@ -22,12 +21,24 @@ def _bootstrap() -> None:
         except NameError:
             mod.bootstrap(None)
         return
-    raise RuntimeError("Project root not found (bootstrap_entry.py).")
+    raise RuntimeError(
+        "Project root not found. cd to the repo, set CDSW_PROJECT, or run this file as "
+        "python 2_job-init-database/init_database.py"
+    )
 
 
 _bootstrap()
 
-from customer360.seed import main
+from customer360.paths import default_db_path, project_root
+from customer360.seed import init_database
+
+
+def main() -> None:
+    db_path = default_db_path()
+    print(f"Project root: {project_root()}", flush=True)
+    print(f"Initializing database at {db_path}", flush=True)
+    init_database(db_path, rebuild=True)
+
 
 if __name__ == "__main__":
     main()

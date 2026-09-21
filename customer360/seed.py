@@ -1,0 +1,486 @@
+#!/usr/bin/env python3
+"""Create and seed the Customer 360 SQLite warehouse."""
+
+from __future__ import annotations
+
+import argparse
+import calendar
+import random
+import sqlite3
+from datetime import date, datetime, timedelta
+from pathlib import Path
+
+from customer360.paths import default_db_path, schema_path
+
+RNG = random.Random(36085)
+
+CUSTOMER_TYPE_MAP = {
+    1: "Teudat Zehut",
+    2: "Passport",
+    3: "Military ID",
+    5: "Corporation",
+}
+
+MARITAL_MAP = {
+    "נ": "Single",
+    "ג": "Married",
+    "ר": "Divorced",
+    "א": "Widowed",
+}
+
+COMM_MAP = {
+    1: "Email",
+    2: "Mail",
+    6: "SMS",
+}
+
+FIRST_NAMES = [
+    "David", "Sarah", "Yosef", "Michal", "Avi", "Noa", "Eitan", "Shira",
+    "Ron", "Tamar", "Amir", "Hila", "Omer", "Yael", "Itay", "Rachel",
+    "Daniel", "Leah", "Tom", "Maya",
+]
+
+LAST_NAMES = [
+    "Cohen", "Levi", "Mizrahi", "Peretz", "Biton", "Azoulay", "Dahan",
+    "Abraham", "Friedman", "Goldstein", "Shapiro", "Katz", "Rosenberg",
+    "Ben-David", "Avraham", "Mor", "Barak", "Golan", "Shalev", "Nagar",
+]
+
+CITIES = [
+    ("Tel Aviv", "Rothschild Blvd", 6370001),
+    ("Jerusalem", "Jaffa Road", 9422701),
+    ("Haifa", "Herzl Street", 3300000),
+    ("Beer Sheva", "Rager Blvd", 8448101),
+    ("Netanya", "Herzl Street", 4226001),
+    ("Ashdod", "Menachem Begin Blvd", 7745701),
+    ("Rishon LeZion", "Herzl Street", 7528501),
+    ("Petah Tikva", "Jabotinsky Street", 4910000),
+]
+
+POLICY_TYPES = [
+    (101, "Life Insurance"),
+    (102, "Critical Illness"),
+    (201, "Health Supplementary"),
+    (301, "Elementary Property"),
+    (401, "Pension Fund"),
+    (402, "Provident Fund"),
+    (403, "Study Fund"),
+]
+
+POLICY_STATUS = [
+    (10, "Active"),
+    (20, "Premium Paying"),
+    (45, "Paid Up"),
+    (55, "Lapsed"),
+    (60, "Surrendered"),
+]
+
+EMPLOYERS = [
+    (1001, "Intel Israel"),
+    (1002, "Tehila Tech Ltd"),
+    (1003, "Maccabi Healthcare"),
+    (1004, "Israel Electric Corp"),
+    (1005, "Bank Hapoalim"),
+]
+
+FUNDS = [
+    (7, 5101, "General Pension Track — Balanced"),
+    (7, 5102, "General Pension Track — Equity"),
+    (1, 2101, "Life Savings — Conservative"),
+    (1, 2102, "Life Savings — Growth"),
+    (8, 8101, "Gemel — Multi-Sector"),
+    (8, 8102, "Gemel — Index 500"),
+]
+
+CORP_NAMES = {
+    1: "Phoenix Life Insurance",
+    7: "Clal Pension",
+    8: "Meitav Dash Gemel",
+}
+
+
+def iso(d: date | datetime) -> str:
+    if isinstance(d, datetime):
+        return d.strftime("%Y-%m-%d %H:%M:%S")
+    return d.isoformat()
+
+
+def last_day_of_month(year: int, month: int) -> date:
+    return date(year, month, calendar.monthrange(year, month)[1])
+
+
+def month_id(d: date) -> int:
+    return d.year * 100 + d.month
+
+
+def generate_israeli_id(rng: random.Random) -> int:
+    """Generate a plausible 9-digit ID (not checksum-validated)."""
+    base = rng.randint(100_000_000, 399_999_999)
+    return base
+
+
+def build_customers(n: int = 40) -> list[dict]:
+    rows: list[dict] = []
+    used_ids: set[int] = set()
+    now = datetime(2025, 9, 15, 10, 30, 0)
+
+    for i in range(n):
+        cid = generate_israeli_id(RNG)
+        while cid in used_ids:
+            cid = generate_israeli_id(RNG)
+        used_ids.add(cid)
+
+        ctype = 1 if i < n - 2 else RNG.choice([2, 5])
+        first = FIRST_NAMES[i % len(FIRST_NAMES)]
+        last = LAST_NAMES[i % len(LAST_NAMES)]
+        city, street, zipcode = CITIES[i % len(CITIES)]
+        marital_code = RNG.choice(list(MARITAL_MAP.keys()))
+        comm = RNG.choice([1, 2, 6])
+        smoker = RNG.choice(["0", "1"])
+        kosher = "KOSHER_MOBILE" if RNG.random() < 0.15 else "NO"
+        birth = date(RNG.randint(1955, 2000), RNG.randint(1, 12), RNG.randint(1, 28))
+        gender = RNG.choice([1, 2])
+        prefix = RNG.choice(["050", "052", "053", "054", "058"])
+        mobile = f"{prefix}-{RNG.randint(1000000, 9999999)}"
+        email = f"{first.lower()}.{last.lower()}{i}@example.co.il"
+        registered = 1 if RNG.random() > 0.25 else 0
+        last_login = now - timedelta(days=RNG.randint(1, 120)) if registered else None
+
+        key = f"CK-{cid}"
+        rows.append(
+            {
+                "CUSTOMER_KEY": key,
+                "CUSTOMER_ID": cid,
+                "CUSTOMER_ID_CHAR": str(cid),
+                "CUSTOMER_TYPE": ctype,
+                "CUSTOMER_TYPE_DSC": CUSTOMER_TYPE_MAP[ctype],
+                "FIRST_NAME": first,
+                "LAST_NAME": last,
+                "CUSTOMER_NAME": f"{first} {last}",
+                "GENDER_CODE": gender,
+                "BIRTH_DATE": iso(birth),
+                "MARITAL_STATUS_CODE": marital_code,
+                "MARITAL_STATUS_DSC": MARITAL_MAP[marital_code],
+                "OCCUPATION_CODE": RNG.randint(100, 999),
+                "SMOKER_STATUS_CODE": smoker,
+                "EMAIL": email,
+                "MOBILE_NO": mobile,
+                "IS_MOBILE_KOSHER": kosher,
+                "CITY_NAME": city,
+                "STREET_NAME": street,
+                "HOUSE_NO": RNG.randint(1, 120),
+                "ZIPCODE": zipcode,
+                "COMMUNICATION_CODE": comm,
+                "COMMUNICATION_DSC": COMM_MAP[comm],
+                "LAST_LOGIN": iso(last_login) if last_login else None,
+                "USER_SITE_REGISTER_STATUS": registered,
+                "DWH_INSERT_DATE": iso(now - timedelta(days=RNG.randint(30, 800))),
+                "DWH_CLOSE_DATE": "2999-12-31",
+                "CURRENT_IND": 1,
+            }
+        )
+
+    # SCD Type 2 history row for first customer
+    hist = dict(rows[0])
+    hist["CUSTOMER_KEY"] = f"{rows[0]['CUSTOMER_KEY']}-HIST"
+    hist["EMAIL"] = "old.email@example.co.il"
+    hist["DWH_CLOSE_DATE"] = "2024-06-30"
+    hist["CURRENT_IND"] = 0
+    rows.append(hist)
+
+    return rows
+
+
+def build_policies(customers: list[dict]) -> list[dict]:
+    rows: list[dict] = []
+    policy_seq = 100000
+
+    active_customers = [c for c in customers if c["CURRENT_IND"] == 1]
+    for cust in active_customers:
+        n_policies = RNG.randint(1, 4)
+        for _ in range(n_policies):
+            policy_seq += 1
+            ptype_code, ptype_desc = RNG.choice(POLICY_TYPES)
+            mng = {101: 1, 102: 1, 201: 1, 301: 9, 401: 7, 402: 8, 403: 8}[ptype_code]
+            status_code, status_desc = RNG.choice(POLICY_STATUS)
+            is_active = 1 if status_code < 50 else 0
+            start = date(RNG.randint(2005, 2022), RNG.randint(1, 12), RNG.randint(1, 28))
+            end = date(2099, 12, 31) if is_active else date(RNG.randint(2020, 2025), RNG.randint(1, 12), 28)
+            collective = 1 if ptype_code in (401, 402) and RNG.random() < 0.4 else 0
+            employer_num, employer_desc = (None, None)
+            if collective:
+                employer_num, employer_desc = RNG.choice(EMPLOYERS)
+            premium = round(RNG.uniform(150, 4500), 2) if ptype_code != 301 else round(RNG.uniform(80, 600), 2)
+            liquidity = None
+            if mng in (7, 8):
+                liquidity = iso(start + timedelta(days=RNG.randint(365 * 3, 365 * 10)))
+
+            rows.append(
+                {
+                    "POLICY_KEY": f"{mng}-{policy_seq}",
+                    "CUSTOMER_ID": str(cust["CUSTOMER_ID"]),
+                    "CUSTOMER_KEY": cust["CUSTOMER_KEY"],
+                    "MNG_COMPANY_CODE": mng,
+                    "COMPANY_CODE": 1 if mng == 9 else mng,
+                    "POLICY_NUM": policy_seq,
+                    "POLICY_TYPE_CODE": ptype_code,
+                    "POLICY_TYPE_DESC": ptype_desc,
+                    "POLICY_START_DATE": iso(start),
+                    "POLICY_END_DATE": iso(end),
+                    "IS_ACTIVE": is_active,
+                    "POLICY_STATUS_CODE": status_code,
+                    "POLICY_STATUS_DESC": status_desc,
+                    "IS_COLECTIVE": collective,
+                    "EMPLOYER_NUM": employer_num,
+                    "EMPLOYER_DESC": employer_desc,
+                    "BRUTO_MONTHLY_PREMIUM": premium,
+                    "AGENT_NUMBER": RNG.randint(10000, 99999),
+                    "DISTRICT_NUM": RNG.randint(1, 6),
+                    "LIQUIDITY_DATE": liquidity,
+                }
+            )
+    return rows
+
+
+def build_foreclosures(customers: list[dict], policies: list[dict]) -> tuple[list[dict], list[dict]]:
+    fc_rows: list[dict] = []
+    asset_rows: list[dict] = []
+    targets = RNG.sample([c for c in customers if c["CURRENT_IND"] == 1], 6)
+    spuror = 5000
+
+    for cust in targets:
+        spuror += 1
+        fc_num = RNG.randint(100000, 999999)
+        amount = round(RNG.uniform(5000, 250000), 2)
+        fc_date = date(RNG.randint(2019, 2024), RNG.randint(1, 12), RNG.randint(1, 28))
+        reg_date = fc_date + timedelta(days=RNG.randint(5, 45))
+        cust_policies = [p for p in policies if p["CUSTOMER_KEY"] == cust["CUSTOMER_KEY"] and p["IS_ACTIVE"]]
+
+        fc_rows.append(
+            {
+                "COMPANY_NUMBER": 1,
+                "CUSTOMER_ID": str(cust["CUSTOMER_ID"]),
+                "FORECLOSURES_NUMBER": fc_num,
+                "PORTFOLIO_NUMBER": RNG.randint(1000, 9999),
+                "FORECLOSURES_AMOUNT": amount,
+                "FORECLOSURES_DATE": iso(fc_date),
+                "REGIST_DATE": iso(reg_date),
+                "SPUROR_NUMBER": spuror,
+            }
+        )
+
+        if cust_policies:
+            pol = RNG.choice(cust_policies)
+            asset_rows.append(
+                {
+                    "SPUROR_NUMBER": spuror,
+                    "COMPANY_ID": pol["COMPANY_CODE"],
+                    "CUSTOMER_ID": str(cust["CUSTOMER_ID"]),
+                    "IND_EXIST": "כן",
+                    "ASSETS_SOURCE": "AS400-IKULIMF",
+                    "POLICY_OR_CLAIM": "פוליסה",
+                    "POLICY_NUM": pol["POLICY_NUM"],
+                    "CLAIM_NUM": 0,
+                    "IND_RELAVANT_ASSET": 1,
+                    "FIRST_DATE_LOCATE_ASSET": iso(fc_date + timedelta(days=RNG.randint(10, 90))),
+                }
+            )
+        if RNG.random() < 0.35:
+            claim_num = RNG.randint(200000, 299999)
+            asset_rows.append(
+                {
+                    "SPUROR_NUMBER": spuror,
+                    "COMPANY_ID": 1,
+                    "CUSTOMER_ID": str(cust["CUSTOMER_ID"]),
+                    "IND_EXIST": RNG.choice(["כן", "לא"]),
+                    "ASSETS_SOURCE": "Claims-NOGA",
+                    "POLICY_OR_CLAIM": "תביעה",
+                    "POLICY_NUM": 0,
+                    "CLAIM_NUM": claim_num,
+                    "IND_RELAVANT_ASSET": 1,
+                    "FIRST_DATE_LOCATE_ASSET": iso(fc_date + timedelta(days=RNG.randint(30, 120))),
+                }
+            )
+
+    return fc_rows, asset_rows
+
+
+def build_policy_investment_tracks(policies: list[dict], months: list[date]) -> list[dict]:
+    rows: list[dict] = []
+    invest_policies = [p for p in policies if p["MNG_COMPANY_CODE"] in (1, 7, 8) and p["IS_ACTIVE"]]
+
+    for pol in invest_policies:
+        fund_choices = [f for f in FUNDS if f[0] == pol["MNG_COMPANY_CODE"]]
+        if not fund_choices:
+            fund_choices = FUNDS[:2]
+        tracks = RNG.sample(fund_choices, k=min(len(fund_choices), RNG.randint(1, 2)))
+        policy_key = int("".join(c for c in pol["POLICY_KEY"] if c.isdigit())[-8:])
+
+        rewards = RNG.uniform(80000, 450000)
+        comp = RNG.uniform(20000, 180000)
+
+        for snap in months:
+            growth = 1 + RNG.uniform(-0.02, 0.035)
+            rewards *= growth
+            comp *= 1 + RNG.uniform(-0.015, 0.025)
+            total = rewards + comp
+            ytd_r = round(RNG.uniform(-5000, 25000), 2)
+            ytd_t = round(ytd_r + RNG.uniform(-3000, 15000), 2)
+
+            for track_id, (_, fund_id, _) in enumerate(tracks, start=1):
+                split = 1 / len(tracks)
+                rows.append(
+                    {
+                        "POLICY_KEY": policy_key,
+                        "SNAPSHOT_DATE": iso(last_day_of_month(snap.year, snap.month)),
+                        "MONTH_ID": month_id(snap),
+                        "MNG_COMPANY_CODE": pol["MNG_COMPANY_CODE"],
+                        "COMPANY_CODE": pol["COMPANY_CODE"],
+                        "CUSTOMER_ID": int(pol["CUSTOMER_ID"]),
+                        "POLICY_NUM": pol["POLICY_NUM"],
+                        "INVESTMENT_TRACK_ID": track_id,
+                        "FUND_ID": fund_id,
+                        "ACCUMULATION_REWARDS": round(rewards * split, 2),
+                        "ACCUMULATION_COMPENSATION": round(comp * split, 2),
+                        "ACCUMULATION_TOTAL": round(total * split, 2),
+                        "YEARLY_PROFIT_LOSS_REWARDS": round(ytd_r * split, 2),
+                        "YEARLY_PROFIT_LOSS_TOTAL": round(ytd_t * split, 2),
+                    }
+                )
+    return rows
+
+
+def build_market_tracks(months: list[date]) -> list[dict]:
+    rows: list[dict] = []
+    for snap in months:
+        snap_d = last_day_of_month(snap.year, snap.month)
+        mid = month_id(snap_d)
+        for mng, fund_id, fund_name in FUNDS:
+            monthly_yield = round(RNG.uniform(-2.5, 3.5), 4)
+            rows.append(
+                {
+                    "MONTH_ID": mid,
+                    "SNAPSHOT_DATE": iso(snap_d),
+                    "MNG_COMPANY_CODE": mng,
+                    "PRODUCT_TYPE_CODE": {1: 10, 7: 20, 8: 30}[mng],
+                    "FUND_ID": fund_id,
+                    "FUND_NAME": fund_name,
+                    "MANAGING_CORPORATION_LEGAL_ID": 512345678 + mng,
+                    "MANAGING_CORPORATION": CORP_NAMES[mng],
+                    "MONTHLY_YIELD": monthly_yield,
+                    "YEAR_TO_DATE_YIELD": round(RNG.uniform(-5, 12), 4),
+                    "YIELD_TRAILING_3_YRS": round(RNG.uniform(2, 10), 4),
+                    "YIELD_TRAILING_5_YRS": round(RNG.uniform(3, 9), 4),
+                    "ALPHA": round(RNG.uniform(-1, 2), 4),
+                    "SHARPE_RATIO": round(RNG.uniform(0.2, 1.5), 4),
+                    "LIQUID_ASSETS_PERCENT": round(RNG.uniform(5, 35), 2),
+                    "STOCK_MARKET_EXPOSURE": round(RNG.uniform(15, 75), 2),
+                    "TOTAL_ASSETS": round(RNG.uniform(500_000_000, 12_000_000_000), 2),
+                }
+            )
+    return rows
+
+
+def build_matzav_bituach(policies: list[dict], months: list[date]) -> list[dict]:
+    rows: list[dict] = []
+    life_health = [p for p in policies if p["POLICY_TYPE_CODE"] in (101, 102, 201)]
+
+    for pol in life_health:
+        base_sum = RNG.uniform(200_000, 2_500_000)
+        for snap in months[-3:]:
+            snap_d = last_day_of_month(snap.year, snap.month)
+            premium = pol["BRUTO_MONTHLY_PREMIUM"] or 0
+            surrender = round(base_sum * RNG.uniform(0.05, 0.35), 2)
+            savings = round(base_sum * RNG.uniform(0.1, 0.5), 2)
+            rows.append(
+                {
+                    "KOD_CHEVRA": pol["COMPANY_CODE"],
+                    "TAARICH_MAATAFIT": iso(snap_d),
+                    "MS_MEVUTACH": int(pol["CUSTOMER_ID"]),
+                    "MS_POL": pol["POLICY_NUM"],
+                    "MBB_SCHUM_BITUACH": round(base_sum, 2),
+                    "MBB_PREMIA": round(premium, 2),
+                    "MBB_SCHUM_LEMIKRA_MAVET": round(base_sum * RNG.uniform(0.8, 1.0), 2),
+                    "MBB_ERECH_PIDYON": surrender,
+                    "MBB_ERECH_MESULAK": round(surrender * 0.9, 2),
+                    "MBB_ITRAT_CHISACHON": savings,
+                    "SCHUM_DMEY_NIHUL_PREMIA": round(premium * 0.02, 2),
+                    "SCHUM_DMEY_NIHUL_TZVIRA": round(savings * 0.004, 2),
+                    "MBB_PITZUIM": round(savings * 0.25, 2),
+                }
+            )
+    return rows
+
+
+def insert_rows(conn: sqlite3.Connection, table: str, rows: list[dict]) -> None:
+    if not rows:
+        return
+    cols = list(rows[0].keys())
+    placeholders = ", ".join("?" for _ in cols)
+    col_sql = ", ".join(cols)
+    sql = f"INSERT INTO {table} ({col_sql}) VALUES ({placeholders})"
+    conn.executemany(sql, [tuple(r[c] for c in cols) for r in rows])
+
+
+def init_database(db_path: Path, rebuild: bool = True) -> None:
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    if rebuild and db_path.exists():
+        db_path.unlink()
+
+    months = [date(2025, m, 1) for m in range(1, 10)]
+
+    customers = build_customers()
+    policies = build_policies(customers)
+    foreclosures, fc_assets = build_foreclosures(customers, policies)
+    pit = build_policy_investment_tracks(policies, months)
+    market = build_market_tracks(months)
+    matzav = build_matzav_bituach(policies, months)
+
+    with sqlite3.connect(db_path) as conn:
+        conn.executescript(schema_path().read_text(encoding="utf-8"))
+        insert_rows(conn, "DWH_DIM_CUSTOMERS_UNIQUE", customers)
+        insert_rows(conn, "DWH_DIM_ALL_POLICY", policies)
+        insert_rows(conn, "DWH_FCT_FORECLOSURES", foreclosures)
+        insert_rows(conn, "DWH_FCT_FORECLOSURES_ASSETS", fc_assets)
+        insert_rows(conn, "DWH_FCT_POLICY_INVESTMENT_TRACK", pit)
+        insert_rows(conn, "DWH_FCT_INVESTMENT_TRACK", market)
+        insert_rows(conn, "FCT_MATZAV_BITUACH", matzav)
+        conn.commit()
+
+        counts = conn.execute(
+            """
+            SELECT 'DWH_DIM_CUSTOMERS_UNIQUE' AS tbl, COUNT(*) FROM DWH_DIM_CUSTOMERS_UNIQUE
+            UNION ALL SELECT 'DWH_DIM_ALL_POLICY', COUNT(*) FROM DWH_DIM_ALL_POLICY
+            UNION ALL SELECT 'DWH_FCT_FORECLOSURES', COUNT(*) FROM DWH_FCT_FORECLOSURES
+            UNION ALL SELECT 'DWH_FCT_FORECLOSURES_ASSETS', COUNT(*) FROM DWH_FCT_FORECLOSURES_ASSETS
+            UNION ALL SELECT 'DWH_FCT_POLICY_INVESTMENT_TRACK', COUNT(*) FROM DWH_FCT_POLICY_INVESTMENT_TRACK
+            UNION ALL SELECT 'DWH_FCT_INVESTMENT_TRACK', COUNT(*) FROM DWH_FCT_INVESTMENT_TRACK
+            UNION ALL SELECT 'FCT_MATZAV_BITUACH', COUNT(*) FROM FCT_MATZAV_BITUACH
+            """
+        ).fetchall()
+
+    print(f"Database written to {db_path}")
+    for name, count in counts:
+        print(f"  {name}: {count}")
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--db",
+        type=Path,
+        default=None,
+        help="SQLite database path (default: CUSTOMER360_DB_PATH or data/customer360.db)",
+    )
+    parser.add_argument(
+        "--no-rebuild",
+        action="store_true",
+        help="Append to existing DB without deleting (schema still applied)",
+    )
+    args = parser.parse_args()
+    db_path = args.db or default_db_path()
+    init_database(db_path, rebuild=not args.no_rebuild)
+
+
+if __name__ == "__main__":
+    main()

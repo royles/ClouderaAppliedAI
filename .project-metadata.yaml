@@ -1,0 +1,54 @@
+name: Insurance Customer 360
+description: >
+  Unified insurance customer dashboard backed by a DDS-aligned SQLite warehouse.
+  Deploy as a Cloudera AI (CAI) project with automated dependency install, database
+  seeding, and a Streamlit application.
+author: Cloudera Applied AI
+specification_version: "1.0"
+prototype_version: "1.0"
+date: "2025-09-21"
+
+environment_variables:
+  CUSTOMER360_DB_PATH:
+    default: "data/customer360.db"
+    description: >
+      Relative or absolute path to the SQLite warehouse file. Relative paths resolve
+      from the CAI project root (CDSW_PROJECT).
+    required: false
+
+runtimes:
+  - editor: Workbench
+    kernel: Python 3.11
+    edition: Standard
+
+tasks:
+  - type: create_job
+    name: Install Dependencies
+    entity_label: install_dependencies
+    script: 1_session-install-dependencies/install.py
+    kernel: python3
+    cpu: 1
+    memory: 2
+
+  - type: run_job
+    entity_label: install_dependencies
+
+  - type: create_job
+    name: Initialize Customer 360 Database
+    entity_label: init_database
+    script: 2_job-init-database/init_database.py
+    kernel: python3
+    cpu: 1
+    memory: 2
+
+  - type: run_job
+    entity_label: init_database
+
+  - type: start_application
+    name: Customer 360 Dashboard
+    subdomain: customer-360
+    script: 3_application/start-app.py
+    kernel: python3
+    cpu: 2
+    memory: 4
+    static_subdomain: true

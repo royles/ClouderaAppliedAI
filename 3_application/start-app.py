@@ -1,9 +1,10 @@
-#!/usr/bin/env python3
-"""Local CLI wrapper — prefer 2_job-init-database/init_database.py on Cloudera AI."""
+"""CAI application entrypoint — FastAPI (uvicorn) on the platform-injected port."""
 
 from __future__ import annotations
 
 import importlib.util
+import subprocess
+import sys
 from pathlib import Path
 
 
@@ -27,7 +28,23 @@ def _bootstrap() -> None:
 
 _bootstrap()
 
-from customer360.seed import main
+from customer360.cai_runtime import application_port
 
-if __name__ == "__main__":
-    main()
+port = application_port()
+
+print(f"Starting Customer 360 API on 127.0.0.1:{port}", flush=True)
+
+subprocess.check_call(
+    [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "customer360.api.main:app",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+        "--workers",
+        "1",
+    ]
+)
