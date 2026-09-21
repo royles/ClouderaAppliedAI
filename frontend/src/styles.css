@@ -1291,6 +1291,89 @@ select.control {
   border-left: 3px solid #b42318;
 }
 
+.admin-config-intro {
+  padding-bottom: 0.75rem;
+}
+
+.admin-config-intro h2 {
+  margin-bottom: 0.35rem;
+}
+
+.admin-config-accordions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-bottom: 0.5rem;
+}
+
+.admin-accordion {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-accordion > summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  user-select: none;
+}
+
+.admin-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.admin-accordion-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.admin-accordion-chevron {
+  flex-shrink: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid #5a6b7d;
+  border-bottom: 2px solid #5a6b7d;
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  margin-top: -0.15rem;
+}
+
+.admin-accordion[open] > summary .admin-accordion-chevron {
+  transform: rotate(45deg);
+  margin-top: 0.1rem;
+}
+
+.admin-accordion-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #0f3d5e;
+}
+
+.admin-accordion-meta {
+  flex-shrink: 0;
+  text-align: right;
+  max-width: min(16rem, 45vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-accordion-lead {
+  margin: 0 1rem 0.75rem;
+  padding-top: 0;
+}
+
+.admin-accordion-body {
+  padding: 0 1rem 1rem;
+  border-top: 1px solid #e6ebf0;
+}
+
 .admin-datasource-note {
   margin: 0.5rem 0 0;
   padding: 0.5rem 0.65rem;

@@ -79,7 +79,17 @@ export default function AdminPage() {
         </section>
       )}
 
-      <AdminDataSourcePanel />
+      <section className="panel admin-config-intro">
+        <h2>Configuration</h2>
+        <p className="muted small">
+          Expand a section to edit backend settings. Collapsed by default to keep the inventory
+          view uncluttered.
+        </p>
+      </section>
+
+      <div className="admin-config-accordions">
+        <AdminDataSourcePanel />
+      </div>
 
       {data && (
         <>

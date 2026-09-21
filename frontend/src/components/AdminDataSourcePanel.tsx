@@ -5,6 +5,7 @@ import {
   testDataSourceConnection,
   updateDataSourceConfig,
 } from "../api";
+import AdminAccordionSection from "./AdminAccordionSection";
 
 type BackendChoice = "sqlite" | "cdw_jdbc" | "iceberg";
 
@@ -151,22 +152,31 @@ export default function AdminDataSourcePanel() {
     }
   };
 
+  const accordionMeta = loading
+    ? "Loading…"
+    : meta?.backend_label ?? form?.backend_type ?? "Not configured";
+
   if (loading || !form) {
     return (
-      <section className="panel">
-        <h2>Warehouse backend</h2>
+      <AdminAccordionSection
+        id="admin-warehouse-backend"
+        title="Warehouse backend"
+        meta={accordionMeta}
+        description="Choose where Customer 360 reads warehouse data. Settings are stored in the local control database."
+      >
         <p className="muted small">Loading backend configuration…</p>
-      </section>
+      </AdminAccordionSection>
     );
   }
 
   return (
-    <section className="panel admin-datasource">
-      <h2>Warehouse backend</h2>
-      <p className="muted small">
-        Choose where Customer 360 reads warehouse data. Admin settings are always stored in the
-        local control database; API routes use SQLite until CDW or Iceberg routing is enabled.
-      </p>
+    <AdminAccordionSection
+      id="admin-warehouse-backend"
+      title="Warehouse backend"
+      meta={accordionMeta}
+      description="Choose where Customer 360 reads warehouse data. Admin settings are always stored in the local control database; API routes use SQLite until CDW or Iceberg routing is enabled."
+    >
+      <div className="admin-datasource">
       {meta?.api_routing_note && (
         <p className="muted small admin-datasource-note">{meta.api_routing_note}</p>
       )}
@@ -344,6 +354,7 @@ export default function AdminDataSourcePanel() {
           <p className="muted small">Last updated {new Date(meta.updated_at).toLocaleString()}</p>
         )}
       </form>
-    </section>
+      </div>
+    </AdminAccordionSection>
   );
 }
