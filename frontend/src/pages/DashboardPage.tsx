@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import {
   CustomerSegment,
   DomainCount,
@@ -8,11 +8,10 @@ import {
   Overview,
   PortfolioAnalytics,
 } from "../api";
-import { BUSINESS_BASE, CUSTOMER_BASE } from "../appRoutes";
+import { BUSINESS_BASE } from "../appRoutes";
 import Breadcrumbs from "../components/Breadcrumbs";
 import DomainFilterGrid from "../components/DomainFilterGrid";
 import PortfolioAnalyticsSection from "../components/PortfolioAnalyticsSection";
-import { cohortSearchString } from "../cohortQuery";
 import { parseBusinessSegment, patchBusinessSegment } from "../dashboardUrl";
 export default function DashboardPage() {
   const location = useLocation();
@@ -26,7 +25,6 @@ export default function DashboardPage() {
     null,
   );
   const [portfolioLoading, setPortfolioLoading] = useState(true);
-  const [overviewUpdatedAt, setOverviewUpdatedAt] = useState<Date | null>(null);
   const portfolioRequestRef = useRef(0);
   const portfolioSegmentRef = useRef<CustomerSegment | null>(null);
 
@@ -46,7 +44,6 @@ export default function DashboardPage() {
         const ov = await fetchOverview();
         if (!cancelled) {
           setOverview(ov);
-          setOverviewUpdatedAt(new Date());
           setError(null);
         }
       } catch (e) {
@@ -105,8 +102,6 @@ export default function DashboardPage() {
     setSearchParams((prev) => patchBusinessSegment(prev, next), { replace: true });
   };
 
-  const customerListHref = `${CUSTOMER_BASE}${cohortSearchString({ segment })}`;
-
   if (overviewLoading && !overview) {
     return (
       <>
@@ -128,21 +123,6 @@ export default function DashboardPage() {
     <>
       <Breadcrumbs items={[{ label: "The business" }]} />
       <section className="panel">
-        <div className="panel-head">
-          <div>
-            <h1>Warehouse overview</h1>
-            <p className="muted small">
-              Click a card to set the cohort for portfolio analytics. Customer search
-              and lists live on{" "}
-              <Link to={customerListHref}>the customer</Link> area (same filters).
-            </p>
-          </div>
-          {overviewUpdatedAt && (
-            <p className="muted small data-freshness">
-              Counts refreshed {overviewUpdatedAt.toLocaleTimeString()}
-            </p>
-          )}
-        </div>
         <DomainFilterGrid
           overview={overview}
           segment={segment}
