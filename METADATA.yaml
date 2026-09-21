@@ -1,0 +1,50 @@
+# Cloudera Blueprint catalog metadata
+# Populate fields used by the master blueprint website and internal catalog.
+
+# --- Identity ---
+  name: "Insurance Customer 360 Dashoard"
+  slug: "insurance-360-dashboard"              # URL-safe repo / catalog identifier
+  description: "Insurance Customer 360 Dshboard"
+  reprise_link: "[TBD]"         # Public reprise link
+  
+  # --- Classification (website filters) ---
+  catalog_classification:
+    - Enterprise Blueprint                     # Options: Enterprise Blueprint | Research | Launchable (AMP) | Developer Example
+  launchable: true                             # true | false
+  lifecycle_status: Active                     # e.g., Active | Deprecated
+  
+  # --- Industry & alignment ---
+  industry: Insurance                            # e.g., General | Telecom | Financial Services | Healthcare & Life Sciences | Retail | Media | Physical AI & Robotics
+  industry_alignment: "Vertical"                     # Horizontal | Vertical
+  target_vertical: "Insurance Customer 360"                          # Optional finer-grained vertical
+  
+  # --- Tags (website search & browse) ---
+  tags:
+    - Synthetic Data
+    - Customer Churn
+    - Generated recommendations and engagement scripts
+    - Hyper personalisation
+  
+  # --- Relationships ---
+  product_mapping:                             # Cloudera products used
+    - Cloudera Machine Learning
+  # model_dependencies:                          # Models, embeddings, or external AI services, if any. Comment out if none.
+      - Amazon Bedrock
+  #   - nemotron-3-super-120b-a12b
+  #   - llama-nemotron-embed-1b-v2
+  
+  # --- Provenance ---
+  publisher: cloudera                          # cloudera | partner-name
+  source: Internal                             # Internal | Partner | NVIDIA Adaptation | Customer
+  
+  # --- Repository & assets ---
+  public_github_link: "[TBD]]"
+  private_github_link: "git@github.com:royles/ClouderaAppliedAI.git"                      # If applicable, original repo during development
+  
+  # --- Ownership ---
+  maintainer_name: "Christopher Royles"
+  
+  # --- Dates ---
+  date_created: "2026-09-21"
+  date_updated: "2026-09-21"
+  published_date: "[TBD]"                 # Published date / last modified
