@@ -7,12 +7,15 @@ Unified customer dashboard for Cloudera AI (CAI), backed by a DDS-aligned SQLite
 ### Deploy on Cloudera AI
 
 1. Create a project from this Git repository (or import as an ML prototype if catalog metadata is added later).
-2. On first import, `.project-metadata.yaml` runs:
-   - **Install Dependencies** — Python packages + editable `customer360` install
-   - **Build React Frontend** — `npm run build` → `frontend/dist` (skipped if `npm` is missing; prebuilt `dist` is in Git)
-   - **Initialize Customer 360 Database** — builds `data/customer360.db`
-   - **Train Churn Model** — normalized features + logistic regression → `APP_CUSTOMER_CHURN_SCORES`
-   - **Customer 360 Dashboard** — FastAPI + React at subdomain `customer-360`
+2. On first import, `.project-metadata.yaml` runs these stages in order:
+
+   | Stage | Folder / script | Purpose |
+   | --- | --- | --- |
+   | 1 | `1_session-install-dependencies/` | Python deps + editable `customer360` install |
+   | 2 | `scripts/build_frontend.py` | `npm run build` → `frontend/dist` |
+   | 3 | `2_job-init-database/` | Seed `data/customer360.db` |
+   | 4 | `3_job-train-churn-model/` | Churn model → `APP_CUSTOMER_CHURN_SCORES` |
+   | 5 | `4_application/start-app.py` | FastAPI + React dashboard |
 3. Application scripts bind to `127.0.0.1` and use `CDSW_APP_PORT` (Workbench/CML) or `APP_PORT` (AI Inference, default 8080). Do not hard-code ports.
 
 Optional environment variable:
@@ -26,13 +29,14 @@ Optional environment variable:
 ```
 .
 ├── .project-metadata.yaml          # AMP / prototype automation
-├── 1_session-install-dependencies/ # pip install job
-├── 2_job-init-database/            # warehouse seed job
-├── 2_job-train-churn-model/        # churn training job
-├── 3_application/                  # FastAPI launcher (start-app.py)
+├── 1_session-install-dependencies/ # stage 1: pip install
+├── 2_job-init-database/            # stage 3: warehouse seed
+├── 3_job-train-churn-model/        # stage 4: churn training
+├── 4_application/                  # stage 5: FastAPI app launcher
 ├── customer360/                    # Shared Python package (seed, DB, churn, API)
 ├── data/schema.sql                 # Warehouse DDL
-└── scripts/init_db.py              # Local dev CLI (same seed logic as CAI job)
+├── scripts/build_frontend.py       # stage 2: React build
+└── scripts/init_db.py                # Local dev CLI (same as stage 3 job)
 ```
 
 ### Warehouse domains
@@ -45,6 +49,16 @@ Optional environment variable:
 | `DWH_FCT_POLICY_INVESTMENT_TRACK` | Monthly per-policy accumulation by track |
 | `DWH_FCT_INVESTMENT_TRACK` | Regulatory market track performance |
 | `FCT_MATZAV_BITUACH` | Policy status, coverage, and surrender values |
+| `APP_CUSTOMER_CHURN_SCORES` | Churn probability and risk tier per customer ID |
+
+### Churn intelligence
+
+Features are built from warehouse behaviour, normalized with `StandardScaler`, and modeled
+with balanced logistic regression. Scores are stored in SQLite for the API and UI.
+
+```bash
+python 3_job-train-churn-model/train_churn.py
+```
 
 ### Local development
 
@@ -52,7 +66,7 @@ Optional environment variable:
 python3 -m pip install -r requirements.txt
 python3 -m pip install -e .
 python3 scripts/init_db.py
-python3 3_application/start-app.py
+python3 4_application/start-app.py
 ```
 
 ### `__file__` / Workbench interactive runs
@@ -66,6 +80,7 @@ Use one of these instead:
 ```python
 # From a session whose working directory is the project root:
 %run 2_job-init-database/init_database.py
+%run 3_job-train-churn-model/train_churn.py   # after database init
 ```
 
 ```python
