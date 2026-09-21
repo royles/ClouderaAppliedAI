@@ -488,7 +488,7 @@ def build_market_tracks(months: list[date]) -> list[dict]:
     return rows
 
 
-def build_matzav_bituach(policies: list[dict], months: list[date]) -> list[dict]:
+def build_policy_status_snapshots(policies: list[dict], months: list[date]) -> list[dict]:
     rows: list[dict] = []
     life_health = [p for p in policies if p["POLICY_TYPE_CODE"] in (101, 102, 201)]
 
@@ -501,19 +501,21 @@ def build_matzav_bituach(policies: list[dict], months: list[date]) -> list[dict]
             savings = round(base_sum * RNG.uniform(0.1, 0.5), 2)
             rows.append(
                 {
-                    "KOD_CHEVRA": pol["COMPANY_CODE"],
-                    "TAARICH_MAATAFIT": iso(snap_d),
-                    "MS_MEVUTACH": int(pol["CUSTOMER_ID"]),
-                    "MS_POL": pol["POLICY_NUM"],
-                    "MBB_SCHUM_BITUACH": round(base_sum, 2),
-                    "MBB_PREMIA": round(premium, 2),
-                    "MBB_SCHUM_LEMIKRA_MAVET": round(base_sum * RNG.uniform(0.8, 1.0), 2),
-                    "MBB_ERECH_PIDYON": surrender,
-                    "MBB_ERECH_MESULAK": round(surrender * 0.9, 2),
-                    "MBB_ITRAT_CHISACHON": savings,
-                    "SCHUM_DMEY_NIHUL_PREMIA": round(premium * 0.02, 2),
-                    "SCHUM_DMEY_NIHUL_TZVIRA": round(savings * 0.004, 2),
-                    "MBB_PITZUIM": round(savings * 0.25, 2),
+                    "COMPANY_CODE": pol["COMPANY_CODE"],
+                    "SNAPSHOT_DATE": iso(snap_d),
+                    "CUSTOMER_ID": int(pol["CUSTOMER_ID"]),
+                    "POLICY_NUM": pol["POLICY_NUM"],
+                    "POLICY_STATUS_CODE": pol["POLICY_STATUS_CODE"],
+                    "POLICY_STATUS_DESC": pol["POLICY_STATUS_DESC"],
+                    "SUM_INSURED_AMOUNT": round(base_sum, 2),
+                    "MONTHLY_PREMIUM": round(premium, 2),
+                    "DEATH_BENEFIT_AMOUNT": round(base_sum * RNG.uniform(0.8, 1.0), 2),
+                    "SURRENDER_VALUE": surrender,
+                    "PAID_UP_VALUE": round(surrender * 0.9, 2),
+                    "SAVINGS_BALANCE": savings,
+                    "PREMIUM_MANAGEMENT_FEE": round(premium * 0.02, 2),
+                    "SAVINGS_MANAGEMENT_FEE": round(savings * 0.004, 2),
+                    "EMPLOYER_BENEFIT_AMOUNT": round(savings * 0.25, 2),
                 }
             )
     return rows
@@ -561,7 +563,7 @@ def init_database(
     foreclosures, fc_assets = build_foreclosures(customers, policies)
     pit = build_policy_investment_tracks(policies, months)
     market = build_market_tracks(months)
-    matzav = build_matzav_bituach(policies, months)
+    policy_status = build_policy_status_snapshots(policies, months)
     print("Building interaction events…", flush=True)
     interactions = build_interaction_events(customers, policies, foreclosures, rng=RNG)
 
@@ -588,7 +590,7 @@ def init_database(
         insert_rows(conn, "DWH_FCT_FORECLOSURES_ASSETS", fc_assets)
         insert_rows(conn, "DWH_FCT_POLICY_INVESTMENT_TRACK", pit)
         insert_rows(conn, "DWH_FCT_INVESTMENT_TRACK", market)
-        insert_rows(conn, "FCT_MATZAV_BITUACH", matzav)
+        insert_rows(conn, "DWH_FCT_POLICY_STATUS", policy_status)
         insert_rows(conn, "APP_CUSTOMER_INTERACTION_EVENTS", interactions)
         conn.commit()
 
@@ -612,7 +614,7 @@ def init_database(
             UNION ALL SELECT 'DWH_FCT_FORECLOSURES_ASSETS', COUNT(*) FROM DWH_FCT_FORECLOSURES_ASSETS
             UNION ALL SELECT 'DWH_FCT_POLICY_INVESTMENT_TRACK', COUNT(*) FROM DWH_FCT_POLICY_INVESTMENT_TRACK
             UNION ALL SELECT 'DWH_FCT_INVESTMENT_TRACK', COUNT(*) FROM DWH_FCT_INVESTMENT_TRACK
-            UNION ALL SELECT 'FCT_MATZAV_BITUACH', COUNT(*) FROM FCT_MATZAV_BITUACH
+            UNION ALL SELECT 'DWH_FCT_POLICY_STATUS', COUNT(*) FROM DWH_FCT_POLICY_STATUS
             UNION ALL SELECT 'APP_CUSTOMER_INTERACTION_EVENTS', COUNT(*) FROM APP_CUSTOMER_INTERACTION_EVENTS
             """
         ).fetchall()

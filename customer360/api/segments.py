@@ -69,11 +69,11 @@ OVERVIEW_DOMAINS: list[tuple[str, str, str, str]] = [
     (
         "Insurance status rows",
         "with_insurance_status",
-        "Customers with matzav bituach coverage snapshots",
+        "Customers with policy status / coverage snapshots",
         """
         SELECT COUNT(DISTINCT c.CUSTOMER_ID)
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
-        INNER JOIN FCT_MATZAV_BITUACH m ON m.MS_MEVUTACH = c.CUSTOMER_ID
+        INNER JOIN DWH_FCT_POLICY_STATUS ps ON ps.CUSTOMER_ID = c.CUSTOMER_ID
         WHERE c.CURRENT_IND = 1
         """,
     ),
@@ -109,8 +109,8 @@ SEGMENT_WHERE: dict[str, str] = {
     """,
     "with_insurance_status": """
         EXISTS (
-            SELECT 1 FROM FCT_MATZAV_BITUACH m
-            WHERE m.MS_MEVUTACH = c.CUSTOMER_ID
+            SELECT 1 FROM DWH_FCT_POLICY_STATUS ps
+            WHERE ps.CUSTOMER_ID = c.CUSTOMER_ID
         )
     """,
 }

@@ -246,7 +246,7 @@ export default function CustomerValueChart({
           <span className="swatch swatch-investment" /> Investment accumulation
         </li>
         <li>
-          <span className="swatch swatch-coverage" /> Coverage & savings (matzav)
+          <span className="swatch swatch-coverage" /> Coverage & savings (policy status)
         </li>
       </ul>
     </div>

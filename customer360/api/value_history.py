@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import sqlite3
 
+from customer360.api.policy_status_sql import POLICY_STATUS_COVERAGE_EXPR
 from customer360.api.segments import SEGMENT_WHERE, normalize_segment
 
-# Latest investment snapshot + latest coverage snapshot (same logic as value history totals).
-CUSTOMER_VALUE_SQL = """
+# Latest investment snapshot + latest policy status snapshot.
+CUSTOMER_VALUE_SQL = f"""
 (
   COALESCE(
     (
@@ -24,17 +25,13 @@ CUSTOMER_VALUE_SQL = """
   )
   + COALESCE(
     (
-      SELECT SUM(
-          COALESCE(m.MBB_SCHUM_BITUACH, 0)
-          + COALESCE(m.MBB_ITRAT_CHISACHON, 0)
-          + COALESCE(m.MBB_ERECH_PIDYON, 0)
-        )
-      FROM FCT_MATZAV_BITUACH m
-      WHERE m.MS_MEVUTACH = c.CUSTOMER_ID
-        AND m.TAARICH_MAATAFIT = (
-          SELECT MAX(m2.TAARICH_MAATAFIT)
-          FROM FCT_MATZAV_BITUACH m2
-          WHERE m2.MS_MEVUTACH = c.CUSTOMER_ID
+      SELECT SUM({POLICY_STATUS_COVERAGE_EXPR})
+      FROM DWH_FCT_POLICY_STATUS ps
+      WHERE ps.CUSTOMER_ID = c.CUSTOMER_ID
+        AND ps.SNAPSHOT_DATE = (
+          SELECT MAX(ps2.SNAPSHOT_DATE)
+          FROM DWH_FCT_POLICY_STATUS ps2
+          WHERE ps2.CUSTOMER_ID = c.CUSTOMER_ID
         )
     ),
     0
@@ -71,17 +68,13 @@ COALESCE(
 )
 """.strip()
 
-_COVERAGE_AT_PERIOD = """
+_COVERAGE_AT_PERIOD = f"""
 COALESCE(
   (
-    SELECT SUM(
-        COALESCE(m.MBB_SCHUM_BITUACH, 0)
-        + COALESCE(m.MBB_ITRAT_CHISACHON, 0)
-        + COALESCE(m.MBB_ERECH_PIDYON, 0)
-      )
-    FROM FCT_MATZAV_BITUACH m
-    WHERE m.MS_MEVUTACH = c.CUSTOMER_ID
-      AND m.TAARICH_MAATAFIT = ?
+    SELECT SUM({POLICY_STATUS_COVERAGE_EXPR})
+    FROM DWH_FCT_POLICY_STATUS ps
+    WHERE ps.CUSTOMER_ID = c.CUSTOMER_ID
+      AND ps.SNAPSHOT_DATE = ?
   ),
   0
 )
@@ -101,7 +94,6 @@ def customer_value_at_period_sql(metric: str) -> tuple[str, int]:
     if m == "coverage":
         return _COVERAGE_AT_PERIOD, 1
     if m == "at_risk":
-        # Book at period × current churn score (matches portfolio churn horizon math).
         book_sql, param_count = customer_book_at_period_sql()
         return f"(({book_sql}) * COALESCE(ch.CHURN_PROBABILITY, 0))", param_count
     return customer_book_at_period_sql()
@@ -142,15 +134,11 @@ def fetch_value_history(
         ),
         coverage AS (
             SELECT
-                m.TAARICH_MAATAFIT AS period,
-                SUM(
-                    COALESCE(m.MBB_SCHUM_BITUACH, 0)
-                    + COALESCE(m.MBB_ITRAT_CHISACHON, 0)
-                    + COALESCE(m.MBB_ERECH_PIDYON, 0)
-                ) AS coverage_value
-            FROM FCT_MATZAV_BITUACH m
-            INNER JOIN scoped_customers sc ON sc.CUSTOMER_ID = m.MS_MEVUTACH
-            GROUP BY m.TAARICH_MAATAFIT
+                ps.SNAPSHOT_DATE AS period,
+                SUM({POLICY_STATUS_COVERAGE_EXPR}) AS coverage_value
+            FROM DWH_FCT_POLICY_STATUS ps
+            INNER JOIN scoped_customers sc ON sc.CUSTOMER_ID = ps.CUSTOMER_ID
+            GROUP BY ps.SNAPSHOT_DATE
         ),
         periods AS (
             SELECT period FROM investment

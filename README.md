@@ -55,7 +55,7 @@ Optional environment variable:
 | `DWH_FCT_FORECLOSURES` / `DWH_FCT_FORECLOSURES_ASSETS` | Legal encumbrances and linked assets |
 | `DWH_FCT_POLICY_INVESTMENT_TRACK` | Monthly per-policy accumulation by track |
 | `DWH_FCT_INVESTMENT_TRACK` | Regulatory market track performance |
-| `FCT_MATZAV_BITUACH` | Policy status, coverage, and surrender values |
+| `DWH_FCT_POLICY_STATUS` | Policy status, coverage, and surrender/savings snapshots |
 | `APP_CUSTOMER_CHURN_SCORES` | Churn probability and risk tier per customer ID |
 | `APP_CUSTOMER_INTERACTION_EVENTS` | Synthetic reviews, agent questions, and web searches |
 | `APP_CUSTOMER_AI_INSIGHTS` | Cached Bedrock (or fallback) customer summaries |

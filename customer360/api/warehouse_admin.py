@@ -59,11 +59,11 @@ TABLE_CATALOG: list[dict] = [
         "load_job": "2_job-init-database / customer360.seed",
     },
     {
-        "table_name": "FCT_MATZAV_BITUACH",
+        "table_name": "DWH_FCT_POLICY_STATUS",
         "layer": "warehouse",
-        "domain": "Insurance status",
+        "domain": "Policy status",
         "role": "Fact (snapshot)",
-        "description": "Matzav bituach coverage, premium, surrender, and savings balances by policy period.",
+        "description": "Periodic policy status, coverage amounts, surrender/savings balances by customer and policy.",
         "load_job": "2_job-init-database / customer360.seed",
     },
     {
@@ -168,10 +168,10 @@ RELATIONSHIPS: list[dict] = [
     {
         "from_table": "DWH_DIM_CUSTOMERS_UNIQUE",
         "from_column": "CUSTOMER_ID",
-        "to_table": "FCT_MATZAV_BITUACH",
-        "to_column": "MS_MEVUTACH",
+        "to_table": "DWH_FCT_POLICY_STATUS",
+        "to_column": "CUSTOMER_ID",
         "cardinality": "1:N",
-        "label": "coverage snapshots",
+        "label": "policy status snapshots",
     },
     {
         "from_table": "DWH_FCT_FORECLOSURES",
@@ -214,7 +214,7 @@ erDiagram
     DWH_FCT_FORECLOSURES ||--o{ DWH_FCT_FORECLOSURES_ASSETS : links
     DWH_DIM_CUSTOMERS_UNIQUE ||--o{ DWH_FCT_POLICY_INVESTMENT_TRACK : accumulates
     DWH_DIM_ALL_POLICY ||--o{ DWH_FCT_POLICY_INVESTMENT_TRACK : tracks
-    DWH_DIM_CUSTOMERS_UNIQUE ||--o{ FCT_MATZAV_BITUACH : coverage
+    DWH_DIM_CUSTOMERS_UNIQUE ||--o{ DWH_FCT_POLICY_STATUS : policy_status
     DWH_DIM_CUSTOMERS_UNIQUE ||--o{ APP_CUSTOMER_INTERACTION_EVENTS : interacts
     DWH_DIM_CUSTOMERS_UNIQUE ||--|| APP_CUSTOMER_CHURN_SCORES : scored
     DWH_DIM_CUSTOMERS_UNIQUE ||--|| APP_CUSTOMER_METRICS : metrics
