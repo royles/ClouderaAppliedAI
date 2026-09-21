@@ -1,31 +1,72 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  CustomerSegment,
+  CustomerSortBy,
   CustomerSummary,
+  DomainCount,
   fetchCustomers,
   fetchOverview,
   Overview,
+  SortOrder,
 } from "../api";
+import {
+  maskCity,
+  maskCustomerId,
+  maskDate,
+  maskEmail,
+  maskName,
+  maskPhone,
+} from "../pii";
 
 export default function DashboardPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [search, setSearch] = useState("");
+  const [segment, setSegment] = useState<CustomerSegment>("customers_all");
+  const [sortBy, setSortBy] = useState<CustomerSortBy>("name");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [activeDomain, setActiveDomain] = useState<DomainCount | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
+
+  const loadCustomers = useCallback(
+    async (
+      q: string,
+      seg: CustomerSegment,
+      by: CustomerSortBy,
+      order: SortOrder,
+    ) => {
+      setTableLoading(true);
+      try {
+        setCustomers(
+          await fetchCustomers({
+            q,
+            segment: seg,
+            sortBy: by,
+            sortOrder: order,
+            limit: 200,
+          }),
+        );
+        setError(null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load customers");
+      } finally {
+        setTableLoading(false);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         setLoading(true);
-        const [ov, list] = await Promise.all([
-          fetchOverview(),
-          fetchCustomers(),
-        ]);
+        const ov = await fetchOverview();
         if (!cancelled) {
           setOverview(ov);
-          setCustomers(list);
           setError(null);
         }
       } catch (e) {
@@ -42,72 +83,171 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    const handle = window.setTimeout(async () => {
-      try {
-        setCustomers(await fetchCustomers(search));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Search failed");
-      }
+    const handle = window.setTimeout(() => {
+      void loadCustomers(search, segment, sortBy, sortOrder);
     }, 300);
     return () => window.clearTimeout(handle);
-  }, [search]);
+  }, [search, segment, sortBy, sortOrder, loadCustomers]);
+
+  const onCardClick = (domain: DomainCount) => {
+    const key = domain.filter_key as CustomerSegment;
+    if (segment === key) {
+      setSegment("customers_all");
+      setActiveDomain(null);
+    } else {
+      setSegment(key);
+      setActiveDomain(domain);
+    }
+  };
+
+  const clearFilter = () => {
+    setSegment("customers_all");
+    setActiveDomain(null);
+  };
+
+  const setRankBy = (by: CustomerSortBy) => {
+    setSortBy(by);
+    if (by === "policy_count" || by === "investment_count") {
+      setSortOrder("desc");
+    } else {
+      setSortOrder("asc");
+    }
+  };
+
+  const toggleSortOrder = () => {
+    setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+  };
+
+  const showRank = sortBy === "policy_count" || sortBy === "investment_count";
 
   if (loading) return <p className="muted">Loading warehouse…</p>;
-  if (error) return <p className="error">{error}</p>;
+  if (error && !overview) return <p className="error">{error}</p>;
 
   return (
     <>
       <section className="panel">
         <h1>Warehouse overview</h1>
+        <p className="muted small">
+          Click a card to filter the customer table. Click again to clear. PII is masked in
+          the UI.
+        </p>
         {overview && (
-          <>
-            <p className="muted small">Database: {overview.database_path}</p>
-            <div className="stat-grid">
-              {overview.domains.map((d) => (
-                <div key={d.domain} className="stat-card">
+          <div className="stat-grid">
+            {overview.domains.map((d) => {
+              const selected = segment === d.filter_key;
+              return (
+                <button
+                  key={d.filter_key}
+                  type="button"
+                  className={`stat-card stat-card-btn${selected ? " stat-card-selected" : ""}`}
+                  onClick={() => onCardClick(d)}
+                  title={d.description || d.domain}
+                >
                   <div className="stat-value">{d.row_count.toLocaleString()}</div>
                   <div className="stat-label">{d.domain}</div>
-                </div>
-              ))}
-            </div>
-          </>
+                </button>
+              );
+            })}
+          </div>
         )}
       </section>
 
       <section className="panel">
         <div className="panel-head">
-          <h2>Customers</h2>
-          <input
-            className="search"
-            placeholder="Search by name or ID"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div>
+            <h2>Customers</h2>
+            {activeDomain ? (
+              <p className="filter-banner">
+                Filter: <strong>{activeDomain.domain}</strong>
+                <button type="button" className="link-btn" onClick={clearFilter}>
+                  Clear filter
+                </button>
+              </p>
+            ) : (
+              <p className="muted small">Showing all current customers</p>
+            )}
+          </div>
+          <div className="toolbar">
+            <label className="sort-control">
+              Rank by
+              <select
+                value={sortBy}
+                onChange={(e) => setRankBy(e.target.value as CustomerSortBy)}
+              >
+                <option value="name">Name (A–Z)</option>
+                <option value="policy_count">Policy count</option>
+                <option value="investment_count">Investment tracks</option>
+              </select>
+            </label>
+            <button type="button" className="tab" onClick={toggleSortOrder}>
+              {sortOrder === "desc" ? "Highest first ↓" : "Lowest first ↑"}
+            </button>
+            <input
+              className="search"
+              placeholder="Search name or ID"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search customers"
+            />
+          </div>
         </div>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>ID</th>
-              <th>City</th>
-              <th>Policies</th>
-              <th>Last login</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map((c) => (
-              <tr key={c.customer_key}>
-                <td>
-                  <Link to={`/customers/${c.customer_id}`}>{c.customer_name}</Link>
-                </td>
-                <td>{c.customer_id}</td>
-                <td>{c.city_name ?? "—"}</td>
-                <td>{c.policy_count}</td>
-                <td>{c.last_login ?? "—"}</td>
+        {error && <p className="error">{error}</p>}
+        {tableLoading ? (
+          <p className="muted">Updating table…</p>
+        ) : (
+          <table className="table table-interactive">
+            <thead>
+              <tr>
+                {showRank && <th>#</th>}
+                <th>Name</th>
+                <th>ID</th>
+                <th>City</th>
+                <th>Email</th>
+                <th>Mobile</th>
+                <th
+                  className={sortBy === "policy_count" ? "th-sorted" : undefined}
+                >
+                  Policies
+                </th>
+                <th
+                  className={
+                    sortBy === "investment_count" ? "th-sorted" : undefined
+                  }
+                >
+                  Investments
+                </th>
+                <th>Last login</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {customers.length === 0 ? (
+                <tr>
+                  <td colSpan={showRank ? 9 : 8} className="muted">
+                    No customers match this filter.
+                  </td>
+                </tr>
+              ) : (
+                customers.map((c, index) => (
+                  <tr key={c.customer_key} className="table-row-click">
+                    {showRank && <td className="rank-cell">{index + 1}</td>}
+                    <td>
+                      <Link to={`/customers/${c.customer_id}`}>
+                        {maskName(c.customer_name)}
+                      </Link>
+                    </td>
+                    <td>{maskCustomerId(c.customer_id)}</td>
+                    <td>{maskCity(c.city_name)}</td>
+                    <td>{maskEmail(c.email)}</td>
+                    <td>{maskPhone(c.mobile_no)}</td>
+                    <td>{c.policy_count}</td>
+                    <td>{c.investment_count}</td>
+                    <td>{maskDate(c.last_login?.slice(0, 10))}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        )}
       </section>
     </>
   );

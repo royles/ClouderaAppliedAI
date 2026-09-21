@@ -61,10 +61,44 @@ body {
 .panel-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
   margin-bottom: 1rem;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-control {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.78rem;
+  color: #5a6b7d;
+  gap: 0.2rem;
+}
+
+.sort-control select {
+  padding: 0.45rem 0.5rem;
+  border: 1px solid #c5d0dc;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  min-width: 10rem;
+}
+
+.th-sorted {
+  color: #0f3d5e;
+  background: #f0f5fa;
+}
+
+.rank-cell {
+  font-weight: 700;
+  color: #0f6db8;
+  width: 2.5rem;
 }
 
 .search {
@@ -85,6 +119,26 @@ body {
   background: #f0f5fa;
   border-radius: 8px;
   padding: 0.75rem 1rem;
+}
+
+.stat-card-btn {
+  border: 2px solid transparent;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.stat-card-btn:hover {
+  border-color: #9ecae8;
+  box-shadow: 0 2px 8px rgba(15, 61, 94, 0.12);
+}
+
+.stat-card-selected {
+  border-color: #0f6db8;
+  background: #e8f4fc;
 }
 
 .stat-value {
@@ -150,4 +204,55 @@ body {
 
 .error {
   color: #b42318;
+}
+
+.filter-banner {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: #5a6b7d;
+}
+
+.link-btn {
+  margin-left: 0.75rem;
+  background: none;
+  border: none;
+  color: #0f6db8;
+  cursor: pointer;
+  text-decoration: underline;
+  font: inherit;
+  padding: 0;
+}
+
+.table-interactive .table-row-click {
+  cursor: pointer;
+}
+
+.table-interactive .table-row-click:hover {
+  background: #f7fafc;
+}
+
+.table-row-selected {
+  background: #e8f4fc !important;
+}
+
+.tab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.tab {
+  border: 1px solid #c5d0dc;
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.45rem 0.9rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.tab.active {
+  background: #0f3d5e;
+  color: #fff;
+  border-color: #0f3d5e;
 }

@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from customer360.api.deps import get_db
 from customer360.api.schemas import (
     CustomerDetailResponse,
     CustomerProfile,
@@ -18,7 +19,8 @@ from customer360.api.schemas import (
     OverviewResponse,
     PolicyRow,
 )
-from customer360.api.deps import get_db
+from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE, normalize_segment
+from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
 from customer360.paths import default_db_path
 
 router = APIRouter(prefix="/api")
@@ -31,19 +33,19 @@ def health() -> HealthResponse:
 
 @router.get("/overview", response_model=OverviewResponse)
 def overview(conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> OverviewResponse:
-    rows = conn.execute(
-        """
-        SELECT 'Customers (current)' AS domain, COUNT(*) AS row_count
-        FROM DWH_DIM_CUSTOMERS_UNIQUE WHERE CURRENT_IND = 1
-        UNION ALL SELECT 'Policies', COUNT(*) FROM DWH_DIM_ALL_POLICY
-        UNION ALL SELECT 'Foreclosures', COUNT(*) FROM DWH_FCT_FORECLOSURES
-        UNION ALL SELECT 'Policy investment snapshots', COUNT(*) FROM DWH_FCT_POLICY_INVESTMENT_TRACK
-        UNION ALL SELECT 'Market tracks', COUNT(*) FROM DWH_FCT_INVESTMENT_TRACK
-        UNION ALL SELECT 'Insurance status rows', COUNT(*) FROM FCT_MATZAV_BITUACH
-        """
-    ).fetchall()
+    domains: list[DomainCount] = []
+    for label, filter_key, description, count_sql in OVERVIEW_DOMAINS:
+        row_count = conn.execute(count_sql).fetchone()[0]
+        domains.append(
+            DomainCount(
+                domain=label,
+                row_count=row_count,
+                filter_key=filter_key,
+                description=description,
+            )
+        )
     return OverviewResponse(
-        domains=[DomainCount(domain=r["domain"], row_count=r["row_count"]) for r in rows],
+        domains=domains,
         database_path=str(default_db_path()),
     )
 
@@ -52,9 +54,26 @@ def overview(conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> OverviewRe
 def list_customers(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
     q: str | None = Query(None, description="Search name or customer ID"),
+    segment: str | None = Query(
+        None,
+        description="Overview card filter key (e.g. with_policies, with_foreclosures)",
+    ),
+    sort_by: str | None = Query(
+        None,
+        description="Sort key: name, policy_count, or investment_count",
+    ),
+    sort_order: str | None = Query(
+        None,
+        description="Sort direction: asc or desc (defaults: desc for counts, asc for name)",
+    ),
     limit: int = Query(50, ge=1, le=200),
 ) -> list[CustomerSummary]:
-    sql = """
+    seg = normalize_segment(segment)
+    segment_sql = SEGMENT_WHERE[seg]
+    sort_key = normalize_sort_by(sort_by)
+    order_key = normalize_sort_order(sort_order, sort_by=sort_key)
+
+    sql = f"""
         SELECT
             c.CUSTOMER_ID AS customer_id,
             c.CUSTOMER_KEY AS customer_key,
@@ -63,17 +82,28 @@ def list_customers(
             c.EMAIL AS email,
             c.MOBILE_NO AS mobile_no,
             c.LAST_LOGIN AS last_login,
-            COUNT(p.POLICY_NUM) AS policy_count
+            (
+                SELECT COUNT(*)
+                FROM DWH_DIM_ALL_POLICY p
+                WHERE p.CUSTOMER_KEY = c.CUSTOMER_KEY
+            ) AS policy_count,
+            (
+                SELECT COUNT(*)
+                FROM (
+                    SELECT DISTINCT pit.POLICY_NUM, pit.INVESTMENT_TRACK_ID
+                    FROM DWH_FCT_POLICY_INVESTMENT_TRACK pit
+                    WHERE pit.CUSTOMER_ID = c.CUSTOMER_ID
+                )
+            ) AS investment_count
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
-        LEFT JOIN DWH_DIM_ALL_POLICY p ON p.CUSTOMER_KEY = c.CUSTOMER_KEY
-        WHERE c.CURRENT_IND = 1
+        WHERE c.CURRENT_IND = 1 AND ({segment_sql})
     """
     params: list[object] = []
     if q and q.strip():
         sql += " AND (c.CUSTOMER_NAME LIKE ? OR CAST(c.CUSTOMER_ID AS TEXT) LIKE ?)"
         like = f"%{q.strip()}%"
         params.extend([like, like])
-    sql += " GROUP BY c.CUSTOMER_KEY ORDER BY c.CUSTOMER_NAME LIMIT ?"
+    sql += f" ORDER BY {order_clause(sort_key, order_key)} LIMIT ?"
     params.append(limit)
     rows = conn.execute(sql, params).fetchall()
     return [CustomerSummary(**dict(r)) for r in rows]

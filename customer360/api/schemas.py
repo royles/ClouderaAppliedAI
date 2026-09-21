@@ -13,6 +13,8 @@ class HealthResponse(BaseModel):
 class DomainCount(BaseModel):
     domain: str
     row_count: int
+    filter_key: str
+    description: str = ""
 
 
 class OverviewResponse(BaseModel):
@@ -29,6 +31,7 @@ class CustomerSummary(BaseModel):
     mobile_no: str | None = None
     last_login: str | None = None
     policy_count: int = 0
+    investment_count: int = 0
 
 
 class CustomerProfile(BaseModel):

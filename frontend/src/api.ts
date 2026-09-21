@@ -1,4 +1,17 @@
-export type DomainCount = { domain: string; row_count: number };
+export type DomainCount = {
+  domain: string;
+  row_count: number;
+  filter_key: string;
+  description?: string;
+};
+
+export type CustomerSegment =
+  | "customers_all"
+  | "with_policies"
+  | "with_foreclosures"
+  | "with_investments"
+  | "with_insurance_status"
+  | "with_market_products";
 
 export type Overview = {
   domains: DomainCount[];
@@ -14,7 +27,11 @@ export type CustomerSummary = {
   mobile_no?: string | null;
   last_login?: string | null;
   policy_count: number;
+  investment_count: number;
 };
+
+export type CustomerSortBy = "name" | "policy_count" | "investment_count";
+export type SortOrder = "asc" | "desc";
 
 export type CustomerDetail = {
   profile: {
@@ -64,9 +81,29 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export const fetchOverview = () => getJson<Overview>("/api/overview");
-export const fetchCustomers = (q?: string) =>
-  getJson<CustomerSummary[]>(
-    `/api/customers${q?.trim() ? `?q=${encodeURIComponent(q.trim())}` : ""}`,
-  );
+
+export const fetchCustomers = (options?: {
+  q?: string;
+  segment?: CustomerSegment | null;
+  sortBy?: CustomerSortBy;
+  sortOrder?: SortOrder;
+  limit?: number;
+}) => {
+  const params = new URLSearchParams();
+  if (options?.q?.trim()) params.set("q", options.q.trim());
+  if (options?.segment && options.segment !== "customers_all") {
+    params.set("segment", options.segment);
+  }
+  if (options?.sortBy && options.sortBy !== "name") {
+    params.set("sort_by", options.sortBy);
+  } else if (options?.sortBy === "name") {
+    params.set("sort_by", "name");
+  }
+  if (options?.sortOrder) params.set("sort_order", options.sortOrder);
+  if (options?.limit) params.set("limit", String(options.limit));
+  const qs = params.toString();
+  return getJson<CustomerSummary[]>(`/api/customers${qs ? `?${qs}` : ""}`);
+};
+
 export const fetchCustomer = (id: number) =>
   getJson<CustomerDetail>(`/api/customers/${id}`);
