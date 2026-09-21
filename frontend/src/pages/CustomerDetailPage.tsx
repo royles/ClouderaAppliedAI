@@ -206,15 +206,15 @@ export default function CustomerDetailPage() {
           <CustomerValueChart
             className="customer-detail-value-chart"
             fillContainer
-            title="Value & churn risk"
-            subtitle="Actual monthly value from warehouse snapshots; dashed line shows expected value declining to zero at the predicted lapse month from the churn model."
+            title="Customer value"
+            subtitle="Solid lines are warehouse snapshots. Dashed projection: HIGH risk lapses to ₪0 within 3 months; MEDIUM extends recent history; LOW extends full history."
             points={valueHistory}
             loading={valueHistoryLoading}
             churn={
-              detail.churn?.churn_probability != null
+              detail.churn?.churn_risk_tier || detail.churn?.churn_probability != null
                 ? {
-                    probability: detail.churn.churn_probability,
-                    tier: detail.churn.churn_risk_tier,
+                    probability: detail.churn?.churn_probability ?? 0,
+                    tier: detail.churn?.churn_risk_tier,
                   }
                 : null
             }

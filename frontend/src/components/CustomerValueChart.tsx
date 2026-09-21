@@ -155,11 +155,16 @@ export default function CustomerValueChart({
     const displayPoints = forecastBundle.points;
     const historyLen = points.length;
     const totals = displayPoints.map((p) => p.total_value);
+    const includeForecastComponents = forecastBundle.scenario !== "high_lapse";
     const investments = displayPoints.map((p) =>
-      p.kind === "actual" ? p.investment_value : null,
+      p.kind === "actual" || (p.kind === "forecast" && includeForecastComponents)
+        ? p.investment_value
+        : null,
     );
     const coverage = displayPoints.map((p) =>
-      p.kind === "actual" ? p.coverage_value : null,
+      p.kind === "actual" || (p.kind === "forecast" && includeForecastComponents)
+        ? p.coverage_value
+        : null,
     );
     const actualTotals = displayPoints.map((p, i) =>
       i < historyLen ? p.total_value : null,
@@ -171,7 +176,10 @@ export default function CustomerValueChart({
       return null;
     });
     const numericY = totals.filter((v) => v != null) as number[];
-    const minY = forecastBundle.monthsToChurn > 0 ? 0 : Math.min(...numericY) * 0.95;
+    const minY =
+      forecastBundle.scenario === "high_lapse"
+        ? 0
+        : Math.min(...numericY) * 0.95;
     const maxY = Math.max(...numericY) * 1.05;
     const first = points[0].total_value;
     const last = forecastBundle.lastActualValue;
@@ -194,11 +202,14 @@ export default function CustomerValueChart({
       deltaPct,
       lapseIndex,
       monthsToChurn: forecastBundle.monthsToChurn,
+      forecastHorizonMonths: forecastBundle.forecastHorizonMonths,
       predictedLapsePeriod: forecastBundle.predictedLapsePeriod,
       valueAtRisk: forecastBundle.valueAtRisk,
       churnProbability: churn?.probability ?? null,
+      scenario: forecastBundle.scenario,
+      churnTier: churn?.tier ?? null,
     };
-  }, [forecastBundle, points.length, churn?.probability]);
+  }, [forecastBundle, points.length, churn?.probability, churn?.tier]);
 
   if (loading) {
     return (
@@ -231,9 +242,12 @@ export default function CustomerValueChart({
     deltaPct,
     lapseIndex,
     monthsToChurn,
+    forecastHorizonMonths,
     predictedLapsePeriod,
     valueAtRisk,
     churnProbability,
+    scenario,
+    churnTier,
   } = chartMetrics;
   const pointCount = displayPoints.length;
   const xLabelStep =
@@ -242,7 +256,15 @@ export default function CustomerValueChart({
     index === 0 || index === pointCount - 1 || index % xLabelStep === 0;
   const active =
     activeIndex != null ? (displayPoints[activeIndex] as ExtendedValuePoint) : null;
-  const showChurnForecast = monthsToChurn > 0 && churnProbability != null;
+  const showChurnForecast = scenario !== "none";
+  const forecastLegendLabel =
+    scenario === "high_lapse"
+      ? "High risk — lapse to ₪0 (3 mo)"
+      : scenario === "medium_trend"
+        ? "Medium risk — trend from recent history"
+        : scenario === "low_trend"
+          ? "Low risk — trend from full history"
+          : "";
 
   const clearHover = useCallback(() => {
     setActiveIndex(null);
@@ -288,14 +310,20 @@ export default function CustomerValueChart({
           </div>
           {showChurnForecast && (
             <div className="value-chart-churn-kpi">
-              <span className="label">12m lapse risk</span>
-              <strong>{(churnProbability * 100).toFixed(1)}%</strong>
+              <span className="label">
+                Churn tier {churnTier ?? "—"}
+                {churnProbability != null ? ` · ${(churnProbability * 100).toFixed(1)}%` : ""}
+              </span>
+              <strong>
+                {scenario === "high_lapse"
+                  ? "Lapse within 3 months"
+                  : `Projected ${forecastHorizonMonths} months`}
+              </strong>
               <span className="muted small">
-                At-risk {formatTooltipMoney(valueAtRisk)} · Predicted lapse{" "}
-                {predictedLapsePeriod
-                  ? formatPeriodLabel(predictedLapsePeriod)
-                  : "—"}{" "}
-                ({monthsToChurn} mo)
+                At-risk {formatTooltipMoney(valueAtRisk)}
+                {scenario === "high_lapse" && predictedLapsePeriod
+                  ? ` · Lapse ${formatPeriodLabel(predictedLapsePeriod)}`
+                  : ""}
               </span>
             </div>
           )}
@@ -358,7 +386,7 @@ export default function CustomerValueChart({
               fill="none"
             />
           )}
-          {showChurnForecast && lapseIndex >= 0 && (
+          {scenario === "high_lapse" && lapseIndex >= 0 && (
             (() => {
               const stepX =
                 displayPoints.length > 1
@@ -485,9 +513,9 @@ export default function CustomerValueChart({
         <li>
           <span className="swatch swatch-total" /> Total customer value (actual)
         </li>
-        {showChurnForecast && (
+        {showChurnForecast && forecastLegendLabel && (
           <li>
-            <span className="swatch swatch-forecast" /> Lapse scenario (value → ₪0)
+            <span className="swatch swatch-forecast" /> {forecastLegendLabel}
           </li>
         )}
         <li>
