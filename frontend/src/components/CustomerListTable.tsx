@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { CustomerSortBy, CustomerSummary, SortOrder } from "../api";
+import { customerPath } from "../appRoutes";
 import ChurnBadge from "../ChurnBadge";
 import { formatMoneyIls } from "../formatMoney";
 import {
@@ -100,12 +101,12 @@ export default function CustomerListTable({
             <tr key={c.customer_id} className="table-row-click">
               {showRank && <td className="rank-cell">{rankStart + index}</td>}
               <td>
-                <Link to={`/customers/${c.customer_id}`} state={{ dashboardReturn }}>
+                <Link to={customerPath(c.customer_id)} state={{ businessReturn: dashboardReturn }}>
                   {displayCustomerName(c.customer_name)}
                 </Link>
               </td>
               <td>
-                <Link to={`/customers/${c.customer_id}`} state={{ dashboardReturn }}>
+                <Link to={customerPath(c.customer_id)} state={{ businessReturn: dashboardReturn }}>
                   {displayCustomerId(c.customer_id)}
                 </Link>
               </td>

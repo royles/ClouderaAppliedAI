@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { CustomerSummary } from "../api";
+import { customerPath } from "../appRoutes";
 import ChurnBadge from "../ChurnBadge";
 import { formatMoneyIls } from "../formatMoney";
 import {
@@ -35,8 +36,8 @@ export default function CustomerCardGrid({
         return (
           <li key={c.customer_id}>
             <Link
-              to={`/customers/${c.customer_id}`}
-              state={{ dashboardReturn }}
+              to={customerPath(c.customer_id)}
+              state={{ businessReturn: dashboardReturn }}
               className="customer-card"
             >
               <div className="customer-card-top">

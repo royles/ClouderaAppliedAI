@@ -12,6 +12,7 @@ import {
   PortfolioAnalytics,
   SortOrder,
 } from "../api";
+import { BUSINESS_BASE } from "../appRoutes";
 import Breadcrumbs from "../components/Breadcrumbs";
 import CustomerCardGrid from "../components/CustomerCardGrid";
 import CustomerListTable from "../components/CustomerListTable";
@@ -107,7 +108,7 @@ export default function DashboardPage() {
   }, [segment, overview]);
 
   useEffect(() => {
-    if (location.pathname !== "/") return;
+    if (location.pathname !== BUSINESS_BASE) return;
 
     let cancelled = false;
     (async () => {
@@ -134,7 +135,7 @@ export default function DashboardPage() {
   }, [location.pathname, location.key]);
 
   useEffect(() => {
-    if (location.pathname !== "/" || overviewLoading) return;
+    if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
 
     const requestId = ++customersRequestRef.current;
     let cancelled = false;
@@ -204,7 +205,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (location.pathname !== "/" || overviewLoading) return;
+    if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
 
     void loadPortfolioAnalytics(segment);
 
@@ -284,7 +285,7 @@ export default function DashboardPage() {
   if (overviewLoading && !overview) {
     return (
       <>
-        <Breadcrumbs items={[{ label: "Dashboard" }]} />
+        <Breadcrumbs items={[{ label: "The business" }]} />
         <section className="panel">
           <div className="skeleton skeleton-title" />
           <div className="stat-grid">
@@ -300,7 +301,7 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "Dashboard" }]} />
+      <Breadcrumbs items={[{ label: "The business" }]} />
       <section className="panel">
         <div className="panel-head">
           <div>

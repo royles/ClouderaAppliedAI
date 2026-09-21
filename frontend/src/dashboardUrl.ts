@@ -1,4 +1,5 @@
 import { CustomerSegment, CustomerSortBy, SortOrder } from "./api";
+import { BUSINESS_BASE } from "./appRoutes";
 
 const VALID_SEGMENTS = new Set<string>([
   "customers_all",
@@ -83,5 +84,5 @@ export function dashboardSearchString(state: Partial<DashboardUrlState>): string
 }
 
 export function dashboardPath(state: Partial<DashboardUrlState> = {}): string {
-  return `/${dashboardSearchString(state)}`;
+  return `${BUSINESS_BASE}${dashboardSearchString(state)}`;
 }

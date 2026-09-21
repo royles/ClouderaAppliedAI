@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
+import { BUSINESS_BASE, CUSTOMER_BASE } from "../appRoutes";
 import Breadcrumbs from "../components/Breadcrumbs";
+import { rememberRecentCustomer } from "./CustomerHubPage";
 import {
   CustomerDetail,
   fetchCustomer,
@@ -50,10 +52,10 @@ export default function CustomerDetailPage() {
   const { customerId } = useParams();
   const location = useLocation();
   const id = Number(customerId);
-  const dashboardBack =
-    typeof location.state?.dashboardReturn === "string"
-      ? location.state.dashboardReturn
-      : "/";
+  const businessBack =
+    typeof location.state?.businessReturn === "string"
+      ? location.state.businessReturn
+      : BUSINESS_BASE;
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("policies");
@@ -69,8 +71,12 @@ export default function CustomerDetailPage() {
     let cancelled = false;
     (async () => {
       try {
-        setDetail(await fetchCustomer(id));
-        setError(null);
+        const data = await fetchCustomer(id);
+        if (!cancelled) {
+          setDetail(data);
+          rememberRecentCustomer(id);
+          setError(null);
+        }
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Customer not found");
@@ -111,7 +117,7 @@ export default function CustomerDetailPage() {
     return (
       <section className="panel">
         <p className="error">{error}</p>
-        <Link to={dashboardBack}>← Back to dashboard</Link>
+        <Link to={businessBack}>← Back to the business</Link>
       </section>
     );
   }
@@ -120,8 +126,9 @@ export default function CustomerDetailPage() {
       <>
         <Breadcrumbs
           items={[
-            { label: "Dashboard", to: dashboardBack },
-            { label: "Customer" },
+            { label: "The business", to: businessBack },
+            { label: "The customer", to: CUSTOMER_BASE },
+            { label: "Loading…" },
           ]}
         />
         <section className="panel">
@@ -158,10 +165,16 @@ export default function CustomerDetailPage() {
     <>
       <Breadcrumbs
         items={[
-          { label: "Dashboard", to: dashboardBack },
+          { label: "The business", to: businessBack },
+          { label: "The customer", to: CUSTOMER_BASE },
           { label: displayCustomerName(profile.customer_name) },
         ]}
       />
+      <p className="muted small customer-area-links">
+        <Link to={businessBack}>Portfolio in the business</Link>
+        {" · "}
+        <Link to={CUSTOMER_BASE}>Customer home</Link>
+      </p>
       <section className="panel">
         <h1>{displayCustomerName(profile.customer_name)}</h1>
         <div className="kpi-strip">

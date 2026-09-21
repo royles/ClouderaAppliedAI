@@ -25,6 +25,140 @@ body,
   width: 100%;
 }
 
+.app-body {
+  display: flex;
+  flex: 1;
+  align-items: stretch;
+  min-height: 0;
+}
+
+.app-side-nav {
+  flex: 0 0 min(15rem, 28vw);
+  padding: 1.25rem 0.85rem 1.25rem 1.25rem;
+  background: #e8eef4;
+  border-right: 1px solid #d0dbe6;
+}
+
+.app-side-nav-heading {
+  margin: 0 0 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #5a6b7d;
+}
+
+.app-side-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.app-side-tab {
+  display: block;
+  padding: 0.75rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  text-decoration: none;
+  color: inherit;
+  background: transparent;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.app-side-tab:hover {
+  background: rgba(255, 255, 255, 0.55);
+  border-color: #c5d0dc;
+}
+
+.app-side-tab.is-active {
+  background: #fff;
+  border-color: #0f6db8;
+  box-shadow: 0 1px 4px rgba(15, 61, 94, 0.1);
+}
+
+.app-side-tab-title {
+  display: block;
+  font-weight: 600;
+  color: #0f3d5e;
+  margin-bottom: 0.15rem;
+}
+
+.app-side-tab.is-active .app-side-tab-title {
+  color: #0f6db8;
+}
+
+.app-side-tab-desc {
+  display: block;
+  line-height: 1.35;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.customer-hub-search {
+  margin: 0.75rem 0 0.5rem;
+}
+
+.customer-hub-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.customer-hub-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #e6ebf0;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  text-decoration: none;
+  color: inherit;
+  background: #f7fafc;
+}
+
+.customer-hub-row:hover {
+  border-color: #9ecae8;
+  background: #eef6fc;
+}
+
+.customer-hub-name {
+  font-weight: 600;
+  color: #0f3d5e;
+}
+
+.customer-area-links {
+  margin: -0.5rem 0 1rem;
+}
+
+@media (max-width: 800px) {
+  .app-body {
+    flex-direction: column;
+  }
+
+  .app-side-nav {
+    flex: none;
+    border-right: none;
+    border-bottom: 1px solid #d0dbe6;
+    padding: 0.75rem 1rem;
+  }
+
+  .app-side-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .app-side-tab {
+    flex: 1 1 12rem;
+  }
+}
+
 .header {
   display: flex;
   align-items: center;
