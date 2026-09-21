@@ -57,10 +57,18 @@ class ChurnForecastPoint(BaseModel):
     implied_retention_rate: float | None = None
 
 
+class InvestmentReturnPoint(BaseModel):
+    period: str
+    investment_balance: float = 0
+    period_return_pct: float | None = None
+    cumulative_return_pct: float | None = None
+
+
 class PortfolioAnalyticsResponse(BaseModel):
     segment: str
     kpis: PortfolioKpis
     value_points: list[ValueHistoryPoint] = Field(default_factory=list)
+    investment_returns: list[InvestmentReturnPoint] = Field(default_factory=list)
     churn_forecast: list[ChurnForecastPoint] = Field(default_factory=list)
     methodology_note: str = ""
 

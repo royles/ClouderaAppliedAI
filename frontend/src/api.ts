@@ -172,10 +172,18 @@ export type ChurnForecastPoint = {
   implied_retention_rate?: number | null;
 };
 
+export type InvestmentReturnPoint = {
+  period: string;
+  investment_balance: number;
+  period_return_pct?: number | null;
+  cumulative_return_pct?: number | null;
+};
+
 export type PortfolioAnalytics = {
   segment: string;
   kpis: PortfolioKpis;
   value_points: ValueHistoryPoint[];
+  investment_returns: InvestmentReturnPoint[];
   churn_forecast: ChurnForecastPoint[];
   methodology_note: string;
 };

@@ -1,6 +1,8 @@
 import { PortfolioAnalytics } from "../api";
 import { formatMoneyIls } from "../formatMoney";
-import PortfolioBookChart from "./PortfolioBookChart";
+import BookValueChart from "./charts/BookValueChart";
+import ChurnHorizonChart from "./charts/ChurnHorizonChart";
+import InvestmentReturnsChart from "./charts/InvestmentReturnsChart";
 
 type Props = {
   data: PortfolioAnalytics | null;
@@ -21,6 +23,7 @@ export default function PortfolioAnalyticsSection({
   cohortLabel,
 }: Props) {
   const kpis = data?.kpis;
+  const chartLoading = loading && !data;
 
   return (
     <div className="portfolio-analytics in-panel">
@@ -91,11 +94,19 @@ export default function PortfolioAnalyticsSection({
         </div>
       </div>
 
-      <PortfolioBookChart
-        series={data?.churn_forecast ?? []}
-        loading={loading && !data}
-        refreshing={refreshing}
-      />
+      <div
+        className={`portfolio-charts-grid${refreshing ? " portfolio-charts-refreshing" : ""}`}
+      >
+        <BookValueChart history={data?.value_points ?? []} loading={chartLoading} />
+        <InvestmentReturnsChart
+          series={data?.investment_returns ?? []}
+          loading={chartLoading}
+        />
+        <ChurnHorizonChart series={data?.churn_forecast ?? []} loading={chartLoading} />
+      </div>
+      {refreshing && (
+        <p className="value-chart-refresh-label muted small">Updating analytics…</p>
+      )}
 
       {data?.methodology_note && (
         <p className="muted small portfolio-methodology">{data.methodology_note}</p>

@@ -158,6 +158,32 @@ def _build_churn_forecast(
     return series
 
 
+def _build_investment_returns(value_points: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    prev: float | None = None
+    base: float | None = None
+    for pt in value_points:
+        inv = float(pt["investment_value"])
+        if base is None and inv > 0:
+            base = inv
+        period_ret = None
+        if prev is not None and prev > 0:
+            period_ret = round(100.0 * (inv - prev) / prev, 2)
+        cum = None
+        if base and base > 0:
+            cum = round(100.0 * (inv - base) / base, 2)
+        out.append(
+            {
+                "period": pt["period"],
+                "investment_balance": round(inv, 2),
+                "period_return_pct": period_ret,
+                "cumulative_return_pct": cum,
+            }
+        )
+        prev = inv
+    return out
+
+
 def fetch_portfolio_analytics(
     conn: sqlite3.Connection,
     *,
@@ -180,11 +206,13 @@ def fetch_portfolio_analytics(
         weighted_churn=kpis.get("weighted_churn_probability"),
         annual_retention=kpis.get("annual_retention_rate_forecast"),
     )
+    investment_returns = _build_investment_returns(value_points)
 
     return {
         "segment": seg,
         "kpis": kpis,
         "value_points": value_points,
+        "investment_returns": investment_returns,
         "churn_forecast": churn_forecast,
         "methodology_note": METHODOLOGY_NOTE,
     }

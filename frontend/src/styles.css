@@ -899,12 +899,60 @@ select.control {
   max-width: 52rem;
 }
 
-.portfolio-chart-wrap {
-  width: 100%;
+.portfolio-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: stretch;
 }
 
-.portfolio-chart-svg {
-  max-height: 12rem;
+@media (max-width: 1100px) {
+  .portfolio-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.portfolio-charts-refreshing {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.analytics-chart-panel {
+  background: #f7fafc;
+  border: 1px solid #e6ebf0;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem 0.65rem;
+  min-height: 100%;
+}
+
+.analytics-chart-title {
+  margin: 0 0 0.2rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0f3d5e;
+}
+
+.analytics-chart-sub {
+  margin: 0 0 0.45rem;
+  line-height: 1.35;
+}
+
+.analytics-chart-svg {
+  max-height: 9.5rem;
+}
+
+.chart-tooltip-compact {
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.chart-legend-compact {
+  font-size: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.chart-line-dashed {
+  stroke-dasharray: 5 3;
 }
 
 .chart-line-risk {
