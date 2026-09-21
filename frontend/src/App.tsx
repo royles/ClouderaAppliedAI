@@ -6,11 +6,14 @@ import {
   isAdminArea,
   isBusinessArea,
   isCustomerArea,
+  isEngagementArea,
+  ENGAGEMENT_BASE,
 } from "./appRoutes";
 import AdminPage from "./pages/AdminPage";
 import DashboardPage from "./pages/DashboardPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import CustomerHubPage from "./pages/CustomerHubPage";
+import EngagementHubPage from "./pages/EngagementHubPage";
 
 function LegacyRootRedirect() {
   const location = useLocation();
@@ -31,6 +34,7 @@ function AppSideNav() {
   const location = useLocation();
   const businessActive = isBusinessArea(location.pathname);
   const customerActive = isCustomerArea(location.pathname);
+  const engagementActive = isEngagementArea(location.pathname);
   const adminActive = isAdminArea(location.pathname);
 
   return (
@@ -56,6 +60,16 @@ function AppSideNav() {
             <span className="app-side-tab-title">The customer</span>
             <span className="app-side-tab-desc muted small">
               360 profile, insights, and outreach
+            </span>
+          </Link>
+          <Link
+            to={ENGAGEMENT_BASE}
+            className={`app-side-tab${engagementActive ? " is-active" : ""}`}
+            aria-current={engagementActive ? "page" : undefined}
+          >
+            <span className="app-side-tab-title">Engagement</span>
+            <span className="app-side-tab-desc muted small">
+              Touchpoints, influence, and next best action
             </span>
           </Link>
         </nav>
@@ -96,6 +110,7 @@ export default function App() {
             <Route path={BUSINESS_BASE} element={<DashboardPage />} />
             <Route path={CUSTOMER_BASE} element={<CustomerHubPage />} />
             <Route path={`${CUSTOMER_BASE}/:customerId`} element={<CustomerDetailPage />} />
+            <Route path={ENGAGEMENT_BASE} element={<EngagementHubPage />} />
             <Route path={ADMIN_BASE} element={<AdminPage />} />
             <Route path="/customers/:customerId" element={<LegacyCustomerRedirect />} />
             <Route path="*" element={<Navigate to={BUSINESS_BASE} replace />} />

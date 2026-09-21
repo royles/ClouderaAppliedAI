@@ -142,6 +142,53 @@ class CustomerListResponse(BaseModel):
     truncated: bool = False
 
 
+class EngagementBookSummary(BaseModel):
+    customers_with_touchpoints_90d: int = 0
+    total_touchpoints_90d: int = 0
+    unresolved_agent_questions: int = 0
+    digital_touchpoints_90d: int = 0
+    review_events_90d: int = 0
+    avg_days_since_last_touch: float | None = None
+
+
+class EngagementTouchpoints(BaseModel):
+    events_last_90d: int = 0
+    reviews_90d: int = 0
+    web_searches_90d: int = 0
+    unresolved_agent_questions: int = 0
+    days_since_last_touch: float = 0
+    last_event_ts: str | None = None
+
+
+class EngagementRecommendedAction(BaseModel):
+    action_code: str
+    title: str
+    detail: str
+    channel_hint: str = "phone"
+
+
+class EngagementOpportunity(BaseModel):
+    customer_id: int
+    customer_key: str
+    customer_name: str
+    city_name: str | None = None
+    customer_value: float = 0
+    churn_probability: float | None = None
+    churn_risk_tier: str | None = None
+    influence_score: float = 0
+    touchpoints: EngagementTouchpoints
+    recommended_action: EngagementRecommendedAction
+
+
+class EngagementHubResponse(BaseModel):
+    segment: str = "customers_all"
+    book_summary: EngagementBookSummary
+    opportunities: list[EngagementOpportunity] = Field(default_factory=list)
+    total: int = 0
+    limit: int = 50
+    offset: int = 0
+
+
 class CustomerProfile(BaseModel):
     customer_id: int
     customer_key: str

@@ -353,6 +353,68 @@ export const fetchKpiBenchmarks = () =>
 export const updateKpiBenchmarks = (benchmarks: Record<string, unknown>[]) =>
   putJson<KpiBenchmarkList>("/api/admin/kpi-benchmarks", { benchmarks });
 
+export type EngagementBookSummary = {
+  customers_with_touchpoints_90d: number;
+  total_touchpoints_90d: number;
+  unresolved_agent_questions: number;
+  digital_touchpoints_90d: number;
+  review_events_90d: number;
+  avg_days_since_last_touch?: number | null;
+};
+
+export type EngagementTouchpoints = {
+  events_last_90d: number;
+  reviews_90d: number;
+  web_searches_90d: number;
+  unresolved_agent_questions: number;
+  days_since_last_touch: number;
+  last_event_ts?: string | null;
+};
+
+export type EngagementRecommendedAction = {
+  action_code: string;
+  title: string;
+  detail: string;
+  channel_hint: string;
+};
+
+export type EngagementOpportunity = {
+  customer_id: number;
+  customer_key: string;
+  customer_name: string;
+  city_name?: string | null;
+  customer_value: number;
+  churn_probability?: number | null;
+  churn_risk_tier?: string | null;
+  influence_score: number;
+  touchpoints: EngagementTouchpoints;
+  recommended_action: EngagementRecommendedAction;
+};
+
+export type EngagementHub = {
+  segment: string;
+  book_summary: EngagementBookSummary;
+  opportunities: EngagementOpportunity[];
+  total: number;
+  limit: number;
+  offset: number;
+};
+
+export const fetchEngagementHub = (opts?: {
+  segment?: CustomerSegment | null;
+  limit?: number;
+  offset?: number;
+}) => {
+  const params = new URLSearchParams();
+  if (opts?.segment && opts.segment !== "customers_all") {
+    params.set("segment", opts.segment);
+  }
+  if (opts?.limit != null) params.set("limit", String(opts.limit));
+  if (opts?.offset != null) params.set("offset", String(opts.offset));
+  const qs = params.toString();
+  return getJson<EngagementHub>(`/api/engagement/hub${qs ? `?${qs}` : ""}`);
+};
+
 export const fetchPortfolioAnalytics = (segment?: CustomerSegment | null) => {
   const params = new URLSearchParams();
   if (segment && segment !== "customers_all") {

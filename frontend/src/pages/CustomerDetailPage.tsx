@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
-import { CUSTOMER_BASE } from "../appRoutes";
+import { CUSTOMER_BASE, ENGAGEMENT_BASE } from "../appRoutes";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { rememberRecentCustomer } from "../recentCustomers";
 import {
@@ -53,20 +53,50 @@ export default function CustomerDetailPage() {
     typeof location.state?.businessReturn === "string"
       ? location.state.businessReturn
       : CUSTOMER_BASE;
-  const backFromCustomerList = listBack.startsWith(CUSTOMER_BASE);
-  const hubBackLabel = backFromCustomerList ? "The customer" : "The business";
-  const hubBackLinkText = backFromCustomerList
-    ? "← Back to customers"
-    : "← Back to the business";
-  const secondaryHubLinkText = backFromCustomerList
-    ? "Back to customer list"
-    : "Portfolio in the business";
+  const backFromCustomerList =
+    listBack.startsWith(CUSTOMER_BASE) || listBack.startsWith(ENGAGEMENT_BASE);
+  const hubBackLabel = listBack.startsWith(ENGAGEMENT_BASE)
+    ? "Engagement"
+    : backFromCustomerList
+      ? "The customer"
+      : "The business";
+  const hubBackLinkText = listBack.startsWith(ENGAGEMENT_BASE)
+    ? "← Back to engagement"
+    : backFromCustomerList
+      ? "← Back to customers"
+      : "← Back to the business";
+  const secondaryHubLinkText = listBack.startsWith(ENGAGEMENT_BASE)
+    ? "Back to engagement hub"
+    : backFromCustomerList
+      ? "Back to customer list"
+      : "Portfolio in the business";
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("policies");
+  const navState = location.state as {
+    businessReturn?: string;
+    initialTab?: Tab;
+    scrollToInsights?: boolean;
+    engagementAction?: string;
+  } | null;
+  const [tab, setTab] = useState<Tab>(navState?.initialTab ?? "policies");
+  const [engagementActionHint] = useState<string | null>(
+    navState?.engagementAction ?? null,
+  );
   const [activePolicy, setActivePolicy] = useState<number | null>(null);
   const [valueHistory, setValueHistory] = useState<ValueHistoryPoint[]>([]);
   const [valueHistoryLoading, setValueHistoryLoading] = useState(true);
+
+  useEffect(() => {
+    if (navState?.initialTab) {
+      setTab(navState.initialTab);
+    }
+  }, [location.key, navState?.initialTab]);
+
+  useEffect(() => {
+    if (!navState?.scrollToInsights) return;
+    const node = document.getElementById("customer-insights-anchor");
+    node?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [detail, navState?.scrollToInsights]);
 
   useEffect(() => {
     if (!Number.isFinite(id)) {
@@ -265,10 +295,17 @@ export default function CustomerDetailPage() {
         </div>
       </section>
 
-      <CustomerInsightsPanel
-        customerId={profile.customer_id}
-        churnTier={detail.churn?.churn_risk_tier}
-      />
+      {engagementActionHint && (
+        <p className="engagement-action-banner muted small">
+          Suggested from Engagement hub: <strong>{engagementActionHint}</strong>
+        </p>
+      )}
+      <div id="customer-insights-anchor">
+        <CustomerInsightsPanel
+          customerId={profile.customer_id}
+          churnTier={detail.churn?.churn_risk_tier}
+        />
+      </div>
 
       <div className="tab-bar">
         <button

@@ -39,7 +39,9 @@ from customer360.api.schemas import (
     KpiBenchmarkAdmin,
     KpiBenchmarkListResponse,
     KpiBenchmarkBulkUpdateRequest,
+    EngagementHubResponse,
 )
+from customer360.api.engagement_hub import fetch_engagement_opportunities
 from customer360.api.policy_counts import policy_totals_for_segment
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
 from customer360.api.portfolio_objectives import fetch_objective_trends
@@ -308,6 +310,20 @@ def overview(conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> OverviewRe
         domains=domains,
         database_path=str(default_db_path()),
     )
+
+
+@router.get("/engagement/hub", response_model=EngagementHubResponse)
+def engagement_hub(
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+    segment: str | None = Query(
+        None,
+        description="Optional overview segment filter (same keys as customer list)",
+    ),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> EngagementHubResponse:
+    data = fetch_engagement_opportunities(conn, segment=segment, limit=limit, offset=offset)
+    return EngagementHubResponse(**data)
 
 
 _POLICY_COUNT_SELECT = """
