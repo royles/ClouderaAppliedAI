@@ -25,11 +25,13 @@ from customer360.api.schemas import (
     InteractionSummary,
     InvestmentSnapshot,
     OverviewResponse,
+    PortfolioAnalyticsResponse,
     PolicyRow,
     SimulateSendRequest,
     SimulateSendResponse,
     ValueHistoryResponse,
 )
+from customer360.api.portfolio_analytics import fetch_portfolio_analytics
 from customer360.api.value_history import CUSTOMER_VALUE_SQL, fetch_value_history
 from customer360.actions.draft import build_action_draft, classify_recommendation, simulate_send
 from customer360.interactions.summary import load_interaction_bundle
@@ -84,6 +86,19 @@ def bedrock_status() -> BedrockStatusResponse:
         model_id=settings.model_id,
         region=settings.bedrock_region,
     )
+
+
+@router.get("/portfolio-analytics", response_model=PortfolioAnalyticsResponse)
+def portfolio_analytics(
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+    segment: str | None = Query(
+        None,
+        description="Same segment keys as customer list / overview cards",
+    ),
+) -> PortfolioAnalyticsResponse:
+    seg = normalize_segment(segment)
+    data = fetch_portfolio_analytics(conn, segment=seg)
+    return PortfolioAnalyticsResponse(**data)
 
 
 @router.get("/value-history", response_model=ValueHistoryResponse)

@@ -150,6 +150,45 @@ export const fetchBedrockStatus = () => getJson<BedrockStatus>("/api/bedrock/sta
 
 export const fetchOverview = () => getJson<Overview>("/api/overview");
 
+export type PortfolioKpis = {
+  active_customers: number;
+  total_book_value: number;
+  avg_customer_value: number;
+  avg_policies_per_customer: number;
+  weighted_churn_probability?: number | null;
+  annual_retention_rate_forecast?: number | null;
+  value_at_risk_12m: number;
+  high_risk_customers: number;
+  high_risk_book_pct: number;
+  book_growth_pct?: number | null;
+};
+
+export type ChurnForecastPoint = {
+  period: string;
+  kind: string;
+  total_book_value: number;
+  value_at_risk: number;
+  expected_retained_value: number;
+  implied_retention_rate?: number | null;
+};
+
+export type PortfolioAnalytics = {
+  segment: string;
+  kpis: PortfolioKpis;
+  value_points: ValueHistoryPoint[];
+  churn_forecast: ChurnForecastPoint[];
+  methodology_note: string;
+};
+
+export const fetchPortfolioAnalytics = (segment?: CustomerSegment | null) => {
+  const params = new URLSearchParams();
+  if (segment && segment !== "customers_all") {
+    params.set("segment", segment);
+  }
+  const qs = params.toString();
+  return getJson<PortfolioAnalytics>(`/api/portfolio-analytics${qs ? `?${qs}` : ""}`);
+};
+
 export const fetchPortfolioValueHistory = (segment?: CustomerSegment | null) => {
   const params = new URLSearchParams();
   if (segment && segment !== "customers_all") {

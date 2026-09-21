@@ -861,6 +861,97 @@ select.control {
   background: #8a96a3;
 }
 
+.portfolio-analytics.in-panel {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e6ebf0;
+}
+
+.portfolio-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.portfolio-kpi {
+  background: #f7fafc;
+  border: 1px solid #e6ebf0;
+  border-radius: 8px;
+  padding: 0.55rem 0.75rem;
+}
+
+.portfolio-kpi strong {
+  display: block;
+  font-size: 1.05rem;
+  color: #0f3d5e;
+  margin-top: 0.15rem;
+}
+
+.portfolio-kpi .kpi-sub {
+  display: block;
+  margin-top: 0.15rem;
+}
+
+.portfolio-methodology {
+  margin: 0.65rem 0 0;
+  line-height: 1.45;
+  max-width: 52rem;
+}
+
+.portfolio-chart-wrap {
+  width: 100%;
+}
+
+.portfolio-chart-svg {
+  max-height: 12rem;
+}
+
+.chart-line-risk {
+  stroke: #c47a0a;
+  stroke-width: 1.35;
+  stroke-dasharray: 5 3;
+}
+
+.chart-line-retained {
+  stroke: #1e6b34;
+  stroke-width: 1.15;
+  opacity: 0.85;
+}
+
+.chart-line-forecast {
+  stroke: #0f3d5e;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  opacity: 0.75;
+}
+
+.chart-forecast-divider {
+  stroke: #9aa8b8;
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+  opacity: 0.6;
+}
+
+.chart-x-forecast {
+  fill: #5a6b7d;
+  font-style: italic;
+}
+
+.swatch-forecast {
+  background: #0f3d5e;
+  opacity: 0.65;
+  stroke-dasharray: 2 2;
+}
+
+.swatch-risk {
+  background: #c47a0a;
+}
+
+.swatch-retained {
+  background: #1e6b34;
+}
+
 .breadcrumbs ol {
   display: flex;
   flex-wrap: wrap;

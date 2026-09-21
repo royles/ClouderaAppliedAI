@@ -35,6 +35,36 @@ class ValueHistoryResponse(BaseModel):
     customer_id: int | None = None
 
 
+class PortfolioKpis(BaseModel):
+    active_customers: int = 0
+    total_book_value: float = 0
+    avg_customer_value: float = 0
+    avg_policies_per_customer: float = 0
+    weighted_churn_probability: float | None = None
+    annual_retention_rate_forecast: float | None = None
+    value_at_risk_12m: float = 0
+    high_risk_customers: int = 0
+    high_risk_book_pct: float = 0
+    book_growth_pct: float | None = None
+
+
+class ChurnForecastPoint(BaseModel):
+    period: str
+    kind: str = "actual"
+    total_book_value: float = 0
+    value_at_risk: float = 0
+    expected_retained_value: float = 0
+    implied_retention_rate: float | None = None
+
+
+class PortfolioAnalyticsResponse(BaseModel):
+    segment: str
+    kpis: PortfolioKpis
+    value_points: list[ValueHistoryPoint] = Field(default_factory=list)
+    churn_forecast: list[ChurnForecastPoint] = Field(default_factory=list)
+    methodology_note: str = ""
+
+
 class CustomerSummary(BaseModel):
     customer_id: int
     customer_key: str

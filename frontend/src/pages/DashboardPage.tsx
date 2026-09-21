@@ -7,15 +7,15 @@ import {
   DomainCount,
   fetchCustomers,
   fetchOverview,
-  fetchPortfolioValueHistory,
+  fetchPortfolioAnalytics,
   Overview,
+  PortfolioAnalytics,
   SortOrder,
-  ValueHistoryPoint,
 } from "../api";
 import Breadcrumbs from "../components/Breadcrumbs";
 import CustomerCardGrid from "../components/CustomerCardGrid";
 import CustomerListTable from "../components/CustomerListTable";
-import CustomerValueChart from "../components/CustomerValueChart";
+import PortfolioAnalyticsSection from "../components/PortfolioAnalyticsSection";
 import {
   CustomerListView,
   DASHBOARD_PAGE_SIZE,
@@ -68,12 +68,14 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
-  const [valueHistory, setValueHistory] = useState<ValueHistoryPoint[]>([]);
-  const [valueHistoryLoading, setValueHistoryLoading] = useState(true);
+  const [portfolioAnalytics, setPortfolioAnalytics] = useState<PortfolioAnalytics | null>(
+    null,
+  );
+  const [portfolioLoading, setPortfolioLoading] = useState(true);
   const [overviewUpdatedAt, setOverviewUpdatedAt] = useState<Date | null>(null);
   const customersRequestRef = useRef(0);
-  const valueHistoryRequestRef = useRef(0);
-  const valueHistorySegmentRef = useRef<CustomerSegment | null>(null);
+  const portfolioRequestRef = useRef(0);
+  const portfolioSegmentRef = useRef<CustomerSegment | null>(null);
 
   const dashboardReturn = location.pathname + location.search;
 
@@ -179,24 +181,24 @@ export default function DashboardPage() {
     overviewLoading,
   ]);
 
-  const loadValueHistory = useCallback(async (seg: CustomerSegment) => {
-    const requestId = ++valueHistoryRequestRef.current;
-    if (valueHistorySegmentRef.current !== seg) {
-      setValueHistory([]);
-      valueHistorySegmentRef.current = seg;
+  const loadPortfolioAnalytics = useCallback(async (seg: CustomerSegment) => {
+    const requestId = ++portfolioRequestRef.current;
+    if (portfolioSegmentRef.current !== seg) {
+      setPortfolioAnalytics(null);
+      portfolioSegmentRef.current = seg;
     }
-    setValueHistoryLoading(true);
+    setPortfolioLoading(true);
     try {
-      const data = await fetchPortfolioValueHistory(seg);
-      if (requestId !== valueHistoryRequestRef.current) return;
-      setValueHistory(data.points ?? []);
+      const data = await fetchPortfolioAnalytics(seg);
+      if (requestId !== portfolioRequestRef.current) return;
+      setPortfolioAnalytics(data);
     } catch {
-      if (requestId === valueHistoryRequestRef.current) {
-        setValueHistory([]);
+      if (requestId === portfolioRequestRef.current) {
+        setPortfolioAnalytics(null);
       }
     } finally {
-      if (requestId === valueHistoryRequestRef.current) {
-        setValueHistoryLoading(false);
+      if (requestId === portfolioRequestRef.current) {
+        setPortfolioLoading(false);
       }
     }
   }, []);
@@ -204,14 +206,14 @@ export default function DashboardPage() {
   useEffect(() => {
     if (location.pathname !== "/" || overviewLoading) return;
 
-    void loadValueHistory(segment);
+    void loadPortfolioAnalytics(segment);
 
     return () => {
-      valueHistoryRequestRef.current += 1;
+      portfolioRequestRef.current += 1;
     };
   }, [
     segment,
-    loadValueHistory,
+    loadPortfolioAnalytics,
     location.pathname,
     location.key,
     overviewLoading,
@@ -304,8 +306,8 @@ export default function DashboardPage() {
           <div>
             <h1>Warehouse overview</h1>
             <p className="muted small">
-              Click a card to filter the customer table and value chart. Click again to
-              clear.
+              Click a card to filter the customer list and portfolio analytics. Click
+              again to clear.
             </p>
           </div>
           {overviewUpdatedAt && (
@@ -338,16 +340,11 @@ export default function DashboardPage() {
             })}
           </div>
         )}
-        <CustomerValueChart
-          title="Accumulated customer value over time"
-          subtitle={
-            activeDomain
-              ? `Filtered cohort: ${activeDomain.domain} — investment tracks plus coverage/savings snapshots (ILS).`
-              : "Book-wide monthly history — investment accumulation and insurance status values (ILS)."
-          }
-          points={valueHistory}
-          loading={valueHistoryLoading && valueHistory.length === 0}
-          refreshing={valueHistoryLoading && valueHistory.length > 0}
+        <PortfolioAnalyticsSection
+          data={portfolioAnalytics}
+          loading={portfolioLoading && !portfolioAnalytics}
+          refreshing={portfolioLoading && portfolioAnalytics != null}
+          cohortLabel={activeDomain?.domain ?? null}
         />
       </section>
 
