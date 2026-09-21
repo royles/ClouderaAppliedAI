@@ -510,6 +510,9 @@ def init_database(
         print("Precomputing customer list metrics and overview counts…", flush=True)
         refresh_customer_metrics(conn)
         refresh_overview_counts(conn)
+        from customer360.api.warehouse_admin import refresh_warehouse_manifest
+
+        refresh_warehouse_manifest(conn, source_job="seed")
 
         counts = conn.execute(
             """

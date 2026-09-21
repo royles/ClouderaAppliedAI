@@ -150,6 +150,49 @@ export const fetchBedrockStatus = () => getJson<BedrockStatus>("/api/bedrock/sta
 
 export const fetchOverview = () => getJson<Overview>("/api/overview");
 
+export type WarehouseTableAdmin = {
+  table_name: string;
+  layer: string;
+  domain: string;
+  role: string;
+  description: string;
+  load_job: string;
+  row_count: number;
+  table_exists: boolean;
+  last_loaded_at: string | null;
+  last_source_job: string | null;
+};
+
+export type WarehouseRelationship = {
+  from_table: string;
+  from_column: string;
+  to_table: string;
+  to_column: string;
+  cardinality: string;
+  label: string;
+};
+
+export type DataQualityCheck = {
+  id: string;
+  label: string;
+  status: string;
+  summary: string;
+  detail?: string | null;
+  metric_value?: number | null;
+};
+
+export type WarehouseAdmin = {
+  database_path: string;
+  database_size_bytes: number;
+  warehouse_last_loaded_at: string | null;
+  tables: WarehouseTableAdmin[];
+  relationships: WarehouseRelationship[];
+  relationship_diagram: string;
+  quality_checks: DataQualityCheck[];
+};
+
+export const fetchWarehouseAdmin = () => getJson<WarehouseAdmin>("/api/admin/warehouse");
+
 export type PortfolioKpis = {
   active_customers: number;
   total_book_value: number;

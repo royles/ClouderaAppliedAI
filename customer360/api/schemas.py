@@ -236,3 +236,44 @@ class SimulateSendResponse(BaseModel):
     channel: str
     sent_at: str
     message: str
+
+
+class WarehouseTableAdmin(BaseModel):
+    table_name: str
+    layer: str
+    domain: str
+    role: str
+    description: str
+    load_job: str
+    row_count: int = 0
+    table_exists: bool = False
+    last_loaded_at: str | None = None
+    last_source_job: str | None = None
+
+
+class WarehouseRelationship(BaseModel):
+    from_table: str
+    from_column: str
+    to_table: str
+    to_column: str
+    cardinality: str
+    label: str
+
+
+class DataQualityCheck(BaseModel):
+    id: str
+    label: str
+    status: str
+    summary: str
+    detail: str | None = None
+    metric_value: float | None = None
+
+
+class WarehouseAdminResponse(BaseModel):
+    database_path: str
+    database_size_bytes: int = 0
+    warehouse_last_loaded_at: str | None = None
+    tables: list[WarehouseTableAdmin] = Field(default_factory=list)
+    relationships: list[WarehouseRelationship] = Field(default_factory=list)
+    relationship_diagram: str = ""
+    quality_checks: list[DataQualityCheck] = Field(default_factory=list)

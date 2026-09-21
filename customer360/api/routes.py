@@ -31,6 +31,7 @@ from customer360.api.schemas import (
     SimulateSendRequest,
     SimulateSendResponse,
     ValueHistoryResponse,
+    WarehouseAdminResponse,
 )
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
 from customer360.api.value_history import (
@@ -48,6 +49,7 @@ from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE, normalize_
 from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
 from customer360.metrics_refresh import customer_metrics_populated
 from customer360.paths import default_db_path
+from customer360.api.warehouse_admin import fetch_warehouse_admin
 
 MAX_CUSTOMER_PAGE_SIZE = 100
 
@@ -205,6 +207,14 @@ def _customer_list_where(
         like = f"%{q.strip()}%"
         params.extend([like, like])
     return where, params
+
+
+@router.get("/admin/warehouse", response_model=WarehouseAdminResponse)
+def warehouse_admin(
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+) -> WarehouseAdminResponse:
+    data = fetch_warehouse_admin(conn, database_path=default_db_path())
+    return WarehouseAdminResponse(**data)
 
 
 @router.get("/customers", response_model=CustomerListResponse)

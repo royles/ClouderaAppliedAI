@@ -1,5 +1,13 @@
 import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-router-dom";
-import { BUSINESS_BASE, CUSTOMER_BASE, isBusinessArea, isCustomerArea } from "./appRoutes";
+import {
+  ADMIN_BASE,
+  BUSINESS_BASE,
+  CUSTOMER_BASE,
+  isAdminArea,
+  isBusinessArea,
+  isCustomerArea,
+} from "./appRoutes";
+import AdminPage from "./pages/AdminPage";
 import DashboardPage from "./pages/DashboardPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import CustomerHubPage from "./pages/CustomerHubPage";
@@ -23,6 +31,7 @@ function AppSideNav() {
   const location = useLocation();
   const businessActive = isBusinessArea(location.pathname);
   const customerActive = isCustomerArea(location.pathname);
+  const adminActive = isAdminArea(location.pathname);
 
   return (
     <aside className="app-side-nav" aria-label="Application areas">
@@ -48,6 +57,16 @@ function AppSideNav() {
             360 profile, insights, and outreach
           </span>
         </Link>
+        <Link
+          to={ADMIN_BASE}
+          className={`app-side-tab${adminActive ? " is-active" : ""}`}
+          aria-current={adminActive ? "page" : undefined}
+        >
+          <span className="app-side-tab-title">Data &amp; admin</span>
+          <span className="app-side-tab-desc muted small">
+            Tables, lineage, load times, quality
+          </span>
+        </Link>
       </nav>
     </aside>
   );
@@ -70,6 +89,7 @@ export default function App() {
             <Route path={BUSINESS_BASE} element={<DashboardPage />} />
             <Route path={CUSTOMER_BASE} element={<CustomerHubPage />} />
             <Route path={`${CUSTOMER_BASE}/:customerId`} element={<CustomerDetailPage />} />
+            <Route path={ADMIN_BASE} element={<AdminPage />} />
             <Route path="/customers/:customerId" element={<LegacyCustomerRedirect />} />
             <Route path="*" element={<Navigate to={BUSINESS_BASE} replace />} />
           </Routes>
