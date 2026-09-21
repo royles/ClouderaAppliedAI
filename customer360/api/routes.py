@@ -18,12 +18,17 @@ from customer360.api.schemas import (
     DomainCount,
     ForeclosureRow,
     HealthResponse,
+    InsightActionDraftRequest,
+    InsightActionDraftResponse,
     InteractionEventRow,
     InteractionSummary,
     InvestmentSnapshot,
     OverviewResponse,
     PolicyRow,
+    SimulateSendRequest,
+    SimulateSendResponse,
 )
+from customer360.actions.draft import build_action_draft, classify_recommendation, simulate_send
 from customer360.interactions.summary import load_interaction_bundle
 from customer360.bedrock.config import get_bedrock_settings
 from customer360.bedrock.client import is_bedrock_configured
@@ -264,6 +269,20 @@ def customer_detail(
     )
 
 
+def _insight_action_meta(text: str) -> dict:
+    kind = classify_recommendation(text)
+    return {"text": text, "actionable": kind is not None, "action_kind": kind}
+
+
+def _experience_note_actionable(note: str) -> bool:
+    if not note.strip():
+        return False
+    if classify_recommendation(note):
+        return True
+    lowered = note.lower()
+    return any(token in lowered for token in ("email", "call", "message", "sms", "callback"))
+
+
 @router.get("/customers/{customer_id}/insights", response_model=CustomerInsightsResponse)
 def customer_insights(
     customer_id: int,
@@ -273,4 +292,56 @@ def customer_insights(
     result = get_customer_insights(conn, customer_id, refresh=refresh)
     if result is None:
         raise HTTPException(status_code=404, detail="Customer not found")
+    result["recommendation_actions"] = [
+        _insight_action_meta(text) for text in result.get("recommendations", [])
+    ]
+    note = result.get("experience_note") or ""
+    result["experience_note_actionable"] = _experience_note_actionable(note)
     return CustomerInsightsResponse(**result)
+
+
+@router.post(
+    "/customers/{customer_id}/insights/action-draft",
+    response_model=InsightActionDraftResponse,
+)
+def insight_action_draft(
+    customer_id: int,
+    payload: InsightActionDraftRequest,
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+) -> InsightActionDraftResponse:
+    try:
+        draft = build_action_draft(
+            conn,
+            customer_id,
+            payload.recommendation.strip(),
+            source=payload.source,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return InsightActionDraftResponse(**draft)
+
+
+@router.post(
+    "/customers/{customer_id}/insights/simulate-send",
+    response_model=SimulateSendResponse,
+)
+def insight_simulate_send(
+    customer_id: int,
+    payload: SimulateSendRequest,
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+) -> SimulateSendResponse:
+    row = conn.execute(
+        "SELECT 1 FROM DWH_DIM_CUSTOMERS_UNIQUE WHERE CURRENT_IND = 1 AND CUSTOMER_ID = ?",
+        (customer_id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    if payload.channel not in ("email", "sms", "call"):
+        raise HTTPException(status_code=400, detail="Unsupported channel")
+    result = simulate_send(
+        payload.channel,
+        subject=payload.subject,
+        body=payload.body,
+        customer_id=customer_id,
+    )
+    return SimulateSendResponse(**result)

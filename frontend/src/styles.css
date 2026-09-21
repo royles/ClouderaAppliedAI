@@ -452,3 +452,78 @@ select.control {
 .warn-stat {
   color: #9a5b00;
 }
+
+.insight-action-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #0f6bae;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.insight-action-link:hover {
+  color: #0f3d5e;
+}
+
+.insight-action-link.inline {
+  display: inline;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 61, 94, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.modal {
+  width: min(640px, 100%);
+  max-height: 90vh;
+  overflow: auto;
+  margin: 0;
+}
+
+.draft-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.draft-subject {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.draft-body {
+  white-space: pre-wrap;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem;
+  max-height: 280px;
+  overflow: auto;
+}
+
+.modal-actions {
+  margin-top: 1rem;
+}
+
+.send-success {
+  margin-top: 1rem;
+  padding: 0.65rem 0.75rem;
+  background: #e6f4ea;
+  color: #1e6b34;
+  border-radius: 8px;
+  font-size: 0.92rem;
+}

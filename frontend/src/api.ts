@@ -149,16 +149,45 @@ export const fetchCustomers = (options?: {
 export const fetchCustomer = (id: number) =>
   getJson<CustomerDetail>(`/api/customers/${id}`);
 
+export type RecommendationActionMeta = {
+  text: string;
+  actionable: boolean;
+  action_kind?: string | null;
+};
+
 export type CustomerInsights = {
   summary: string;
   primary_focus: "upsell" | "retention" | string;
   recommendations: string[];
+  recommendation_actions?: RecommendationActionMeta[];
   experience_note?: string;
+  experience_note_actionable?: boolean;
   source: string;
   model_id?: string | null;
   generated_at?: string | null;
   bedrock_configured: boolean;
   cached: boolean;
+};
+
+export type ActionDraft = {
+  actionable: boolean;
+  recommendation: string;
+  message?: string | null;
+  action_kind?: string | null;
+  channel?: string | null;
+  preview_label?: string | null;
+  subject?: string | null;
+  body?: string | null;
+  recipient_name?: string | null;
+  recipient_email?: string | null;
+  recipient_phone?: string | null;
+};
+
+export type SimulateSendResult = {
+  status: string;
+  channel: string;
+  sent_at: string;
+  message: string;
 };
 
 export const fetchCustomerInsights = (
@@ -172,3 +201,34 @@ export const fetchCustomerInsights = (
     `/api/customers/${id}/insights${qs ? `?${qs}` : ""}`,
   );
 };
+
+async function postJson<T>(path: string, body: unknown): Promise<T> {
+  const res = await fetch(apiUrl(path), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(text || res.statusText);
+  }
+  return JSON.parse(text) as T;
+}
+
+export const draftInsightAction = (
+  customerId: number,
+  payload: { recommendation: string; source?: "recommendation" | "experience_note" },
+) =>
+  postJson<ActionDraft>(`/api/customers/${customerId}/insights/action-draft`, {
+    recommendation: payload.recommendation,
+    source: payload.source ?? "recommendation",
+  });
+
+export const simulateInsightSend = (
+  customerId: number,
+  payload: { channel: string; body: string; subject?: string },
+) =>
+  postJson<SimulateSendResult>(
+    `/api/customers/${customerId}/insights/simulate-send`,
+    payload,
+  );

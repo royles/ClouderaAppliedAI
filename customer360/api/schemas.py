@@ -115,11 +115,19 @@ class CustomerDetailResponse(BaseModel):
     interaction_summary: InteractionSummary | None = None
 
 
+class RecommendationActionMeta(BaseModel):
+    text: str
+    actionable: bool
+    action_kind: str | None = None
+
+
 class CustomerInsightsResponse(BaseModel):
     summary: str
     primary_focus: str
     recommendations: list[str] = Field(default_factory=list)
+    recommendation_actions: list[RecommendationActionMeta] = Field(default_factory=list)
     experience_note: str = ""
+    experience_note_actionable: bool = False
     source: str
     model_id: str | None = None
     generated_at: str | None = None
@@ -131,3 +139,35 @@ class BedrockStatusResponse(BaseModel):
     configured: bool
     model_id: str
     region: str
+
+
+class InsightActionDraftRequest(BaseModel):
+    recommendation: str = Field(..., min_length=1, max_length=500)
+    source: str = Field(default="recommendation", description="recommendation or experience_note")
+
+
+class InsightActionDraftResponse(BaseModel):
+    actionable: bool
+    recommendation: str
+    message: str | None = None
+    action_kind: str | None = None
+    channel: str | None = None
+    preview_label: str | None = None
+    subject: str | None = None
+    body: str | None = None
+    recipient_name: str | None = None
+    recipient_email: str | None = None
+    recipient_phone: str | None = None
+
+
+class SimulateSendRequest(BaseModel):
+    channel: str
+    body: str = Field(..., min_length=1)
+    subject: str | None = None
+
+
+class SimulateSendResponse(BaseModel):
+    status: str
+    channel: str
+    sent_at: str
+    message: str
