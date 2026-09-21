@@ -103,16 +103,6 @@ export default function CustomerHubPage() {
     <>
       <Breadcrumbs items={[{ label: "The customer" }]} />
       <section className="panel">
-        <div className="panel-head">
-          <div>
-            <h1>Customers</h1>
-            <p className="muted small">
-              Browse and search the portfolio. Use warehouse domain cards to narrow the
-              list—the same filters as on{" "}
-              <Link to="/business">the business</Link> analytics view.
-            </p>
-          </div>
-        </div>
         <DomainFilterGrid
           overview={overview}
           segment={segment}
