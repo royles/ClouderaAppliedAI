@@ -176,7 +176,7 @@ def generate_israeli_id(rng: random.Random) -> int:
     return base
 
 
-DEFAULT_SEED_CUSTOMERS = 40
+DEFAULT_SEED_CUSTOMERS = 2000
 MAX_SEED_CUSTOMERS = 5000
 
 
