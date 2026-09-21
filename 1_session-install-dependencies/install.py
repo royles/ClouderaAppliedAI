@@ -61,26 +61,11 @@ def main() -> None:
         print(f"Using existing frontend build: {dist_index}", flush=True)
         return
 
-    npm = shutil.which("npm")
-    if not npm:
-        print(
-            "WARNING: npm not available in this job — UI will be missing until you build "
-            "frontend/dist. From a Workbench session with Node: "
-            "%run scripts/build_frontend.py",
-            flush=True,
-        )
-        return
-
     if not FRONTEND.is_dir():
         raise FileNotFoundError(f"Frontend directory not found: {FRONTEND}")
 
-    if (FRONTEND / "package-lock.json").is_file():
-        run([npm, "ci"], cwd=FRONTEND)
-    else:
-        run([npm, "install"], cwd=FRONTEND)
-    run([npm, "run", "build"], cwd=FRONTEND)
-    if not dist_index.is_file():
-        raise RuntimeError(f"npm run build did not produce {dist_index}")
+    build_script = (ROOT / "scripts" / "build_frontend.py").resolve()
+    run([sys.executable, str(build_script)])
 
 
 if __name__ == "__main__":

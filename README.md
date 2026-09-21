@@ -8,9 +8,10 @@ Unified customer dashboard for Cloudera AI (CAI), backed by a DDS-aligned SQLite
 
 1. Create a project from this Git repository (or import as an ML prototype if catalog metadata is added later).
 2. On first import, `.project-metadata.yaml` runs:
-   - **Install Dependencies** — `pip install` + editable install of the `customer360` package
+   - **Install Dependencies** — Python packages + editable `customer360` install
+   - **Build React Frontend** — `npm run build` → `frontend/dist` (skipped if `npm` is missing; prebuilt `dist` is in Git)
    - **Initialize Customer 360 Database** — builds `data/customer360.db`
-   - **Customer 360 Dashboard** — Streamlit app at subdomain `customer-360`
+   - **Customer 360 Dashboard** — FastAPI + React at subdomain `customer-360`
 3. Application scripts bind to `127.0.0.1` and use `CDSW_APP_PORT` (Workbench/CML) or `APP_PORT` (AI Inference, default 8080). Do not hard-code ports.
 
 Optional environment variable:
@@ -96,3 +97,18 @@ If install fails with a missing `requirements.txt`, run:
 ```
 
 Generated databases are gitignored (`data/*.db`).
+
+### Frontend without Node on PATH
+
+The repo includes a prebuilt `frontend/dist/`. Restart the application after `git pull` —
+you do **not** need `npm` for that.
+
+To rebuild the UI in a standard Python 3.11 CAI session (no system Node):
+
+```python
+%run scripts/build_frontend.py
+```
+
+The script skips work if `frontend/dist/index.html` already exists. It downloads a
+portable Node.js binary into `.tools/` when `npm` is missing (requires outbound HTTPS
+to `nodejs.org`).

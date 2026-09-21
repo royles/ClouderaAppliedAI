@@ -4,8 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
-import shutil
-import subprocess
+import os
 import sys
 from pathlib import Path
 
@@ -29,25 +28,46 @@ def _bootstrap() -> Path:
 
 def main() -> None:
     root = _bootstrap().resolve()
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+
+    from customer360.node_toolchain import ensure_portable_npm, find_npm, run_npm
+
     frontend = root / "frontend"
-    npm = shutil.which("npm")
-    if not npm:
-        raise RuntimeError(
-            "npm not found on PATH. Install Node.js in the CAI runtime or run "
-            "`npm run build` in frontend/ from a session that has Node."
+    dist_index = frontend / "dist" / "index.html"
+    force = os.environ.get("CUSTOMER360_FORCE_FRONTEND_REBUILD", "").lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+
+    if dist_index.is_file() and not force:
+        print(
+            f"Frontend already built at {dist_index}. "
+            "Set CUSTOMER360_FORCE_FRONTEND_REBUILD=1 to rebuild.",
+            flush=True,
         )
+        return
+
     if not frontend.is_dir():
         raise FileNotFoundError(f"Missing frontend directory: {frontend}")
 
-    if (frontend / "package-lock.json").is_file():
-        subprocess.check_call([npm, "ci"], cwd=str(frontend))
+    npm = find_npm()
+    if npm is None:
+        print("npm not on PATH; installing portable Node.js under .tools/", flush=True)
+        npm = ensure_portable_npm(root)
     else:
-        subprocess.check_call([npm, "install"], cwd=str(frontend))
-    subprocess.check_call([npm, "run", "build"], cwd=str(frontend))
-    dist = frontend / "dist" / "index.html"
-    if not dist.is_file():
-        raise RuntimeError(f"Build finished but {dist} was not created.")
-    print(f"Frontend built: {dist.parent}", flush=True)
+        print(f"Using npm: {npm}", flush=True)
+
+    if (frontend / "package-lock.json").is_file():
+        run_npm(npm, ["ci"], cwd=frontend)
+    else:
+        run_npm(npm, ["install"], cwd=frontend)
+    run_npm(npm, ["run", "build"], cwd=frontend)
+
+    if not dist_index.is_file():
+        raise RuntimeError(f"Build finished but {dist_index} was not created.")
+    print(f"Frontend built: {dist_index.parent}", flush=True)
 
 
 if __name__ == "__main__":
