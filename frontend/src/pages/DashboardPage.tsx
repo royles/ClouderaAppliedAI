@@ -13,6 +13,12 @@ import Breadcrumbs from "../components/Breadcrumbs";
 import DomainFilterGrid from "../components/DomainFilterGrid";
 import PortfolioAnalyticsSection from "../components/PortfolioAnalyticsSection";
 import { parseBusinessSegment, patchBusinessSegment } from "../dashboardUrl";
+import {
+  PORTFOLIO_PREFETCH_SEGMENTS,
+  PortfolioSegmentCache,
+  prefetchPortfolioAnalytics,
+} from "../portfolioSegmentCache";
+
 export default function DashboardPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -25,8 +31,10 @@ export default function DashboardPage() {
     null,
   );
   const [portfolioLoading, setPortfolioLoading] = useState(true);
-  const portfolioRequestRef = useRef(0);
-  const portfolioSegmentRef = useRef<CustomerSegment | null>(null);
+  const portfolioCacheRef = useRef<PortfolioSegmentCache>(new Map());
+  const prefetchStartedRef = useRef(false);
+  const segmentRef = useRef(segment);
+  segmentRef.current = segment;
 
   const activeDomain = useMemo((): DomainCount | null => {
     if (segment === "customers_all" || !overview?.domains) return null;
@@ -60,45 +68,68 @@ export default function DashboardPage() {
     };
   }, [location.pathname, location.key]);
 
-  const loadPortfolioAnalytics = useCallback(async (seg: CustomerSegment) => {
-    const requestId = ++portfolioRequestRef.current;
-    if (portfolioSegmentRef.current !== seg) {
-      setPortfolioAnalytics(null);
-      portfolioSegmentRef.current = seg;
+  const applySegmentFromCache = useCallback((seg: CustomerSegment) => {
+    const cached = portfolioCacheRef.current.get(seg);
+    if (cached) {
+      setPortfolioAnalytics(cached);
+      setPortfolioLoading(false);
+      return true;
     }
-    setPortfolioLoading(true);
-    try {
-      const data = await fetchPortfolioAnalytics(seg);
-      if (requestId !== portfolioRequestRef.current) return;
-      setPortfolioAnalytics(data);
-    } catch {
-      if (requestId === portfolioRequestRef.current) {
-        setPortfolioAnalytics(null);
-      }
-    } finally {
-      if (requestId === portfolioRequestRef.current) {
-        setPortfolioLoading(false);
-      }
-    }
+    return false;
   }, []);
 
   useEffect(() => {
     if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
+    if (applySegmentFromCache(segment)) return;
 
-    void loadPortfolioAnalytics(segment);
+    let cancelled = false;
+    setPortfolioLoading(true);
+    void (async () => {
+      try {
+        const data = await fetchPortfolioAnalytics(segment);
+        if (cancelled) return;
+        portfolioCacheRef.current.set(segment, data);
+        if (segmentRef.current === segment) {
+          setPortfolioAnalytics(data);
+        }
+      } catch {
+        if (!cancelled && segmentRef.current === segment) {
+          setPortfolioAnalytics(null);
+        }
+      } finally {
+        if (!cancelled && segmentRef.current === segment) {
+          setPortfolioLoading(false);
+        }
+      }
+    })();
 
     return () => {
-      portfolioRequestRef.current += 1;
+      cancelled = true;
     };
-  }, [
-    segment,
-    loadPortfolioAnalytics,
-    location.pathname,
-    location.key,
-    overviewLoading,
-  ]);
+  }, [segment, overviewLoading, location.pathname, applySegmentFromCache]);
+
+  useEffect(() => {
+    if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
+    if (prefetchStartedRef.current) return;
+    prefetchStartedRef.current = true;
+
+    void (async () => {
+      try {
+        const cache = await prefetchPortfolioAnalytics(PORTFOLIO_PREFETCH_SEGMENTS);
+        portfolioCacheRef.current = cache;
+        const active = segmentRef.current;
+        if (cache.has(active)) {
+          setPortfolioAnalytics(cache.get(active)!);
+          setPortfolioLoading(false);
+        }
+      } catch {
+        /* segment effect falls back to single-segment fetch */
+      }
+    })();
+  }, [overviewLoading, location.pathname]);
 
   const setSegment = (next: CustomerSegment) => {
+    applySegmentFromCache(next);
     setSearchParams((prev) => patchBusinessSegment(prev, next), { replace: true });
   };
 
@@ -130,7 +161,6 @@ export default function DashboardPage() {
           helperText="Click a card to filter analytics. Click again to clear."
         />
         <PortfolioAnalyticsSection
-          key={segment}
           data={portfolioAnalytics}
           loading={portfolioLoading && !portfolioAnalytics}
           refreshing={portfolioLoading && portfolioAnalytics != null}

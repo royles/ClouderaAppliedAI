@@ -132,17 +132,23 @@ def _finalize_portfolio_objectives(
     conn: sqlite3.Connection,
 ) -> None:
     """Ensure objective series match the response segment (cached rows may be book-wide)."""
+    from customer360.api.portfolio_objectives import objectives_note_for_segment
+
     seg = normalize_segment(enriched.get("segment"))
     enriched["segment"] = seg
+    obj_seg = enriched.get("objectives_segment")
+    if obj_seg == seg and _objectives_ready(enriched):
+        enriched["objectives_note"] = objectives_note_for_segment(seg)
+        return
     if seg != "customers_all":
         enriched.update(
             fetch_objective_trends(conn, segment=seg, prefer_materialized=False),
         )
+        enriched["objectives_segment"] = seg
         return
     if _objectives_ready(enriched):
-        from customer360.api.portfolio_objectives import objectives_note_for_segment
-
         enriched["objectives_note"] = objectives_note_for_segment(seg)
+        enriched["objectives_segment"] = seg
         return
     from customer360.book_objectives_cache import load_book_objective_trends
 
@@ -181,6 +187,16 @@ def _portfolio_analytics_response(
 ) -> PortfolioAnalyticsResponse:
     enriched = dict(payload)
     if conn is not None:
+        kpis = enriched.get("kpis")
+        if isinstance(kpis, dict) and "total_policies" not in kpis:
+            total_policies, active_policies = policy_totals_for_segment(
+                conn,
+                enriched.get("segment"),
+            )
+            kpis = dict(kpis)
+            kpis["total_policies"] = total_policies
+            kpis["active_policies"] = active_policies
+            enriched["kpis"] = kpis
         _finalize_portfolio_objectives(enriched, conn)
     if not enriched.get("kpi_targets"):
         enriched["kpi_targets"] = build_kpi_targets(
@@ -188,6 +204,7 @@ def _portfolio_analytics_response(
             enriched.get("value_points", []),
             conn=conn,
         )
+    enriched.pop("objectives_segment", None)
     return PortfolioAnalyticsResponse(**enriched)
 
 

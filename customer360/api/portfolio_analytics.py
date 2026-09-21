@@ -26,6 +26,16 @@ def _segment_where(segment: str | None) -> tuple[str, list[object]]:
     return f"c.CURRENT_IND = 1 AND ({SEGMENT_WHERE[seg]})", []
 
 
+def _customer_metrics_ready(conn: sqlite3.Connection) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_METRICS'"
+    ).fetchone()
+    if not row:
+        return False
+    count = conn.execute("SELECT COUNT(*) FROM APP_CUSTOMER_METRICS").fetchone()[0]
+    return int(count or 0) > 0
+
+
 def _churn_table_exists(conn: sqlite3.Connection) -> bool:
     row = conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_CHURN_SCORES'"
@@ -39,9 +49,18 @@ def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
     if _churn_table_exists(conn):
         churn_join = "LEFT JOIN APP_CUSTOMER_CHURN_SCORES ch ON ch.CUSTOMER_ID = s.CUSTOMER_ID"
 
-    row = conn.execute(
-        f"""
-        WITH scoped AS (
+    if _customer_metrics_ready(conn):
+        scoped_sql = f"""
+            SELECT
+                c.CUSTOMER_ID,
+                m.CUSTOMER_VALUE AS customer_value,
+                m.POLICY_COUNT AS policy_count
+            FROM DWH_DIM_CUSTOMERS_UNIQUE c
+            INNER JOIN APP_CUSTOMER_METRICS m ON m.CUSTOMER_ID = c.CUSTOMER_ID
+            WHERE {where_sql}
+        """
+    else:
+        scoped_sql = f"""
             SELECT
                 c.CUSTOMER_ID,
                 ROUND({CUSTOMER_VALUE_SQL}, 2) AS customer_value,
@@ -52,6 +71,12 @@ def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
                 ) AS policy_count
             FROM DWH_DIM_CUSTOMERS_UNIQUE c
             WHERE {where_sql}
+        """
+
+    row = conn.execute(
+        f"""
+        WITH scoped AS (
+            {scoped_sql}
         )
         SELECT
             COUNT(*) AS active_customers,
@@ -229,5 +254,6 @@ def fetch_portfolio_analytics(
         "investment_returns": investment_returns,
         "churn_forecast": churn_forecast,
         "methodology_note": METHODOLOGY_NOTE,
+        "objectives_segment": seg,
         **objectives,
     }
