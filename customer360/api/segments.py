@@ -25,9 +25,9 @@ OVERVIEW_DOMAINS: list[tuple[str, str, str, str]] = [
         "with_policies",
         "Customers with at least one policy",
         """
-        SELECT COUNT(DISTINCT c.CUSTOMER_KEY)
+        SELECT COUNT(DISTINCT c.CUSTOMER_ID)
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
-        INNER JOIN DWH_DIM_ALL_POLICY p ON p.CUSTOMER_KEY = c.CUSTOMER_KEY
+        INNER JOIN DWH_DIM_ALL_POLICY p ON p.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
         WHERE c.CURRENT_IND = 1
         """,
     ),
@@ -36,7 +36,7 @@ OVERVIEW_DOMAINS: list[tuple[str, str, str, str]] = [
         "with_foreclosures",
         "Customers with legal encumbrance records",
         """
-        SELECT COUNT(DISTINCT c.CUSTOMER_KEY)
+        SELECT COUNT(DISTINCT c.CUSTOMER_ID)
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
         INNER JOIN DWH_FCT_FORECLOSURES f ON f.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
         WHERE c.CURRENT_IND = 1
@@ -58,9 +58,9 @@ OVERVIEW_DOMAINS: list[tuple[str, str, str, str]] = [
         "with_market_products",
         "Customers with pension / gemel / life investment products",
         """
-        SELECT COUNT(DISTINCT c.CUSTOMER_KEY)
+        SELECT COUNT(DISTINCT c.CUSTOMER_ID)
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
-        INNER JOIN DWH_DIM_ALL_POLICY p ON p.CUSTOMER_KEY = c.CUSTOMER_KEY
+        INNER JOIN DWH_DIM_ALL_POLICY p ON p.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
         WHERE c.CURRENT_IND = 1
           AND p.MNG_COMPANY_CODE IN (1, 7, 8)
           AND p.IS_ACTIVE = 1

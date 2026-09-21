@@ -85,7 +85,7 @@ def list_customers(
             (
                 SELECT COUNT(*)
                 FROM DWH_DIM_ALL_POLICY p
-                WHERE p.CUSTOMER_KEY = c.CUSTOMER_KEY
+                WHERE p.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
             ) AS policy_count,
             (
                 SELECT COUNT(*)

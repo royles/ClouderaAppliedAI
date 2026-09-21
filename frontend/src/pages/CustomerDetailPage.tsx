@@ -4,7 +4,7 @@ import { CustomerDetail, fetchCustomer } from "../api";
 import {
   formatCity,
   formatLastLogin,
-  maskCustomerId,
+  displayCustomerId,
   maskDate,
   maskEmail,
   displayCustomerName,
@@ -83,7 +83,7 @@ export default function CustomerDetailPage() {
         <div className="detail-grid">
           <div>
             <span className="label">Customer ID</span>
-            <div>{maskCustomerId(profile.customer_id)}</div>
+            <div>{displayCustomerId(profile.customer_id)}</div>
           </div>
           <div>
             <span className="label">Type</span>

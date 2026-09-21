@@ -13,7 +13,7 @@ import {
 import {
   formatCity,
   formatLastLogin,
-  maskCustomerId,
+  displayCustomerId,
   maskEmail,
   displayCustomerName,
   maskPhone,
@@ -198,7 +198,7 @@ export default function DashboardPage() {
               <input
                 id="customer-search"
                 className="control control-search"
-                placeholder="Name or ID"
+                placeholder="Name or customer ID"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -243,14 +243,14 @@ export default function DashboardPage() {
                   </tr>
                 ) : (
                   customers.map((c, index) => (
-                    <tr key={c.customer_key} className="table-row-click">
+                    <tr key={c.customer_id} className="table-row-click">
                       {showRank && <td className="rank-cell">{index + 1}</td>}
                       <td>
                         <Link to={`/customers/${c.customer_id}`}>
                           {displayCustomerName(c.customer_name)}
                         </Link>
                       </td>
-                      <td>{maskCustomerId(c.customer_id)}</td>
+                      <td>{displayCustomerId(c.customer_id)}</td>
                       <td>{formatCity(c.city_name)}</td>
                       <td>{maskEmail(c.email)}</td>
                       <td>{maskPhone(c.mobile_no)}</td>

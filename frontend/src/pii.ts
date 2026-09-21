@@ -11,11 +11,15 @@ export function maskName(name: string | null | undefined): string {
   return displayCustomerName(name);
 }
 
-export function maskCustomerId(id: number | string | null | undefined): string {
+/** Customer ID (Teudat Zehut) is shown in full and used for all lookups. */
+export function displayCustomerId(id: number | string | null | undefined): string {
   if (id == null || id === "") return "—";
-  const s = String(id);
-  if (s.length <= 4) return "*".repeat(s.length);
-  return "*".repeat(s.length - 4) + s.slice(-4);
+  return String(id);
+}
+
+/** @deprecated use displayCustomerId */
+export function maskCustomerId(id: number | string | null | undefined): string {
+  return displayCustomerId(id);
 }
 
 export function maskEmail(email: string | null | undefined): string {
