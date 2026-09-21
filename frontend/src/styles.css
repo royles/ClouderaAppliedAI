@@ -1219,6 +1219,52 @@ select.control {
   margin-right: 0.35rem;
 }
 
+.admin-health-grid {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.75rem;
+}
+
+.admin-health-card {
+  border: 1px solid #e6ebf0;
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  background: #fafbfc;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.admin-health-card strong {
+  color: #0f3d5e;
+  font-size: 0.95rem;
+}
+
+.admin-health-detail {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.admin-health-note {
+  margin: 0.65rem 0 0;
+}
+
+.admin-health-ok {
+  border-left: 3px solid #1e6b34;
+}
+
+.admin-health-warn {
+  border-left: 3px solid #c47a0a;
+}
+
+.admin-health-critical {
+  border-left: 3px solid #b42318;
+}
+
 .admin-kpi-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));

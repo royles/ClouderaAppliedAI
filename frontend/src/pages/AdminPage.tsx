@@ -53,6 +53,8 @@ export default function AdminPage() {
 
   const qualityIssues =
     data?.quality_checks.filter((c) => c.status !== "ok").length ?? 0;
+  const healthIssues =
+    data?.health_checks.filter((c) => c.status !== "ok").length ?? 0;
 
   return (
     <>
@@ -78,6 +80,34 @@ export default function AdminPage() {
 
       {data && (
         <>
+          <section className="panel">
+            <h2>System health</h2>
+            <p className="muted small">
+              Runtime checks for API, warehouse database, Bedrock, and churn scoring.
+            </p>
+            <ul className="admin-health-grid">
+              {data.health_checks.map((check) => (
+                <li
+                  key={check.id}
+                  className={`admin-health-card admin-health-${check.status}`}
+                >
+                  <span className={statusClass(check.status)}>{check.status}</span>
+                  <strong>{check.label}</strong>
+                  <p className="muted small">{check.summary}</p>
+                  {check.detail && (
+                    <p className="muted small admin-health-detail">{check.detail}</p>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {healthIssues > 0 && (
+              <p className="muted small admin-health-note">
+                {healthIssues} check{healthIssues === 1 ? "" : "s"} need attention (warn or
+                critical).
+              </p>
+            )}
+          </section>
+
           <section className="panel">
             <div className="admin-kpi-grid">
               <div className="admin-kpi">

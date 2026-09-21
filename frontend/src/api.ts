@@ -181,6 +181,14 @@ export type DataQualityCheck = {
   metric_value?: number | null;
 };
 
+export type SystemHealthCheck = {
+  id: string;
+  label: string;
+  status: string;
+  summary: string;
+  detail?: string | null;
+};
+
 export type WarehouseAdmin = {
   database_path: string;
   database_size_bytes: number;
@@ -189,6 +197,7 @@ export type WarehouseAdmin = {
   relationships: WarehouseRelationship[];
   relationship_diagram: string;
   quality_checks: DataQualityCheck[];
+  health_checks: SystemHealthCheck[];
 };
 
 export const fetchWarehouseAdmin = () => getJson<WarehouseAdmin>("/api/admin/warehouse");

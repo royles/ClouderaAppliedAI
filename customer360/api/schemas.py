@@ -269,6 +269,14 @@ class DataQualityCheck(BaseModel):
     metric_value: float | None = None
 
 
+class SystemHealthCheck(BaseModel):
+    id: str
+    label: str
+    status: str
+    summary: str
+    detail: str | None = None
+
+
 class WarehouseAdminResponse(BaseModel):
     database_path: str
     database_size_bytes: int = 0
@@ -277,3 +285,4 @@ class WarehouseAdminResponse(BaseModel):
     relationships: list[WarehouseRelationship] = Field(default_factory=list)
     relationship_diagram: str = ""
     quality_checks: list[DataQualityCheck] = Field(default_factory=list)
+    health_checks: list[SystemHealthCheck] = Field(default_factory=list)

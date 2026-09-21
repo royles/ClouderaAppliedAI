@@ -6,6 +6,9 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from customer360.bedrock.client import is_bedrock_configured
+from customer360.bedrock.config import get_bedrock_settings
+
 TABLE_CATALOG: list[dict] = [
     {
         "table_name": "DWH_DIM_CUSTOMERS_UNIQUE",
@@ -438,6 +441,118 @@ def _quality_checks(conn: sqlite3.Connection) -> list[dict]:
     return checks
 
 
+def _system_health_checks(conn: sqlite3.Connection, *, database_path: Path) -> list[dict]:
+    checks: list[dict] = []
+
+    def add(
+        check_id: str,
+        label: str,
+        status: str,
+        summary: str,
+        detail: str | None = None,
+    ) -> None:
+        checks.append(
+            {
+                "id": check_id,
+                "label": label,
+                "status": status,
+                "summary": summary,
+                "detail": detail,
+            }
+        )
+
+    add(
+        "api",
+        "Customer 360 API",
+        "ok",
+        "API is reachable and serving this admin request.",
+        detail="Health endpoint: GET /api/health",
+    )
+
+    if not database_path.is_file():
+        add(
+            "database",
+            "SQLite warehouse",
+            "critical",
+            f"Database file not found at {database_path}.",
+            detail="Run 2_job-init-database or python3 -m customer360.seed.",
+        )
+    else:
+        try:
+            conn.execute("SELECT 1").fetchone()
+            tables = conn.execute(
+                "SELECT COUNT(*) FROM sqlite_master WHERE type='table'"
+            ).fetchone()[0]
+            add(
+                "database",
+                "SQLite warehouse",
+                "ok",
+                f"Connected; {int(tables)} tables in catalog.",
+                detail=str(database_path),
+            )
+        except sqlite3.Error as exc:
+            add(
+                "database",
+                "SQLite warehouse",
+                "critical",
+                "Database connection or query failed.",
+                detail=str(exc),
+            )
+
+    settings = get_bedrock_settings()
+    if is_bedrock_configured():
+        add(
+            "bedrock",
+            "Amazon Bedrock",
+            "ok",
+            f"Configured for model {settings.model_id} in {settings.bedrock_region}.",
+            detail="Insights and outreach drafts can use Bedrock when requested.",
+        )
+    else:
+        add(
+            "bedrock",
+            "Amazon Bedrock",
+            "warn",
+            "Not configured — insights use local fallback rules.",
+            detail=(
+                "Set AWS credentials and Bedrock model environment variables "
+                "(see docs/CAI_APPLICATION.md)."
+            ),
+        )
+
+    churn_ready = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_CHURN_SCORES'"
+    ).fetchone()
+    if churn_ready:
+        scored = conn.execute("SELECT COUNT(*) FROM APP_CUSTOMER_CHURN_SCORES").fetchone()[0]
+        if scored > 0:
+            add(
+                "churn_model",
+                "Churn scoring",
+                "ok",
+                f"{scored:,} customers have churn scores.",
+                detail="Populated by 3_job-train-churn-model.",
+            )
+        else:
+            add(
+                "churn_model",
+                "Churn scoring",
+                "warn",
+                "Churn table exists but has no scores.",
+                detail="Run 3_job-train-churn-model.",
+            )
+    else:
+        add(
+            "churn_model",
+            "Churn scoring",
+            "warn",
+            "Churn scores table not present.",
+            detail="Run 3_job-train-churn-model after warehouse init.",
+        )
+
+    return checks
+
+
 def fetch_warehouse_admin(conn: sqlite3.Connection, *, database_path: Path) -> dict:
     manifest = _manifest_map(conn)
     tables: list[dict] = []
@@ -480,4 +595,5 @@ def fetch_warehouse_admin(conn: sqlite3.Connection, *, database_path: Path) -> d
         "relationships": RELATIONSHIPS,
         "relationship_diagram": MERMAID_ER,
         "quality_checks": _quality_checks(conn),
+        "health_checks": _system_health_checks(conn, database_path=database_path),
     }
