@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AdminConfigurationTabs from "../components/AdminConfigurationTabs";
 import Breadcrumbs from "../components/Breadcrumbs";
+import WarehouseSchemaDiagram from "../components/WarehouseSchemaDiagram";
 import { fetchWarehouseAdmin, WarehouseAdmin } from "../api";
 
 function formatBytes(n: number) {
@@ -172,39 +173,44 @@ export default function AdminPage() {
           </section>
 
           <section className="panel">
-            <h2>How tables relate</h2>
+            <h2>Schema map</h2>
             <p className="muted small">
-              Logical joins used by the Customer 360 API (warehouse DDS + application caches).
+              Each card lists live SQLite columns; lines show logical joins used by the API.
             </p>
-            <div className="table-wrap">
-              <table className="data-table admin-table-compact">
-                <thead>
-                  <tr>
-                    <th>From</th>
-                    <th>To</th>
-                    <th>Join</th>
-                    <th>Cardinality</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.relationships.map((r) => (
-                    <tr key={`${r.from_table}-${r.to_table}-${r.label}`}>
-                      <td>
-                        <code>{r.from_table}</code>.{r.from_column}
-                      </td>
-                      <td>
-                        <code>{r.to_table}</code>.{r.to_column}
-                      </td>
-                      <td>{r.label}</td>
-                      <td>{r.cardinality}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="warehouse-schema-scroll">
+              <WarehouseSchemaDiagram
+                tables={data.tables}
+                relationships={data.relationships}
+              />
             </div>
             <details className="admin-er-details">
-              <summary>ER diagram (Mermaid)</summary>
-              <pre className="admin-er-mermaid">{data.relationship_diagram}</pre>
+              <summary>Join reference (table)</summary>
+              <div className="table-wrap">
+                <table className="data-table admin-table-compact">
+                  <thead>
+                    <tr>
+                      <th>From</th>
+                      <th>To</th>
+                      <th>Join</th>
+                      <th>Cardinality</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.relationships.map((r) => (
+                      <tr key={`${r.from_table}-${r.to_table}-${r.label}`}>
+                        <td>
+                          <code>{r.from_table}</code>.{r.from_column}
+                        </td>
+                        <td>
+                          <code>{r.to_table}</code>.{r.to_column}
+                        </td>
+                        <td>{r.label}</td>
+                        <td>{r.cardinality}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </details>
           </section>
 

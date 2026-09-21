@@ -152,6 +152,13 @@ export const fetchBedrockStatus = () => getJson<BedrockStatus>("/api/bedrock/sta
 
 export const fetchOverview = () => getJson<Overview>("/api/overview");
 
+export type WarehouseTableColumn = {
+  name: string;
+  type: string;
+  pk: boolean;
+  notnull: boolean;
+};
+
 export type WarehouseTableAdmin = {
   table_name: string;
   layer: string;
@@ -163,6 +170,7 @@ export type WarehouseTableAdmin = {
   table_exists: boolean;
   last_loaded_at: string | null;
   last_source_job: string | null;
+  columns: WarehouseTableColumn[];
 };
 
 export type WarehouseRelationship = {

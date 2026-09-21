@@ -333,6 +333,13 @@ class SimulateSendResponse(BaseModel):
     message: str
 
 
+class WarehouseTableColumn(BaseModel):
+    name: str
+    type: str
+    pk: bool = False
+    notnull: bool = False
+
+
 class WarehouseTableAdmin(BaseModel):
     table_name: str
     layer: str
@@ -344,6 +351,7 @@ class WarehouseTableAdmin(BaseModel):
     table_exists: bool = False
     last_loaded_at: str | None = None
     last_source_job: str | None = None
+    columns: list[WarehouseTableColumn] = Field(default_factory=list)
 
 
 class WarehouseRelationship(BaseModel):

@@ -291,6 +291,21 @@ def refresh_warehouse_manifest(conn: sqlite3.Connection, *, source_job: str) -> 
     conn.commit()
 
 
+def _table_columns(conn: sqlite3.Connection, table: str, *, exists: bool) -> list[dict]:
+    if not exists:
+        return []
+    rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+    return [
+        {
+            "name": str(r["name"]),
+            "type": str(r["type"] or ""),
+            "pk": bool(r["pk"]),
+            "notnull": bool(r["notnull"]),
+        }
+        for r in rows
+    ]
+
+
 def _manifest_map(conn: sqlite3.Connection) -> dict[str, sqlite3.Row]:
     ready = conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_WAREHOUSE_TABLE_MANIFEST'"
@@ -635,6 +650,7 @@ def fetch_warehouse_admin(conn: sqlite3.Connection, *, database_path: Path) -> d
                 "table_exists": bool(exists),
                 "last_loaded_at": last_loaded,
                 "last_source_job": source_job,
+                "columns": _table_columns(conn, table, exists=bool(exists)),
             }
         )
 
