@@ -168,9 +168,11 @@ export default function DashboardPage() {
             )}
           </div>
           <div className="toolbar">
-            <label className="sort-control">
-              Rank by
+            <div className="toolbar-item">
+              <label htmlFor="customer-sort-by">Rank by</label>
               <select
+                id="customer-sort-by"
+                className="control"
                 value={sortBy}
                 onChange={(e) => setRankBy(e.target.value as CustomerSortBy)}
               >
@@ -178,17 +180,24 @@ export default function DashboardPage() {
                 <option value="policy_count">Policy count</option>
                 <option value="investment_count">Investment tracks</option>
               </select>
-            </label>
-            <button type="button" className="tab" onClick={toggleSortOrder}>
+            </div>
+            <button
+              type="button"
+              className="control control-btn"
+              onClick={toggleSortOrder}
+            >
               {sortOrder === "desc" ? "Highest first ↓" : "Lowest first ↑"}
             </button>
-            <input
-              className="search"
-              placeholder="Search name or ID"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search customers"
-            />
+            <div className="toolbar-item toolbar-item-grow">
+              <label htmlFor="customer-search">Search</label>
+              <input
+                id="customer-search"
+                className="control control-search"
+                placeholder="Name or ID"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
         </div>
         {error && <p className="error">{error}</p>}

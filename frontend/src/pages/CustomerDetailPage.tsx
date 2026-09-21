@@ -234,28 +234,30 @@ export default function CustomerDetailPage() {
           {filteredInvestments.length === 0 ? (
             <p className="muted">No investment snapshots for this selection.</p>
           ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Policy</th>
-                  <th>Fund</th>
-                  <th>Snapshot</th>
-                  <th>Accumulation</th>
-                  <th>YTD P/L</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInvestments.map((inv, idx) => (
-                  <tr key={`${inv.policy_num}-${inv.fund_id}-${idx}`}>
-                    <td>{inv.policy_num}</td>
-                    <td>{inv.fund_id ?? "—"}</td>
-                    <td>{maskDate(inv.snapshot_date)}</td>
-                    <td>{formatMoney(inv.accumulation_total)}</td>
-                    <td>{formatMoney(inv.yearly_profit_loss_total)}</td>
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Policy</th>
+                    <th>Fund</th>
+                    <th>Snapshot</th>
+                    <th>Accumulation</th>
+                    <th>YTD P/L</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredInvestments.map((inv, idx) => (
+                    <tr key={`${inv.policy_num}-${inv.fund_id}-${idx}`}>
+                      <td>{inv.policy_num}</td>
+                      <td>{inv.fund_id ?? "—"}</td>
+                      <td>{maskDate(inv.snapshot_date)}</td>
+                      <td>{formatMoney(inv.accumulation_total)}</td>
+                      <td>{formatMoney(inv.yearly_profit_loss_total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
       )}

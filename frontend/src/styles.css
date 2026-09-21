@@ -83,23 +83,60 @@ body,
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 0.65rem 1rem;
+}
+
+.toolbar-item {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
 }
 
-.sort-control {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.78rem;
-  color: #5a6b7d;
-  gap: 0.2rem;
+.toolbar-item-grow {
+  flex: 1 1 240px;
+  min-width: 200px;
 }
 
-.sort-control select {
-  padding: 0.45rem 0.5rem;
+.toolbar-item label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #5a6b7d;
+  white-space: nowrap;
+  margin: 0;
+}
+
+.control {
+  height: 2.375rem;
+  padding: 0 0.75rem;
   border: 1px solid #c5d0dc;
   border-radius: 6px;
+  font: inherit;
   font-size: 0.9rem;
-  min-width: 10rem;
+  line-height: 1.25;
+  background: #fff;
+  color: inherit;
+  box-sizing: border-box;
+}
+
+select.control {
+  min-width: 11rem;
+  padding-right: 1.75rem;
+}
+
+.control-btn {
+  cursor: pointer;
+  white-space: nowrap;
+  background: #fff;
+}
+
+.control-btn:hover {
+  border-color: #9ecae8;
+  background: #f7fafc;
+}
+
+.control-search {
+  width: 100%;
+  min-width: 0;
 }
 
 .th-sorted {
@@ -119,6 +156,8 @@ body,
   border: 1px solid #c5d0dc;
   border-radius: 6px;
 }
+
+/* legacy .search — prefer .control.control-search in toolbar */
 
 .stat-grid {
   display: grid;
