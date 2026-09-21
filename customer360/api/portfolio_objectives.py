@@ -211,9 +211,16 @@ def fetch_objective_trends(
     conn: sqlite3.Connection,
     *,
     segment: str | None = BOOK_WIDE_SEGMENT,
+    prefer_materialized: bool = True,
 ) -> dict:
     """Book-wide strategic trends (defaults to all active customers)."""
     seg = normalize_segment(segment or BOOK_WIDE_SEGMENT)
+    if prefer_materialized and seg == BOOK_WIDE_SEGMENT:
+        from customer360.book_objectives_cache import load_book_objective_trends
+
+        cached = load_book_objective_trends(conn)
+        if cached is not None:
+            return cached
     return {
         "objectives_note": OBJECTIVES_NOTE,
         "savings_aum_trend": fetch_savings_aum_trend(conn, segment=seg),

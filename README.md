@@ -146,7 +146,8 @@ After seeding, the warehouse precomputes:
 
 - **`APP_CUSTOMER_METRICS`** — per-customer value, policy count, investment tracks (customer list avoids heavy per-row subqueries).
 - **`APP_OVERVIEW_COUNTS`** — domain card counts.
-- **`APP_PORTFOLIO_ANALYTICS_CACHE`** — portfolio charts/KPIs per segment (refreshed after churn training).
+- **`APP_PORTFOLIO_ANALYTICS_CACHE`** — portfolio charts/KPIs per segment (seed, churn train, or `scripts/refresh_api_caches.py`). The API serves this JSON on read; cache misses are computed once and stored (write-through).
+- **`APP_BOOK_*_TREND`** — materialized book-wide strategic objective series (savings AUM, premium momentum, engagement) for fast chart loads without re-aggregating facts on every request.
 
 Refresh caches on an existing DB without reseeding:
 

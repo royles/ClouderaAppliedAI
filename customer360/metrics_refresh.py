@@ -94,7 +94,10 @@ def refresh_overview_counts(conn: sqlite3.Connection) -> None:
 
 
 def refresh_portfolio_analytics_cache(conn: sqlite3.Connection) -> int:
+    from customer360.book_objectives_cache import refresh_book_objective_trends
+
     ensure_metrics_schema(conn)
+    refresh_book_objective_trends(conn)
     refreshed_at = datetime.now(timezone.utc).isoformat()
     conn.execute("DELETE FROM APP_PORTFOLIO_ANALYTICS_CACHE")
     conn.commit()
@@ -126,3 +129,11 @@ def refresh_all_api_caches(conn: sqlite3.Connection) -> dict[str, int | str]:
         "portfolio_segments_cached": segments,
         "refreshed_at": datetime.now(timezone.utc).isoformat(),
     }
+
+
+def portfolio_analytics_cache_ready(conn: sqlite3.Connection) -> bool:
+    ensure_metrics_schema(conn)
+    row = conn.execute(
+        "SELECT 1 FROM APP_PORTFOLIO_ANALYTICS_CACHE WHERE SEGMENT = 'customers_all' LIMIT 1"
+    ).fetchone()
+    return row is not None

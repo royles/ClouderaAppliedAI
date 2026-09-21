@@ -568,6 +568,7 @@ def init_database(
     interactions = build_interaction_events(customers, policies, foreclosures, rng=RNG)
 
     with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.executescript(schema_path().read_text(encoding="utf-8"))

@@ -42,6 +42,7 @@ from customer360.api.schemas import (
 )
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
 from customer360.api.portfolio_objectives import fetch_objective_trends
+from customer360.metrics_refresh import ensure_metrics_schema
 from customer360.api.value_history import (
     CUSTOMER_VALUE_SQL,
     customer_value_at_period_sql,
@@ -120,19 +121,61 @@ def bedrock_status() -> BedrockStatusResponse:
     )
 
 
+def _objectives_ready(payload: dict) -> bool:
+    trends = payload.get("savings_aum_trend")
+    return isinstance(trends, list) and len(trends) > 0
+
+
+def _attach_book_objectives_if_needed(
+    enriched: dict,
+    conn: sqlite3.Connection,
+) -> None:
+    if _objectives_ready(enriched):
+        return
+    from customer360.book_objectives_cache import load_book_objective_trends
+
+    materialized = load_book_objective_trends(conn)
+    if materialized is not None:
+        enriched.update(materialized)
+        return
+    enriched.update(fetch_objective_trends(conn, prefer_materialized=False))
+
+
+def _persist_portfolio_analytics_cache(
+    conn: sqlite3.Connection,
+    segment: str,
+    payload: dict,
+) -> None:
+    from datetime import datetime, timezone
+
+    ensure_metrics_schema(conn)
+    refreshed_at = datetime.now(timezone.utc).isoformat()
+    conn.execute(
+        """
+        INSERT INTO APP_PORTFOLIO_ANALYTICS_CACHE (SEGMENT, PAYLOAD_JSON, REFRESHED_AT)
+        VALUES (?, ?, ?)
+        ON CONFLICT(SEGMENT) DO UPDATE SET
+            PAYLOAD_JSON = excluded.PAYLOAD_JSON,
+            REFRESHED_AT = excluded.REFRESHED_AT
+        """,
+        (segment, json.dumps(payload), refreshed_at),
+    )
+    conn.commit()
+
+
 def _portfolio_analytics_response(
     payload: dict,
     conn: sqlite3.Connection | None = None,
 ) -> PortfolioAnalyticsResponse:
     enriched = dict(payload)
     if conn is not None:
-        # Always recompute book-wide objective charts (cached payloads may predate these fields).
-        enriched.update(fetch_objective_trends(conn))
-    enriched["kpi_targets"] = build_kpi_targets(
-        enriched.get("kpis", {}),
-        enriched.get("value_points", []),
-        conn=conn,
-    )
+        _attach_book_objectives_if_needed(enriched, conn)
+    if not enriched.get("kpi_targets"):
+        enriched["kpi_targets"] = build_kpi_targets(
+            enriched.get("kpis", {}),
+            enriched.get("value_points", []),
+            conn=conn,
+        )
     return PortfolioAnalyticsResponse(**enriched)
 
 
@@ -159,6 +202,8 @@ def portfolio_analytics(
         if cached and cached[0]:
             return _portfolio_analytics_response(json.loads(cached[0]), conn=conn)
     data = fetch_portfolio_analytics(conn, segment=seg)
+    if cache_table:
+        _persist_portfolio_analytics_cache(conn, seg, data)
     return _portfolio_analytics_response(data, conn=conn)
 
 
