@@ -40,7 +40,7 @@ function patchDashboardParams(
   };
   if ("segment" in patch) apply("segment", patch.segment ?? null, "customers_all");
   if ("q" in patch) apply("q", patch.q ?? null);
-  if ("sortBy" in patch) apply("sort", patch.sortBy ?? null, "churn_risk");
+  if ("sortBy" in patch) apply("sort", patch.sortBy ?? null, "customer_value");
   if ("sortOrder" in patch) apply("order", patch.sortOrder ?? null, "desc");
   if ("page" in patch) {
     const p = patch.page;
@@ -232,7 +232,10 @@ export default function DashboardPage() {
 
   const setRankBy = (by: CustomerSortBy) => {
     const order: SortOrder =
-      by === "churn_risk" || by === "policy_count" || by === "investment_count"
+      by === "customer_value" ||
+      by === "churn_risk" ||
+      by === "policy_count" ||
+      by === "investment_count"
         ? "desc"
         : "asc";
     setSearchParams(
@@ -271,6 +274,7 @@ export default function DashboardPage() {
   const showingTo = Math.min(page * DASHBOARD_PAGE_SIZE, listTotal);
 
   const showRank =
+    sortBy === "customer_value" ||
     sortBy === "churn_risk" ||
     sortBy === "policy_count" ||
     sortBy === "investment_count";
@@ -371,6 +375,7 @@ export default function DashboardPage() {
                 value={sortBy}
                 onChange={(e) => setRankBy(e.target.value as CustomerSortBy)}
               >
+                <option value="customer_value">Value, then churn</option>
                 <option value="churn_risk">Churn risk</option>
                 <option value="name">Name (A–Z)</option>
                 <option value="policy_count">Policy count</option>
@@ -382,13 +387,17 @@ export default function DashboardPage() {
               className="control control-btn"
               onClick={toggleSortOrder}
             >
-              {sortBy === "churn_risk"
+              {sortBy === "customer_value"
                 ? sortOrder === "desc"
-                  ? "High risk first ↓"
-                  : "Low risk first ↑"
-                : sortOrder === "desc"
-                  ? "Highest first ↓"
-                  : "Lowest first ↑"}
+                  ? "Highest value first ↓"
+                  : "Lowest value first ↑"
+                : sortBy === "churn_risk"
+                  ? sortOrder === "desc"
+                    ? "High risk first ↓"
+                    : "Low risk first ↑"
+                  : sortOrder === "desc"
+                    ? "Highest first ↓"
+                    : "Lowest first ↑"}
             </button>
             <div className="toolbar-item toolbar-item-grow">
               <label htmlFor="customer-search">Search</label>

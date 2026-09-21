@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CustomerSummary } from "../api";
 import ChurnBadge from "../ChurnBadge";
+import { formatMoneyIls } from "../formatMoney";
 import {
   displayCustomerId,
   displayCustomerName,
@@ -53,6 +54,10 @@ export default function CustomerCardGrid({
                     {formatCity(c.city_name) !== "—"
                       ? ` · ${formatCity(c.city_name)}`
                       : ""}
+                  </p>
+                  <p className="customer-card-value">
+                    <span className="label">Customer value</span>
+                    <strong>{formatMoneyIls(c.customer_value)}</strong>
                   </p>
                 </div>
                 <ChurnBadge

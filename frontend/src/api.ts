@@ -41,11 +41,13 @@ export type CustomerSummary = {
   last_login?: string | null;
   policy_count: number;
   investment_count: number;
+  customer_value: number;
   churn_probability?: number | null;
   churn_risk_tier?: string | null;
 };
 
 export type CustomerSortBy =
+  | "customer_value"
   | "churn_risk"
   | "name"
   | "policy_count"

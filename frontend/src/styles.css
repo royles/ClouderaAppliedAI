@@ -327,6 +327,21 @@ select.control {
   margin: 0.2rem 0 0;
 }
 
+.customer-card-value {
+  margin: 0.45rem 0 0;
+}
+
+.customer-card-value .label {
+  display: block;
+  font-size: 0.72rem;
+  margin-bottom: 0.1rem;
+}
+
+.customer-card-value strong {
+  font-size: 1.15rem;
+  color: #0f3d5e;
+}
+
 .customer-card-stats {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

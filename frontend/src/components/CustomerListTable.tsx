@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { CustomerSortBy, CustomerSummary, SortOrder } from "../api";
 import ChurnBadge from "../ChurnBadge";
+import { formatMoneyIls } from "../formatMoney";
 import {
   displayCustomerId,
   displayCustomerName,
@@ -51,6 +52,15 @@ export default function CustomerListTable({
           <th>
             <button
               type="button"
+              className={`th-sort-btn${sortBy === "customer_value" ? " th-sorted" : ""}`}
+              onClick={() => onToggleColumnSort("customer_value")}
+            >
+              Value{sortIndicator(sortBy, sortOrder, "customer_value")}
+            </button>
+          </th>
+          <th>
+            <button
+              type="button"
               className={`th-sort-btn${sortBy === "policy_count" ? " th-sorted" : ""}`}
               onClick={() => onToggleColumnSort("policy_count")}
             >
@@ -81,7 +91,7 @@ export default function CustomerListTable({
       <tbody>
         {customers.length === 0 ? (
           <tr>
-            <td colSpan={showRank ? 10 : 9} className="muted">
+            <td colSpan={showRank ? 11 : 10} className="muted">
               No customers match this filter.
             </td>
           </tr>
@@ -102,6 +112,7 @@ export default function CustomerListTable({
               <td>{formatCity(c.city_name)}</td>
               <td>{maskEmail(c.email)}</td>
               <td>{maskPhone(c.mobile_no)}</td>
+              <td>{formatMoneyIls(c.customer_value)}</td>
               <td>{c.policy_count ?? 0}</td>
               <td>{c.investment_count ?? 0}</td>
               <td>{formatLastLogin(c.last_login)}</td>

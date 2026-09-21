@@ -30,7 +30,7 @@ from customer360.api.schemas import (
     SimulateSendResponse,
     ValueHistoryResponse,
 )
-from customer360.api.value_history import fetch_value_history
+from customer360.api.value_history import CUSTOMER_VALUE_SQL, fetch_value_history
 from customer360.actions.draft import build_action_draft, classify_recommendation, simulate_send
 from customer360.interactions.summary import load_interaction_bundle
 from customer360.bedrock.config import get_bedrock_settings
@@ -141,7 +141,7 @@ def list_customers(
     ),
     sort_by: str | None = Query(
         None,
-        description="Sort key: churn_risk (default), name, policy_count, or investment_count",
+        description="Sort key: customer_value (default), churn_risk, name, policy_count, or investment_count",
     ),
     sort_order: str | None = Query(
         None,
@@ -192,13 +192,17 @@ def list_customers(
                     WHERE pit.CUSTOMER_ID = c.CUSTOMER_ID
                 )
             ) AS investment_count,
+            ROUND({CUSTOMER_VALUE_SQL}, 2) AS customer_value,
             {churn_cols}
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
         {churn_join}
         WHERE {where_sql}
     """
     list_params = list(params)
-    sql += f" ORDER BY {order_clause(sort_key, order_key)} LIMIT ? OFFSET ?"
+    sql += (
+        f" ORDER BY {order_clause(sort_key, order_key, churn_scores_available=churn_scores_available)} "
+        "LIMIT ? OFFSET ?"
+    )
     list_params.extend([limit, offset])
     rows = conn.execute(sql, list_params).fetchall()
     customers = [CustomerSummary(**dict(r)) for r in rows]

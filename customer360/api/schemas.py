@@ -45,6 +45,7 @@ class CustomerSummary(BaseModel):
     last_login: str | None = None
     policy_count: int = 0
     investment_count: int = 0
+    customer_value: float = 0
     churn_probability: float | None = None
     churn_risk_tier: str | None = None
 

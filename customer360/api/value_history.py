@@ -6,6 +6,42 @@ import sqlite3
 
 from customer360.api.segments import SEGMENT_WHERE, normalize_segment
 
+# Latest investment snapshot + latest coverage snapshot (same logic as value history totals).
+CUSTOMER_VALUE_SQL = """
+(
+  COALESCE(
+    (
+      SELECT SUM(pit.ACCUMULATION_TOTAL)
+      FROM DWH_FCT_POLICY_INVESTMENT_TRACK pit
+      WHERE pit.CUSTOMER_ID = c.CUSTOMER_ID
+        AND pit.SNAPSHOT_DATE = (
+          SELECT MAX(pit2.SNAPSHOT_DATE)
+          FROM DWH_FCT_POLICY_INVESTMENT_TRACK pit2
+          WHERE pit2.CUSTOMER_ID = c.CUSTOMER_ID
+        )
+    ),
+    0
+  )
+  + COALESCE(
+    (
+      SELECT SUM(
+          COALESCE(m.MBB_SCHUM_BITUACH, 0)
+          + COALESCE(m.MBB_ITRAT_CHISACHON, 0)
+          + COALESCE(m.MBB_ERECH_PIDYON, 0)
+        )
+      FROM FCT_MATZAV_BITUACH m
+      WHERE m.MS_MEVUTACH = c.CUSTOMER_ID
+        AND m.TAARICH_MAATAFIT = (
+          SELECT MAX(m2.TAARICH_MAATAFIT)
+          FROM FCT_MATZAV_BITUACH m2
+          WHERE m2.MS_MEVUTACH = c.CUSTOMER_ID
+        )
+    ),
+    0
+  )
+)
+""".strip()
+
 
 def _customer_scope_sql(segment: str, customer_id: int | None) -> tuple[str, list[object]]:
     if customer_id is not None:

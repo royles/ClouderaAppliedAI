@@ -10,6 +10,7 @@ const VALID_SEGMENTS = new Set<string>([
 ]);
 
 const VALID_SORT: CustomerSortBy[] = [
+  "customer_value",
   "churn_risk",
   "name",
   "policy_count",
@@ -35,10 +36,10 @@ export function parseDashboardSearch(params: URLSearchParams): DashboardUrlState
     ? (rawSegment as CustomerSegment)
     : "customers_all";
 
-  const rawSort = params.get("sort") ?? "churn_risk";
+  const rawSort = params.get("sort") ?? "customer_value";
   const sortBy = VALID_SORT.includes(rawSort as CustomerSortBy)
     ? (rawSort as CustomerSortBy)
-    : "churn_risk";
+    : "customer_value";
 
   const orderRaw = params.get("order");
   const sortOrder: SortOrder = orderRaw === "asc" || orderRaw === "desc" ? orderRaw : "desc";
@@ -65,7 +66,7 @@ export function dashboardSearchString(state: Partial<DashboardUrlState>): string
     params.set("segment", state.segment);
   }
   if (state.q?.trim()) params.set("q", state.q.trim());
-  if (state.sortBy && state.sortBy !== "churn_risk") {
+  if (state.sortBy && state.sortBy !== "customer_value") {
     params.set("sort", state.sortBy);
   }
   if (state.sortOrder && state.sortOrder !== "desc") {
