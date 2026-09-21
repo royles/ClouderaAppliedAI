@@ -2,7 +2,7 @@ name: Insurance Customer 360
 description: >
   Unified insurance customer dashboard backed by a DDS-aligned SQLite warehouse.
   Deploy as a Cloudera AI (CAI) project with automated dependency install, database
-  seeding, and a Streamlit application.
+  seeding, React production build, and a FastAPI application.
 author: Cloudera Applied AI
 specification_version: "1.0"
 prototype_version: "1.0"
@@ -32,6 +32,17 @@ tasks:
 
   - type: run_job
     entity_label: install_dependencies
+
+  - type: create_job
+    name: Build React Frontend
+    entity_label: build_frontend
+    script: scripts/build_frontend.py
+    kernel: python3
+    cpu: 2
+    memory: 4
+
+  - type: run_job
+    entity_label: build_frontend
 
   - type: create_job
     name: Initialize Customer 360 Database
