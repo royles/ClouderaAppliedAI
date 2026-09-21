@@ -1,0 +1,10 @@
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/models/
+__pycache__/
+*.egg-info/
+*.pyc
+.venv/
+frontend/node_modules/
+.tools/
