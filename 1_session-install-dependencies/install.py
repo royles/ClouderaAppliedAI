@@ -28,6 +28,7 @@ def _bootstrap() -> Path:
 
 ROOT = _bootstrap().resolve()
 REQ = (ROOT / "1_session-install-dependencies" / "requirements.txt").resolve()
+ML_REQ = (ROOT / "1_session-install-dependencies" / "requirements-ml.txt").resolve()
 FRONTEND = (ROOT / "frontend").resolve()
 
 
@@ -54,6 +55,8 @@ def main() -> None:
         )
 
     run([sys.executable, "-m", "pip", "install", "-r", str(REQ)])
+    if ML_REQ.is_file():
+        run([sys.executable, "-m", "pip", "install", "-r", str(ML_REQ)])
     run([sys.executable, "-m", "pip", "install", "-e", str(ROOT)])
 
     dist_index = FRONTEND / "dist" / "index.html"

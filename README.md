@@ -6,7 +6,11 @@ Unified customer dashboard for Cloudera AI (CAI), backed by a DDS-aligned SQLite
 
 ### Deploy on Cloudera AI
 
-1. Create a project from this Git repository (or import as an ML prototype if catalog metadata is added later).
+This repo is packaged as a **CAI application (AMP)** via `.project-metadata.yaml` and
+`amp-catalog.yaml`. Step-by-step instructions: [docs/CAI_APPLICATION.md](docs/CAI_APPLICATION.md).
+
+1. Create a project from this Git repository and **configure as prototype**, or launch from your
+   AMP catalog entry (**Insurance Customer 360**).
 2. On first import, `.project-metadata.yaml` runs these stages in order:
 
    | Stage | Folder / script | Purpose |
@@ -23,6 +27,7 @@ Optional environment variable:
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `CUSTOMER360_DB_PATH` | `data/customer360.db` | SQLite file (relative to `CDSW_PROJECT`) |
+| `AWS_*`, `CUSTOMER360_BEDROCK_*` | — | Amazon Bedrock (insights + outreach drafts); see `.env.example` |
 
 ### Project layout (CAI-compatible)
 
