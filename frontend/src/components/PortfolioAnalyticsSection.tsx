@@ -178,10 +178,12 @@ export default function PortfolioAnalyticsSection({
           loading={loading}
         />
         <div className="portfolio-kpi">
-          <span className="label">Avg policies / customer</span>
-          <strong>
-            {loading ? "…" : (kpis?.avg_policies_per_customer ?? 0).toFixed(1)}
-          </strong>
+          <div className="portfolio-kpi-head">
+            <span className="label portfolio-kpi-label">Avg policies / customer</span>
+            <strong className="portfolio-kpi-value">
+              {loading ? "…" : (kpis?.avg_policies_per_customer ?? 0).toFixed(1)}
+            </strong>
+          </div>
         </div>
       </div>
 
