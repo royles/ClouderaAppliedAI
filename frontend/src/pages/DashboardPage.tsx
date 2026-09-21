@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   CustomerSegment,
   CustomerSortBy,
@@ -24,18 +24,33 @@ import {
 } from "../pii";
 
 export default function DashboardPage() {
+  const location = useLocation();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [search, setSearch] = useState("");
   const [segment, setSegment] = useState<CustomerSegment>("customers_all");
   const [sortBy, setSortBy] = useState<CustomerSortBy>("churn_risk");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [activeDomain, setActiveDomain] = useState<DomainCount | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [valueHistory, setValueHistory] = useState<ValueHistoryPoint[]>([]);
   const [valueHistoryLoading, setValueHistoryLoading] = useState(true);
+  const customersRequestRef = useRef(0);
+  const valueHistoryRequestRef = useRef(0);
+  const valueHistorySegmentRef = useRef<CustomerSegment | null>(null);
+
+  const activeDomain = useMemo((): DomainCount | null => {
+    if (segment === "customers_all" || !overview?.domains) return null;
+    const match = overview.domains.find((d) => d.filter_key === segment);
+    return match ?? null;
+  }, [segment, overview]);
+
+  const loadOverview = useCallback(async () => {
+    const ov = await fetchOverview();
+    setOverview(ov);
+    return ov;
+  }, []);
 
   const loadCustomers = useCallback(
     async (
@@ -43,8 +58,14 @@ export default function DashboardPage() {
       seg: CustomerSegment,
       by: CustomerSortBy,
       order: SortOrder,
+      immediate = false,
     ) => {
+      const requestId = ++customersRequestRef.current;
       setTableLoading(true);
+      if (!immediate) {
+        await new Promise((r) => window.setTimeout(r, 300));
+      }
+      if (requestId !== customersRequestRef.current) return;
       try {
         setCustomers(
           await fetchCustomers({
@@ -57,76 +78,89 @@ export default function DashboardPage() {
         );
         setError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Failed to load customers");
+        if (requestId === customersRequestRef.current) {
+          setError(e instanceof Error ? e.message : "Failed to load customers");
+        }
       } finally {
-        setTableLoading(false);
+        if (requestId === customersRequestRef.current) {
+          setTableLoading(false);
+        }
       }
     },
     [],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const ov = await fetchOverview();
-        if (!cancelled) {
-          setOverview(ov);
-          setError(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load data");
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+  const loadValueHistory = useCallback(async (seg: CustomerSegment) => {
+    const requestId = ++valueHistoryRequestRef.current;
+    setValueHistoryLoading(true);
+    if (valueHistorySegmentRef.current !== seg) {
+      setValueHistory([]);
+      valueHistorySegmentRef.current = seg;
+    }
+    try {
+      const data = await fetchPortfolioValueHistory(seg);
+      if (requestId !== valueHistoryRequestRef.current) return;
+      setValueHistory(data.points ?? []);
+    } catch {
+      if (requestId === valueHistoryRequestRef.current) {
+        setValueHistory([]);
       }
-    })();
-    return () => {
-      cancelled = true;
-    };
+    } finally {
+      if (requestId === valueHistoryRequestRef.current) {
+        setValueHistoryLoading(false);
+      }
+    }
   }, []);
 
+  // Refetch overview + cohort data whenever the user lands on the dashboard route.
   useEffect(() => {
-    const handle = window.setTimeout(() => {
-      void loadCustomers(search, segment, sortBy, sortOrder);
-    }, 300);
-    return () => window.clearTimeout(handle);
-  }, [search, segment, sortBy, sortOrder, loadCustomers]);
+    if (location.pathname !== "/") return;
 
-  useEffect(() => {
     let cancelled = false;
     (async () => {
-      setValueHistoryLoading(true);
       try {
-        const data = await fetchPortfolioValueHistory(segment);
-        if (!cancelled) setValueHistory(data.points ?? []);
-      } catch {
-        if (!cancelled) setValueHistory([]);
+        if (!overview) setInitialLoading(true);
+        await loadOverview();
+        if (cancelled) return;
+        setError(null);
+        await Promise.all([
+          loadCustomers(search, segment, sortBy, sortOrder, true),
+          loadValueHistory(segment),
+        ]);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : "Failed to load dashboard");
+        }
       } finally {
-        if (!cancelled) setValueHistoryLoading(false);
+        if (!cancelled) setInitialLoading(false);
       }
     })();
+
     return () => {
       cancelled = true;
+      customersRequestRef.current += 1;
+      valueHistoryRequestRef.current += 1;
     };
-  }, [segment]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh on navigation, not every filter keystroke
+  }, [location.pathname, location.key]);
+
+  useEffect(() => {
+    if (location.pathname !== "/" || initialLoading) return;
+    void loadCustomers(search, segment, sortBy, sortOrder);
+  }, [search, segment, sortBy, sortOrder, loadCustomers, location.pathname, initialLoading]);
+
+  useEffect(() => {
+    if (location.pathname !== "/" || initialLoading) return;
+    void loadValueHistory(segment);
+  }, [segment, loadValueHistory, location.pathname, initialLoading]);
 
   const onCardClick = (domain: DomainCount) => {
     const key = domain.filter_key as CustomerSegment;
-    if (segment === key) {
-      setSegment("customers_all");
-      setActiveDomain(null);
-    } else {
-      setSegment(key);
-      setActiveDomain(domain);
-    }
+    setSegment((prev) => (prev === key ? "customers_all" : key));
   };
 
   const clearFilter = () => {
     setSegment("customers_all");
-    setActiveDomain(null);
   };
 
   const setRankBy = (by: CustomerSortBy) => {
@@ -147,7 +181,9 @@ export default function DashboardPage() {
     sortBy === "policy_count" ||
     sortBy === "investment_count";
 
-  if (loading) return <p className="muted">Loading warehouse…</p>;
+  if (initialLoading && !overview) {
+    return <p className="muted">Loading warehouse…</p>;
+  }
   if (error && !overview) return <p className="error">{error}</p>;
 
   return (
@@ -155,8 +191,7 @@ export default function DashboardPage() {
       <section className="panel">
         <h1>Warehouse overview</h1>
         <p className="muted small">
-          Click a card to filter the customer table. Click again to clear. Sensitive fields
-          are partially masked in the UI.
+          Click a card to filter the customer table and value chart. Click again to clear.
         </p>
         {overview && (
           <div className="stat-grid">
@@ -190,7 +225,8 @@ export default function DashboardPage() {
               : "Book-wide monthly history — investment accumulation and insurance status values (ILS)."
           }
           points={valueHistory}
-          loading={valueHistoryLoading}
+          loading={valueHistoryLoading && valueHistory.length === 0}
+          refreshing={valueHistoryLoading && valueHistory.length > 0}
         />
       </section>
 
@@ -255,70 +291,70 @@ export default function DashboardPage() {
             <p className="table-loading-label muted">Updating table…</p>
           )}
           <table className="table table-interactive">
-              <thead>
+            <thead>
+              <tr>
+                {showRank && <th>#</th>}
+                <th>Name</th>
+                <th>ID</th>
+                <th>City</th>
+                <th>Email</th>
+                <th>Mobile</th>
+                <th
+                  className={sortBy === "policy_count" ? "th-sorted" : undefined}
+                >
+                  Policies
+                </th>
+                <th
+                  className={
+                    sortBy === "investment_count" ? "th-sorted" : undefined
+                  }
+                >
+                  Investments
+                </th>
+                <th>Last login</th>
+                <th className={sortBy === "churn_risk" ? "th-sorted" : undefined}>
+                  Churn risk
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {customers.length === 0 ? (
                 <tr>
-                  {showRank && <th>#</th>}
-                  <th>Name</th>
-                  <th>ID</th>
-                  <th>City</th>
-                  <th>Email</th>
-                  <th>Mobile</th>
-                  <th
-                    className={sortBy === "policy_count" ? "th-sorted" : undefined}
-                  >
-                    Policies
-                  </th>
-                  <th
-                    className={
-                      sortBy === "investment_count" ? "th-sorted" : undefined
-                    }
-                  >
-                    Investments
-                  </th>
-                  <th>Last login</th>
-                  <th className={sortBy === "churn_risk" ? "th-sorted" : undefined}>
-                    Churn risk
-                  </th>
+                  <td colSpan={showRank ? 10 : 9} className="muted">
+                    No customers match this filter.
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {customers.length === 0 ? (
-                  <tr>
-                    <td colSpan={showRank ? 10 : 9} className="muted">
-                      No customers match this filter.
+              ) : (
+                customers.map((c, index) => (
+                  <tr key={c.customer_id} className="table-row-click">
+                    {showRank && <td className="rank-cell">{index + 1}</td>}
+                    <td>
+                      <Link to={`/customers/${c.customer_id}`}>
+                        {displayCustomerName(c.customer_name)}
+                      </Link>
+                    </td>
+                    <td>
+                      <Link to={`/customers/${c.customer_id}`}>
+                        {displayCustomerId(c.customer_id)}
+                      </Link>
+                    </td>
+                    <td>{formatCity(c.city_name)}</td>
+                    <td>{maskEmail(c.email)}</td>
+                    <td>{maskPhone(c.mobile_no)}</td>
+                    <td>{c.policy_count ?? 0}</td>
+                    <td>{c.investment_count ?? 0}</td>
+                    <td>{formatLastLogin(c.last_login)}</td>
+                    <td>
+                      <ChurnBadge
+                        probability={c.churn_probability}
+                        tier={c.churn_risk_tier}
+                      />
                     </td>
                   </tr>
-                ) : (
-                  customers.map((c, index) => (
-                    <tr key={c.customer_id} className="table-row-click">
-                      {showRank && <td className="rank-cell">{index + 1}</td>}
-                      <td>
-                        <Link to={`/customers/${c.customer_id}`}>
-                          {displayCustomerName(c.customer_name)}
-                        </Link>
-                      </td>
-                      <td>
-                        <Link to={`/customers/${c.customer_id}`}>
-                          {displayCustomerId(c.customer_id)}
-                        </Link>
-                      </td>
-                      <td>{formatCity(c.city_name)}</td>
-                      <td>{maskEmail(c.email)}</td>
-                      <td>{maskPhone(c.mobile_no)}</td>
-                      <td>{c.policy_count ?? 0}</td>
-                      <td>{c.investment_count ?? 0}</td>
-                      <td>{formatLastLogin(c.last_login)}</td>
-                      <td>
-                        <ChurnBadge
-                          probability={c.churn_probability}
-                          tier={c.churn_risk_tier}
-                        />
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </section>
     </>

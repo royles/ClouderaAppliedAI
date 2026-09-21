@@ -5,6 +5,7 @@ type Props = {
   subtitle?: string;
   points: ValueHistoryPoint[];
   loading?: boolean;
+  refreshing?: boolean;
 };
 
 function formatPeriodLabel(period: string) {
@@ -50,6 +51,7 @@ export default function CustomerValueChart({
   subtitle,
   points,
   loading,
+  refreshing,
 }: Props) {
   const width = 640;
   const height = 168;
@@ -87,7 +89,12 @@ export default function CustomerValueChart({
   const deltaPct = first > 0 ? (delta / first) * 100 : 0;
 
   return (
-    <div className="value-chart-wrap in-panel">
+    <div
+      className={`value-chart-wrap in-panel${refreshing ? " value-chart-refreshing" : ""}`}
+    >
+      {refreshing && (
+        <p className="value-chart-refresh-label muted small">Updating chart…</p>
+      )}
       <div className="panel-head value-chart-head">
         <div>
           <h2 className="subsection-title">{title}</h2>

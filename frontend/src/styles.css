@@ -573,6 +573,14 @@ select.control {
   border-top: 1px solid #e6ebf0;
 }
 
+.value-chart-wrap.value-chart-refreshing .value-chart-canvas {
+  opacity: 0.55;
+}
+
+.value-chart-refresh-label {
+  margin: 0 0 0.35rem;
+}
+
 .value-chart-head {
   margin-bottom: 0.5rem;
 }
