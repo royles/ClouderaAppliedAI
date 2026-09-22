@@ -999,17 +999,39 @@ select.control {
   border-top: 1px dashed #e6ebf0;
 }
 
-.customer-detail-hero-grid {
+.customer-detail-top-grid {
   display: grid;
   grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
   gap: 1rem;
-  align-items: stretch;
-  min-height: clamp(20rem, 42vh, 28rem);
+  align-items: start;
 }
 
-.customer-detail-hero-grid > .customer-detail-value-chart {
+.customer-detail-tabs-pane {
   min-width: 0;
-  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.customer-detail-tab-bar {
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.customer-detail-tab-body {
+  min-width: 0;
+}
+
+.customer-detail-tab-content .subsection-title {
+  margin-top: 0;
+}
+
+.customer-detail-chart-panel {
+  margin-top: 0;
+}
+
+.customer-detail-chart-panel .customer-detail-value-chart {
+  min-width: 0;
 }
 
 .customer-detail-value-chart.value-chart-wrap {
@@ -1099,7 +1121,7 @@ select.control {
 }
 
 @media (max-width: 900px) {
-  .customer-detail-hero-grid {
+  .customer-detail-top-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -3465,7 +3487,7 @@ a.engagement-act-link {
     color: var(--theme-brand-900);
   }
 
-  .customer-detail-hero-grid-compact {
+  .customer-detail-top-grid-compact {
     grid-template-columns: 1fr;
   }
 

@@ -242,8 +242,10 @@ export default function CustomerDetailPage() {
         )}
       </p>
       )}
-      <section className="panel customer-detail-hero">
-        <div className={`customer-detail-hero-grid${mobileFocus ? " customer-detail-hero-grid-compact" : ""}`}>
+      <section className="panel customer-detail-top">
+        <div
+          className={`customer-detail-top-grid${mobileFocus ? " customer-detail-top-grid-compact" : ""}`}
+        >
           {customerCard && (
             <CustomerSummaryCard
               variant="static"
@@ -252,43 +254,8 @@ export default function CustomerDetailPage() {
             />
           )}
           {!mobileFocus && (
-          <CustomerValueChart
-            className="customer-detail-value-chart"
-            fillContainer
-            title={t("charts.customerValue.title")}
-            subtitle={t("charts.customerValue.subtitle")}
-            points={valueHistory}
-            loading={valueHistoryLoading}
-            churn={
-              detail.churn?.churn_risk_tier || detail.churn?.churn_probability != null
-                ? {
-                    probability: detail.churn?.churn_probability ?? 0,
-                    tier: detail.churn?.churn_risk_tier,
-                  }
-                : null
-            }
-          />
-          )}
-        </div>
-      </section>
-
-      {!mobileFocus && engagementActionHint && (
-        <p className="engagement-action-banner muted small">
-          {t("customer.engagementHint.prefix")} <strong>{engagementActionHint}</strong>
-        </p>
-      )}
-      {!mobileFocus && (
-      <div id="customer-insights-anchor">
-        <CustomerInsightsPanel
-          customerId={profile.customer_id}
-          churnTier={detail.churn?.churn_risk_tier}
-        />
-      </div>
-      )}
-
-      {!mobileFocus && (
-      <>
-      <div className="tab-bar">
+            <div className="customer-detail-tabs-pane">
+              <div className="tab-bar customer-detail-tab-bar">
         <button
           type="button"
           className={tab === "policies" ? "tab active" : "tab"}
@@ -317,11 +284,12 @@ export default function CustomerDetailPage() {
         >
           {t("customer.tabs.interactions")} ({interaction_summary?.total_events ?? interactions.length})
         </button>
-      </div>
+              </div>
 
+              <div className="customer-detail-tab-body">
       {tab === "policies" && (
-        <section className="panel">
-          <h2>{t("customer.policies.title")}</h2>
+        <div className="customer-detail-tab-content">
+          <h2 className="subsection-title">{t("customer.policies.title")}</h2>
           <p className="muted small">{t("customer.policies.hint")}</p>
           <div className="table-wrap">
             <table className="table table-interactive">
@@ -359,12 +327,12 @@ export default function CustomerDetailPage() {
               </tbody>
             </table>
           </div>
-        </section>
+        </div>
       )}
 
       {tab === "foreclosures" && (
-        <section className="panel">
-          <h2>{t("customer.foreclosures.title")}</h2>
+        <div className="customer-detail-tab-content">
+          <h2 className="subsection-title">{t("customer.foreclosures.title")}</h2>
           {foreclosures.length === 0 ? (
             <p className="muted">{t("customer.foreclosures.empty")}</p>
           ) : (
@@ -391,12 +359,12 @@ export default function CustomerDetailPage() {
               </table>
             </div>
           )}
-        </section>
+        </div>
       )}
 
       {tab === "interactions" && (
-        <section className="panel">
-          <h2>{t("customer.interactions.title")}</h2>
+        <div className="customer-detail-tab-content">
+          <h2 className="subsection-title">{t("customer.interactions.title")}</h2>
           <p className="muted small">{t("customer.interactions.lede")}</p>
           {interaction_summary && (
             <div className="interaction-stats">
@@ -463,12 +431,12 @@ export default function CustomerDetailPage() {
               })}
             </ol>
           )}
-        </section>
+        </div>
       )}
 
       {tab === "investments" && (
-        <section className="panel">
-          <h2>{t("customer.investments.title")}</h2>
+        <div className="customer-detail-tab-content">
+          <h2 className="subsection-title">{t("customer.investments.title")}</h2>
           {activePolicy != null && (
             <p className="filter-banner">
               {t("customer.investments.policyFilter")} <strong>{activePolicy}</strong>
@@ -509,9 +477,46 @@ export default function CustomerDetailPage() {
               </table>
             </div>
           )}
-        </section>
+        </div>
       )}
-      </>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {!mobileFocus && engagementActionHint && (
+        <p className="engagement-action-banner muted small">
+          {t("customer.engagementHint.prefix")} <strong>{engagementActionHint}</strong>
+        </p>
+      )}
+      {!mobileFocus && (
+        <div id="customer-insights-anchor">
+          <CustomerInsightsPanel
+            customerId={profile.customer_id}
+            churnTier={detail.churn?.churn_risk_tier}
+          />
+        </div>
+      )}
+
+      {!mobileFocus && (
+        <section className="panel customer-detail-chart-panel">
+          <CustomerValueChart
+            className="customer-detail-value-chart"
+            title={t("charts.customerValue.title")}
+            subtitle={t("charts.customerValue.subtitle")}
+            points={valueHistory}
+            loading={valueHistoryLoading}
+            churn={
+              detail.churn?.churn_risk_tier || detail.churn?.churn_probability != null
+                ? {
+                    probability: detail.churn?.churn_probability ?? 0,
+                    tier: detail.churn?.churn_risk_tier,
+                  }
+                : null
+            }
+          />
+        </section>
       )}
     </>
   );
