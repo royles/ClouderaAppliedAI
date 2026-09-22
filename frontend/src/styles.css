@@ -220,21 +220,50 @@ body,
   color: #fff;
 }
 
+.header-with-copilot-toggle {
+  padding-right: max(3rem, calc(clamp(1rem, 2vw, 2rem) + 2.25rem));
+}
+
 .header-copilot-btn {
-  margin-left: auto;
+  position: fixed;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 1100;
+  box-sizing: border-box;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.45);
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
-  font-weight: 600;
-  font-size: 0.88rem;
-  padding: 0.4rem 0.85rem;
   border-radius: 6px;
   cursor: pointer;
 }
 
+.agent-copilot-head-toggle {
+  position: static;
+  flex-shrink: 0;
+  align-self: flex-start;
+  color: #0f3d5e;
+  border-color: #c5d4e0;
+  background: #fff;
+}
+
+.agent-copilot-head-toggle:hover,
+.agent-copilot-head-toggle.is-active {
+  background: #eef4f9;
+}
+
 .header-copilot-btn:hover,
 .header-copilot-btn.is-active {
-  background: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.copilot-panel-icon {
+  display: block;
 }
 
 .app-body-copilot-open .app-main {

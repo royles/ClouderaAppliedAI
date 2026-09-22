@@ -169,14 +169,6 @@ export default function AgentCopilotSidebar() {
               : " Using rule-based routing until Bedrock is configured."}
           </p>
         </div>
-        <button
-          type="button"
-          className="playbook-close"
-          onClick={() => setOpen(false)}
-          aria-label="Close copilot"
-        >
-          ×
-        </button>
       </header>
 
       <div className="agent-copilot-tabs" role="tablist">

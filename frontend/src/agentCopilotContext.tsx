@@ -52,7 +52,7 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
   const [enabled, setEnabled] = useState(false);
   const [agentMode, setAgentMode] = useState("rules");
   const [bedrockConfigured, setBedrockConfigured] = useState(false);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [panel, setPanel] = useState<CopilotPanel>("ask");
   const [turns, setTurns] = useState<CopilotTurn[]>([]);
   const [playbookSegment, setPlaybookSegment] = useState<CustomerSegment>("customers_all");

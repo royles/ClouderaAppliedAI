@@ -116,12 +116,12 @@ function AppLayout() {
 
   return (
     <div className="layout">
-      <header className="header">
+      <AgentCopilotToggle />
+      <header className="header header-with-copilot-toggle">
         <Link to={BUSINESS_BASE} className="brand">
           Insurance Customer 360
         </Link>
         <span className="tag">Cloudera AI · Business &amp; customer views</span>
-        <AgentCopilotToggle />
       </header>
       <div className={`app-body${open ? " app-body-copilot-open" : ""}`}>
         <AppSideNav />
