@@ -18,7 +18,6 @@ from customer360.api.schemas import (
     CustomerProfile,
     CustomerListResponse,
     CustomerSummary,
-    DomainCount,
     ForeclosureRow,
     HealthResponse,
     InsightActionDraftRequest,
@@ -96,9 +95,12 @@ from customer360.api.llm_stream_handlers import (
 )
 from customer360.api.sse import SSE_HEADERS
 from customer360.api.customer_list import customer_list_where as _customer_list_where
-from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE, normalize_segment
+from customer360.api.overview import fetch_overview_domains
+from customer360.api.segments import current_customer_exists, normalize_segment
+from customer360.churn.scoring import churn_table_exists
+from customer360.db import sqlite_table_exists
 from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
-from customer360.metrics_refresh import customer_metrics_populated
+from customer360.api.metrics_cache import customer_metrics_populated
 from customer360.paths import default_db_path
 from customer360.api.warehouse_admin import fetch_warehouse_admin_for_path
 from customer360.business_kpi_targets import build_kpi_targets
@@ -120,15 +122,8 @@ MAX_CUSTOMER_PAGE_SIZE = 100
 router = APIRouter(prefix="/api")
 
 
-def _churn_table_exists(conn: sqlite3.Connection) -> bool:
-    row = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_CHURN_SCORES'"
-    ).fetchone()
-    return row is not None
-
-
 def _fetch_churn(conn: sqlite3.Connection, customer_id: int) -> ChurnInsight | None:
-    if not _churn_table_exists(conn):
+    if not churn_table_exists(conn):
         return None
     row = conn.execute(
         """
@@ -349,9 +344,7 @@ def portfolio_analytics(
     ),
 ) -> PortfolioAnalyticsResponse:
     seg = normalize_segment(segment)
-    cache_table = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_PORTFOLIO_ANALYTICS_CACHE'"
-    ).fetchone()
+    cache_table = sqlite_table_exists(conn, "APP_PORTFOLIO_ANALYTICS_CACHE")
     if cache_table:
         cached = conn.execute(
             """
@@ -402,44 +395,8 @@ def portfolio_value_history(
 
 @router.get("/overview", response_model=OverviewResponse)
 def overview(conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> OverviewResponse:
-    domains: list[DomainCount] = []
-    cache_ready = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_OVERVIEW_COUNTS'"
-    ).fetchone()
-    if cache_ready:
-        for label, filter_key, description, count_sql in OVERVIEW_DOMAINS:
-            row = conn.execute(
-                "SELECT ROW_COUNT FROM APP_OVERVIEW_COUNTS WHERE FILTER_KEY = ?",
-                (filter_key,),
-            ).fetchone()
-            row_count = int(row[0]) if row else int(conn.execute(count_sql).fetchone()[0])
-            total_policies, active_policies = policy_totals_for_segment(conn, filter_key)
-            domains.append(
-                DomainCount(
-                    domain=label,
-                    row_count=row_count,
-                    filter_key=filter_key,
-                    description=description,
-                    policy_total=total_policies,
-                    policy_active=active_policies,
-                )
-            )
-    else:
-        for label, filter_key, description, count_sql in OVERVIEW_DOMAINS:
-            row_count = conn.execute(count_sql).fetchone()[0]
-            total_policies, active_policies = policy_totals_for_segment(conn, filter_key)
-            domains.append(
-                DomainCount(
-                    domain=label,
-                    row_count=row_count,
-                    filter_key=filter_key,
-                    description=description,
-                    policy_total=total_policies,
-                    policy_active=active_policies,
-                )
-            )
     return OverviewResponse(
-        domains=domains,
+        domains=fetch_overview_domains(conn),
         database_path=str(default_db_path()),
     )
 
@@ -708,7 +665,7 @@ def list_customers(
 
     churn_join = ""
     churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"
-    churn_scores_available = _churn_table_exists(conn)
+    churn_scores_available = churn_table_exists(conn)
     if churn_scores_available:
         churn_join = "LEFT JOIN APP_CUSTOMER_CHURN_SCORES ch ON ch.CUSTOMER_ID = c.CUSTOMER_ID"
         churn_cols = "ch.CHURN_PROBABILITY AS churn_probability, ch.CHURN_RISK_TIER AS churn_risk_tier"
@@ -907,11 +864,7 @@ def customer_value_history(
     customer_id: int,
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
 ) -> ValueHistoryResponse:
-    row = conn.execute(
-        "SELECT 1 FROM DWH_DIM_CUSTOMERS_UNIQUE WHERE CURRENT_IND = 1 AND CUSTOMER_ID = ?",
-        (customer_id,),
-    ).fetchone()
-    if row is None:
+    if not current_customer_exists(conn, customer_id):
         raise HTTPException(status_code=404, detail="Customer not found")
     points = fetch_value_history(conn, customer_id=customer_id)
     return ValueHistoryResponse(points=points, customer_id=customer_id)
@@ -995,11 +948,7 @@ def insight_simulate_send(
     payload: SimulateSendRequest,
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
 ) -> SimulateSendResponse:
-    row = conn.execute(
-        "SELECT 1 FROM DWH_DIM_CUSTOMERS_UNIQUE WHERE CURRENT_IND = 1 AND CUSTOMER_ID = ?",
-        (customer_id,),
-    ).fetchone()
-    if row is None:
+    if not current_customer_exists(conn, customer_id):
         raise HTTPException(status_code=404, detail="Customer not found")
     if payload.channel not in ("email", "sms", "call"):
         raise HTTPException(status_code=400, detail="Unsupported channel")

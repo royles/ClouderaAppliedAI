@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from typing import Literal
 
 SegmentKey = Literal[
@@ -121,3 +122,27 @@ def normalize_segment(segment: str | None) -> str:
     if key not in SEGMENT_WHERE:
         return "customers_all"
     return key
+
+
+def segment_scope_sql(
+    segment: str | None,
+    *,
+    alias: str = "c",
+    customer_id: int | None = None,
+) -> tuple[str, list[object]]:
+    """WHERE fragment for current customers in a cohort (or one customer by id)."""
+    if customer_id is not None:
+        return f"{alias}.CUSTOMER_ID = ?", [customer_id]
+    seg = normalize_segment(segment)
+    return f"{alias}.CURRENT_IND = 1 AND ({SEGMENT_WHERE[seg]})", []
+
+
+def current_customer_exists(conn: sqlite3.Connection, customer_id: int) -> bool:
+    row = conn.execute(
+        """
+        SELECT 1 FROM DWH_DIM_CUSTOMERS_UNIQUE
+        WHERE CURRENT_IND = 1 AND CUSTOMER_ID = ?
+        """,
+        (customer_id,),
+    ).fetchone()
+    return row is not None

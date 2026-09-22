@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 
 from customer360.api.customer_list import normalize_city_name
-from customer360.api.segments import SEGMENT_WHERE, normalize_segment
+from customer360.api.segments import normalize_segment, segment_scope_sql
 
 PRODUCT_CLASSES: list[tuple[str, str, tuple[int, ...]]] = [
     ("life_protection", "Life & protection", (101, 102)),
@@ -37,8 +37,7 @@ def fetch_product_catalog(
 ) -> dict:
     seg = normalize_segment(segment)
     city_canon = normalize_city_name(city)
-    customer_where = f"c.CURRENT_IND = 1 AND ({SEGMENT_WHERE[seg]})"
-    params: list[object] = []
+    customer_where, params = segment_scope_sql(seg)
     if city_canon:
         customer_where += " AND c.CITY_NAME = ?"
         params.append(city_canon)

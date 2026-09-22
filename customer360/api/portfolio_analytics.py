@@ -7,7 +7,8 @@ from datetime import date
 
 from customer360.api.policy_counts import policy_totals_for_segment
 from customer360.api.portfolio_objectives import BOOK_WIDE_SEGMENT
-from customer360.api.segments import SEGMENT_WHERE, normalize_segment
+from customer360.api.segments import normalize_segment, segment_scope_sql
+from customer360.api.metrics_cache import customer_metrics_populated
 from customer360.api.value_history import CUSTOMER_VALUE_SQL, fetch_value_history
 from customer360.business_kpi_targets import build_kpi_targets
 from customer360.api.portfolio_objectives import fetch_objective_trends
@@ -23,25 +24,6 @@ METHODOLOGY_NOTE = (
 )
 
 _CHURN_PROB_EXPR = effective_churn_probability_sql("ch")
-
-
-def _segment_where(segment: str | None) -> tuple[str, list[object]]:
-    seg = normalize_segment(segment)
-    return f"c.CURRENT_IND = 1 AND ({SEGMENT_WHERE[seg]})", []
-
-
-def _customer_metrics_ready(conn: sqlite3.Connection) -> bool:
-    row = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_METRICS'"
-    ).fetchone()
-    if not row:
-        return False
-    count = conn.execute("SELECT COUNT(*) FROM APP_CUSTOMER_METRICS").fetchone()[0]
-    return int(count or 0) > 0
-
-
-def _churn_table_exists(conn: sqlite3.Connection) -> bool:
-    return churn_table_exists(conn)
 
 
 def _finalize_churn_kpis(
@@ -68,8 +50,8 @@ def _finalize_churn_kpis(
 
 
 def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
-    where_sql, params = _segment_where(segment)
-    churn_ready = _churn_table_exists(conn)
+    where_sql, params = segment_scope_sql(segment)
+    churn_ready = churn_table_exists(conn)
     scores_ready = churn_scores_populated(conn) if churn_ready else False
     if churn_ready:
         churn_join = "LEFT JOIN APP_CUSTOMER_CHURN_SCORES ch ON ch.CUSTOMER_ID = s.CUSTOMER_ID"
@@ -103,7 +85,7 @@ def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
         low_risk_customers_sql = "0"
         high_risk_book_sql = "0"
 
-    if _customer_metrics_ready(conn):
+    if customer_metrics_populated(conn):
         scoped_sql = f"""
             SELECT
                 c.CUSTOMER_ID,

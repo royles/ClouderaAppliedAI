@@ -31,3 +31,11 @@ def connect(db_path: Path | None = None) -> sqlite3.Connection:
             # Corrupt or partial files may reject tuning PRAGMAs; still allow integrity checks.
             pass
     return conn
+
+
+def sqlite_table_exists(conn: sqlite3.Connection, table_name: str) -> bool:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+        (table_name,),
+    ).fetchone()
+    return row is not None

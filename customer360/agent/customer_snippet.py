@@ -8,7 +8,7 @@ from customer360.agent.list_filters import CustomerListFilters
 from customer360.api.customer_list import customer_list_where
 from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
 from customer360.api.value_history import CUSTOMER_VALUE_SQL
-from customer360.metrics_refresh import customer_metrics_populated
+from customer360.api.metrics_cache import customer_metrics_populated
 
 _POLICY_COUNT_SELECT = """
 (

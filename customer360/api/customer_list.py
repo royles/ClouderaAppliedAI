@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from customer360.api.segments import SEGMENT_WHERE, normalize_segment
+from customer360.api.segments import normalize_segment, segment_scope_sql
 
 VALID_CHURN_RISK_TIERS = frozenset({"HIGH", "MEDIUM", "LOW"})
 
@@ -59,9 +59,7 @@ def customer_list_where(
     city: str | None = None,
     churn_risk_tier: str | None = None,
 ) -> tuple[str, list[object]]:
-    segment_sql = SEGMENT_WHERE[normalize_segment(seg)]
-    where = f"c.CURRENT_IND = 1 AND ({segment_sql})"
-    params: list[object] = []
+    where, params = segment_scope_sql(normalize_segment(seg))
     if q and q.strip():
         where += " AND (c.CUSTOMER_NAME LIKE ? OR CAST(c.CUSTOMER_ID AS TEXT) LIKE ?)"
         like = f"%{q.strip()}%"

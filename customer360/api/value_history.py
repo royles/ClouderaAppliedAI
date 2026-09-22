@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 
 from customer360.api.policy_status_sql import POLICY_STATUS_COVERAGE_EXPR
-from customer360.api.segments import SEGMENT_WHERE, normalize_segment
+from customer360.api.segments import segment_scope_sql
 from customer360.churn.effective_risk import effective_churn_probability_sql
 
 # Latest investment snapshot + latest policy status snapshot.
@@ -106,20 +106,16 @@ def customer_at_risk_at_period_sql() -> tuple[str, int]:
     return customer_value_at_period_sql("at_risk")
 
 
-def _customer_scope_sql(segment: str, customer_id: int | None) -> tuple[str, list[object]]:
-    if customer_id is not None:
-        return "c.CUSTOMER_ID = ?", [customer_id]
-    seg = normalize_segment(segment)
-    return f"c.CURRENT_IND = 1 AND ({SEGMENT_WHERE[seg]})", []
-
-
 def fetch_value_history(
     conn: sqlite3.Connection,
     *,
     segment: str | None = None,
     customer_id: int | None = None,
 ) -> list[dict]:
-    where_sql, params = _customer_scope_sql(segment or "customers_all", customer_id)
+    where_sql, params = segment_scope_sql(
+        segment or "customers_all",
+        customer_id=customer_id,
+    )
     sql = f"""
         WITH scoped_customers AS (
             SELECT c.CUSTOMER_ID

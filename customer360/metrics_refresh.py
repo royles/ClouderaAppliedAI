@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
 from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE
 from customer360.api.value_history import CUSTOMER_VALUE_SQL
+from customer360.api.metrics_cache import customer_metrics_populated
 from customer360.paths import project_root
 
 METRICS_SCHEMA = project_root() / "data" / "metrics_schema.sql"
@@ -29,20 +30,6 @@ def ensure_metrics_schema(conn: sqlite3.Connection) -> None:
     if METRICS_SCHEMA.is_file():
         conn.executescript(METRICS_SCHEMA.read_text(encoding="utf-8"))
         conn.commit()
-
-
-def _metrics_table_ready(conn: sqlite3.Connection) -> bool:
-    row = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_METRICS'"
-    ).fetchone()
-    return row is not None
-
-
-def customer_metrics_populated(conn: sqlite3.Connection) -> bool:
-    if not _metrics_table_ready(conn):
-        return False
-    row = conn.execute("SELECT COUNT(*) FROM APP_CUSTOMER_METRICS").fetchone()
-    return int(row[0] or 0) > 0
 
 
 def refresh_customer_metrics(conn: sqlite3.Connection) -> int:

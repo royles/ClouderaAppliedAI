@@ -5,18 +5,12 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from customer360.api.segments import SEGMENT_WHERE, normalize_segment
+from customer360.api.segments import normalize_segment, segment_scope_sql
+from customer360.churn.scoring import churn_table_exists
 from customer360.interactions.summary import REFERENCE_DATE, interactions_table_exists
-from customer360.metrics_refresh import customer_metrics_populated
+from customer360.api.metrics_cache import customer_metrics_populated
 
 REFERENCE_DAY = REFERENCE_DATE.strftime("%Y-%m-%d")
-
-
-def _churn_table_exists(conn: sqlite3.Connection) -> bool:
-    row = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_CHURN_SCORES'"
-    ).fetchone()
-    return row is not None
 
 
 def _book_touchpoint_summary(conn: sqlite3.Connection) -> dict[str, Any]:
@@ -156,7 +150,7 @@ def fetch_engagement_opportunities(
     offset: int = 0,
 ) -> dict[str, Any]:
     seg = normalize_segment(segment)
-    where_sql = f"c.CURRENT_IND = 1 AND ({SEGMENT_WHERE[seg]})"
+    where_sql, _ = segment_scope_sql(seg)
 
     if not interactions_table_exists(conn):
         return {
@@ -178,7 +172,7 @@ def fetch_engagement_opportunities(
 
     churn_join = ""
     churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"
-    if _churn_table_exists(conn):
+    if churn_table_exists(conn):
         churn_join = "LEFT JOIN APP_CUSTOMER_CHURN_SCORES ch ON ch.CUSTOMER_ID = c.CUSTOMER_ID"
         churn_cols = "ch.CHURN_PROBABILITY AS churn_probability, ch.CHURN_RISK_TIER AS churn_risk_tier"
 

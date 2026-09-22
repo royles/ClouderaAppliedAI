@@ -5,14 +5,12 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+from customer360.db import sqlite_table_exists
 from customer360.paths import default_db_path
 
 
 def churn_table_exists(conn: sqlite3.Connection) -> bool:
-    row = conn.execute(
-        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_CHURN_SCORES'"
-    ).fetchone()
-    return row is not None
+    return sqlite_table_exists(conn, "APP_CUSTOMER_CHURN_SCORES")
 
 
 def churn_scores_populated(conn: sqlite3.Connection) -> bool:

@@ -6,7 +6,7 @@ import sqlite3
 
 from customer360.api.segments import SEGMENT_WHERE, normalize_segment
 from customer360.churn.effective_risk import effective_churn_probability_sql
-from customer360.metrics_refresh import customer_metrics_populated
+from customer360.api.metrics_cache import customer_metrics_populated
 from customer360.api.value_history import CUSTOMER_VALUE_SQL
 
 _CHURN_PROB = effective_churn_probability_sql("ch")
