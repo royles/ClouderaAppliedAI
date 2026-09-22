@@ -6,7 +6,7 @@ import sqlite3
 from collections.abc import Iterator
 
 from customer360.actions.bedrock_draft import (
-    ACTION_DRAFT_SYSTEM,
+    build_draft_system_prompt,
     _parse_draft_json,
 )
 from customer360.actions.draft import build_action_draft
@@ -16,7 +16,7 @@ import json
 from customer360.api.sse import sse_event
 from customer360.insights.context import load_customer_context
 from customer360.insights.parse import parse_insight_json
-from customer360.insights.prompt import SYSTEM_PROMPT, build_user_prompt
+from customer360.insights.prompt import build_insight_system_prompt, build_user_prompt
 from customer360.insights.service import _align_focus_with_churn, _generated_at_stamp, get_customer_insights
 from customer360.insights.fallback import generate_fallback
 from customer360.llm.errors import LLMError
@@ -56,6 +56,7 @@ def stream_insights_events(
     customer_id: int,
     *,
     refresh: bool,
+    locale: str | None = None,
 ) -> Iterator[bytes]:
     del refresh
     ctx = load_customer_context(conn, customer_id)
@@ -65,7 +66,7 @@ def stream_insights_events(
 
     llm_ready = is_llm_configured()
     if not llm_ready:
-        result = get_customer_insights(conn, customer_id, refresh=True)
+        result = get_customer_insights(conn, customer_id, refresh=True, locale=locale)
         if result:
             result["recommendation_actions"] = [
                 insight_action_meta(text) for text in result.get("recommendations", [])
@@ -78,7 +79,7 @@ def stream_insights_events(
     buffer: list[str] = []
     try:
         for piece in stream_text_chunks(
-            system_prompt=SYSTEM_PROMPT,
+            system_prompt=build_insight_system_prompt(locale),
             user_prompt=build_user_prompt(ctx.payload, ctx.churn_tier),
             json_mode=True,
         ):
@@ -147,6 +148,7 @@ def stream_action_draft_events(
     *,
     recommendation: str,
     source: str,
+    locale: str | None = None,
 ) -> Iterator[bytes]:
     ctx = load_customer_context(conn, customer_id)
     if ctx is None:
@@ -213,7 +215,7 @@ def stream_action_draft_events(
     buffer: list[str] = []
     try:
         for piece in stream_text_chunks(
-            system_prompt=ACTION_DRAFT_SYSTEM,
+            system_prompt=build_draft_system_prompt(locale),
             user_prompt=user_prompt,
             json_mode=True,
         ):

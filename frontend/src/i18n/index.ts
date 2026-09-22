@@ -43,3 +43,8 @@ export default i18n;
 export function appIntlLocale(): string {
   return i18n.language?.startsWith("he") ? "he-IL" : "en-IL";
 }
+
+/** API locale for LLM prompts (matches executive assistant). */
+export function apiLocaleCode(): "he" | "en" {
+  return i18n.language?.startsWith("he") ? "he" : "en";
+}

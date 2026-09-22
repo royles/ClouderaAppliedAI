@@ -14,6 +14,7 @@ import { withCopilotFocus } from "../copilotNavigation";
 import { useMobileUx } from "../mobileUxContext";
 import RetentionPlaybookPanel from "./RetentionPlaybookPanel";
 import { assistantSourceLabel, llmBrandName } from "../llmBrand";
+import { apiLocaleCode } from "../i18n/index";
 
 function actionHref(action: AgentAction): string {
   const path = action.path ?? "/business";
@@ -66,7 +67,7 @@ type Props = {
 
 export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
   const { t, i18n } = useTranslation();
-  const apiLocale = i18n.language?.startsWith("he") ? "he" : "en";
+  const apiLocale = apiLocaleCode();
   const navigate = useNavigate();
   const { isPhone, enterMobileContent } = useMobileUx();
   const location = useLocation();

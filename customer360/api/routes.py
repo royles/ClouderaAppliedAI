@@ -875,8 +875,12 @@ def customer_insights(
     customer_id: int,
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
     refresh: bool = Query(False, description="Bypass cache and regenerate insights"),
+    locale: str | None = Query(
+        None,
+        description="UI language code (e.g. en, he) for insight text language.",
+    ),
 ) -> CustomerInsightsResponse:
-    result = get_customer_insights(conn, customer_id, refresh=refresh)
+    result = get_customer_insights(conn, customer_id, refresh=refresh, locale=locale)
     if result is None:
         raise HTTPException(status_code=404, detail="Customer not found")
     result["recommendation_actions"] = [
@@ -892,9 +896,13 @@ def customer_insights_stream(
     customer_id: int,
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
     refresh: bool = Query(False, description="Bypass cache and regenerate insights"),
+    locale: str | None = Query(
+        None,
+        description="UI language code (e.g. en, he) for insight text language.",
+    ),
 ) -> StreamingResponse:
     return StreamingResponse(
-        stream_insights_events(conn, customer_id, refresh=refresh),
+        stream_insights_events(conn, customer_id, refresh=refresh, locale=locale),
         media_type="text/event-stream",
         headers=SSE_HEADERS,
     )
@@ -933,6 +941,7 @@ def insight_action_draft_stream(
             customer_id,
             recommendation=payload.recommendation.strip(),
             source=payload.source,
+            locale=payload.locale,
         ),
         media_type="text/event-stream",
         headers=SSE_HEADERS,

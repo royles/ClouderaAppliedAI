@@ -12,7 +12,7 @@ from customer360.llm_provider import get_active_provider
 from customer360.insights.context import load_customer_context
 from customer360.insights.fallback import generate_fallback
 from customer360.insights.parse import parse_insight_json
-from customer360.insights.prompt import SYSTEM_PROMPT, build_user_prompt
+from customer360.insights.prompt import build_insight_system_prompt, build_user_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +35,7 @@ def get_customer_insights(
     customer_id: int,
     *,
     refresh: bool = False,
+    locale: str | None = None,
 ) -> dict | None:
     del refresh  # kept for API compatibility; insights are always regenerated
     ctx = load_customer_context(conn, customer_id)
@@ -50,7 +51,7 @@ def get_customer_insights(
     if llm_ready:
         try:
             raw, model_id = invoke_text(
-                system_prompt=SYSTEM_PROMPT,
+                system_prompt=build_insight_system_prompt(locale),
                 user_prompt=build_user_prompt(ctx.payload, ctx.churn_tier),
                 json_mode=True,
             )

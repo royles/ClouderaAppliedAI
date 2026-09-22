@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import re
 
+from customer360.agent.locale import draft_language_instruction
 from customer360.llm.router import invoke_text
 
-ACTION_DRAFT_SYSTEM = """## Role
+ACTION_DRAFT_SYSTEM_BASE = """## Role
 You draft outbound communications for an insurance Customer 360 workspace. The reader is the
 customer; the writer is Customer Care on behalf of their relationship manager.
 
@@ -31,6 +32,12 @@ Return one JSON object only. No markdown fences, no text before or after the JSO
 - Reference churn tier and recent interactions when relevant.
 - Never include full credit card or password data.
 """
+
+ACTION_DRAFT_SYSTEM = ACTION_DRAFT_SYSTEM_BASE
+
+
+def build_draft_system_prompt(locale: str | None = None) -> str:
+    return ACTION_DRAFT_SYSTEM_BASE + draft_language_instruction(locale)
 
 
 def _load_first_json_object(text: str) -> dict:

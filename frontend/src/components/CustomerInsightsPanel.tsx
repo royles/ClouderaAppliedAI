@@ -17,6 +17,7 @@ import {
   brandForLlmSource,
   resolveLlmProvider,
 } from "../llmBrand";
+import { apiLocaleCode } from "../i18n/index";
 
 type Props = {
   customerId: number;
@@ -85,7 +86,8 @@ export default function CustomerInsightsPanel({
   churnTier,
   embedded = false,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const uiLocale = apiLocaleCode();
   const [insights, setInsights] = useState<CustomerInsights | null>(null);
   const [bedrockStatus, setBedrockStatus] = useState<BedrockStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -122,10 +124,10 @@ export default function CustomerInsightsPanel({
               },
               onDone: (data) => setInsights(data),
             },
-            { refresh: true },
+            { refresh: true, locale: uiLocale },
           );
         } else {
-          setInsights(await fetchCustomerInsights(customerId, { refresh: true }));
+          setInsights(await fetchCustomerInsights(customerId, { refresh: true, locale: uiLocale }));
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : t("customer.insights.loadError"));
@@ -133,7 +135,7 @@ export default function CustomerInsightsPanel({
         finish();
       }
     },
-    [customerId, t],
+    [customerId, t, uiLocale],
   );
 
   const load = useCallback(
@@ -155,7 +157,7 @@ export default function CustomerInsightsPanel({
     return () => {
       cancelled = true;
     };
-  }, [customerId, loadInsights]);
+  }, [customerId, loadInsights, i18n.language]);
 
   const focusLabel =
     insights?.primary_focus === "retention"

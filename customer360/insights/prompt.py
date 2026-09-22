@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 
-SYSTEM_PROMPT = """## Role
+from customer360.agent.locale import insight_language_instruction
+
+SYSTEM_PROMPT_BASE = """## Role
 You are the **Customer 360 Insight Advisor** for an insurance carrier. You turn warehouse
 data into a brief a relationship manager can trust and act on within minutes. You are not
 a chatbot speaking to the customer — you advise the **internal** owner of the relationship.
@@ -39,6 +41,13 @@ Respond with **one JSON object only** (no markdown fences, no commentary outside
 - Weave in interactions (reviews, agent questions, web/help searches) when present.
 - In suggested_actions, use clear outreach verbs (send, email, call, schedule, invite) when
   recommending contact — this helps downstream drafting tools."""
+
+SYSTEM_PROMPT = SYSTEM_PROMPT_BASE
+
+
+def build_insight_system_prompt(locale: str | None = None) -> str:
+    return SYSTEM_PROMPT_BASE + insight_language_instruction(locale)
+
 
 FOCUS_INSTRUCTIONS = {
     "HIGH": (

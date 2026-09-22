@@ -24,3 +24,36 @@ def normalize_ui_locale(locale: str | None) -> str:
 
 def bedrock_language_instruction(locale: str | None) -> str:
     return HEBREW_UI_INSTRUCTION if normalize_ui_locale(locale) == "he" else ENGLISH_UI_INSTRUCTION
+
+
+INSIGHT_HEBREW = """
+Language (required): The application UI is Hebrew (he-IL).
+Write every JSON string value (preamble, summary, guidance, each suggested_actions entry,
+experience_note) in Modern Hebrew with a professional Israeli insurance tone.
+Keep JSON keys and primary_focus values ("upsell" / "retention") in English.
+If live data is in English, you may keep proper nouns and codes as-is inside Hebrew prose.
+"""
+
+INSIGHT_ENGLISH = """
+Language: The application UI is English. Write all JSON string values in English unless the
+user data clearly requires another language for customer-facing phrases.
+"""
+
+DRAFT_HEBREW = """
+Language (required): The application UI is Hebrew (he-IL).
+Write subject and body in Modern Hebrew (professional Customer Care tone). Keep JSON keys and
+channel value in English. SMS may include the portal URL as given in the rules.
+"""
+
+DRAFT_ENGLISH = """
+Language: The application UI is English. Write subject and body in English unless the customer
+context clearly requires another language.
+"""
+
+
+def insight_language_instruction(locale: str | None) -> str:
+    return INSIGHT_HEBREW if normalize_ui_locale(locale) == "he" else INSIGHT_ENGLISH
+
+
+def draft_language_instruction(locale: str | None) -> str:
+    return DRAFT_HEBREW if normalize_ui_locale(locale) == "he" else DRAFT_ENGLISH

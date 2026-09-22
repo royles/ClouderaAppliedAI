@@ -714,10 +714,11 @@ export const askAgentStream = (
 export const fetchCustomerInsightsStream = (
   id: number,
   handlers: SseHandlers<CustomerInsights>,
-  options?: { refresh?: boolean },
+  options?: { refresh?: boolean; locale?: string | null },
 ) => {
   const params = new URLSearchParams();
   if (options?.refresh) params.set("refresh", "true");
+  if (options?.locale) params.set("locale", options.locale);
   const qs = params.toString();
   return getSseStream<CustomerInsights>(
     `/api/customers/${id}/insights/stream${qs ? `?${qs}` : ""}`,
@@ -727,7 +728,11 @@ export const fetchCustomerInsightsStream = (
 
 export const draftInsightActionStream = (
   customerId: number,
-  payload: { recommendation: string; source?: "recommendation" | "experience_note" },
+  payload: {
+    recommendation: string;
+    source?: "recommendation" | "experience_note";
+    locale?: string | null;
+  },
   handlers: SseHandlers<ActionDraft>,
 ) =>
   postSseStream<ActionDraft>(
@@ -735,6 +740,7 @@ export const draftInsightActionStream = (
     {
       recommendation: payload.recommendation,
       source: payload.source ?? "recommendation",
+      locale: payload.locale ?? null,
     },
     handlers,
   );
@@ -792,10 +798,11 @@ export type SimulateSendResult = {
 
 export const fetchCustomerInsights = (
   id: number,
-  options?: { refresh?: boolean },
+  options?: { refresh?: boolean; locale?: string | null },
 ) => {
   const params = new URLSearchParams();
   if (options?.refresh) params.set("refresh", "true");
+  if (options?.locale) params.set("locale", options.locale);
   const qs = params.toString();
   return getJson<CustomerInsights>(
     `/api/customers/${id}/insights${qs ? `?${qs}` : ""}`,

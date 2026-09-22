@@ -344,6 +344,10 @@ class LlmProviderTestResponse(BaseModel):
 class InsightActionDraftRequest(BaseModel):
     recommendation: str = Field(..., min_length=1, max_length=500)
     source: str = Field(default="recommendation", description="recommendation or experience_note")
+    locale: str | None = Field(
+        default=None,
+        description="UI language code (e.g. en, he) for draft text language.",
+    )
 
 
 class InsightActionDraftResponse(BaseModel):

@@ -18,6 +18,7 @@ import {
   type DraftStreamMeta,
 } from "../outreachDraft";
 import { maskEmail, maskPhone } from "../pii";
+import { apiLocaleCode } from "../i18n/index";
 
 type Props = {
   customerId: number;
@@ -100,7 +101,7 @@ export default function InsightActionModal({
       try {
         await draftInsightActionStream(
           customerId,
-          { recommendation, source },
+          { recommendation, source, locale: apiLocaleCode() },
           {
             onMeta: (meta) => {
               if (cancelled) return;
