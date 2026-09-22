@@ -597,7 +597,7 @@ def _system_health_checks(conn: sqlite3.Connection, *, database_path: Path) -> l
             "warn",
             f"{llm_label} not ready — insights use local fallback rules.",
             detail=(
-                "Configure Bedrock via AWS credentials or choose OpenAI-compatible "
+                "Configure Bedrock via AWS credentials or choose PrivateAI "
                 "under Data & Admin → Configuration → LLM provider."
             ),
         )

@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS APP_ADMIN_DATA_SOURCE (
     UPDATED_AT          TEXT NOT NULL
 );
 
--- Executive assistant / insights LLM backend (Bedrock default or OpenAI-compatible HTTP)
+-- Executive assistant / insights LLM backend (Bedrock default or PrivateAI HTTP)
 CREATE TABLE IF NOT EXISTS APP_ADMIN_LLM (
     ID                      INTEGER PRIMARY KEY CHECK (ID = 1),
     PROVIDER_TYPE           TEXT NOT NULL DEFAULT 'bedrock'

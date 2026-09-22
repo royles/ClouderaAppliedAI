@@ -167,7 +167,7 @@ def bedrock_status() -> BedrockStatusResponse:
 def _llm_env_note() -> str:
     return (
         "Amazon Bedrock uses AWS credentials from the environment or instance profile. "
-        "OpenAI-compatible mode stores the API token only in the local admin database "
+        "PrivateAI mode stores the API token only in the local admin database "
         "(never returned by the API)."
     )
 

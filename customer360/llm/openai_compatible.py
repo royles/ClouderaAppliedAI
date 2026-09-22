@@ -34,7 +34,7 @@ def invoke_openai_compatible_text(
     base = (cfg.openai_base_url or "").strip()
     model = (cfg.openai_model_id or "").strip()
     if not base or not model or not token:
-        raise LLMError("OpenAI-compatible provider is not fully configured", status_code=503)
+        raise LLMError("PrivateAI provider is not fully configured", status_code=503)
 
     max_tokens = cfg.bedrock_max_tokens or 900
     temperature = cfg.bedrock_temperature if cfg.bedrock_temperature is not None else 0.35
@@ -66,19 +66,19 @@ def invoke_openai_compatible_text(
         logger.error("OpenAI-compatible HTTP %s: %s", exc.code, detail)
         status = 401 if exc.code in (401, 403) else 502
         raise LLMError(
-            f"OpenAI-compatible API error ({exc.code}): {detail or exc.reason}",
+            f"PrivateAI API error ({exc.code}): {detail or exc.reason}",
             status_code=status,
         ) from exc
     except urllib.error.URLError as exc:
-        raise LLMError(f"OpenAI-compatible connection error: {exc.reason}", status_code=502) from exc
+        raise LLMError(f"PrivateAI connection error: {exc.reason}", status_code=502) from exc
 
     choices = payload.get("choices") or []
     if not choices:
-        raise LLMError("OpenAI-compatible API returned no choices", status_code=502)
+        raise LLMError("PrivateAI API returned no choices", status_code=502)
     message = choices[0].get("message") or {}
     text = message.get("content")
     if not text:
-        raise LLMError("OpenAI-compatible API returned empty content", status_code=502)
+        raise LLMError("PrivateAI API returned empty content", status_code=502)
     return str(text), model
 
 
@@ -93,7 +93,7 @@ def test_openai_compatible(config: LlmProviderConfig | None = None) -> dict[str,
         snippet = (text or "").strip()[:80]
         return {
             "ok": True,
-            "message": f"OpenAI-compatible endpoint responded for model {model}.",
+            "message": f"PrivateAI endpoint responded for model {model}.",
             "detail": snippet or None,
         }
     except LLMError as exc:

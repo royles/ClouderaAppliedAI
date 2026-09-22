@@ -177,7 +177,14 @@ def config_for_api(config: LlmProviderConfig) -> dict[str, Any]:
 
 def provider_label(provider: LlmProviderType) -> str:
     if provider == "openai_compatible":
-        return "OpenAI-compatible HTTP"
+        return "PrivateAI"
+    return "Amazon Bedrock"
+
+
+def user_facing_brand(provider: LlmProviderType | str | None) -> str:
+    """Product name shown in insights, drafts, and assistant UI copy."""
+    if normalize_provider(provider if provider is not None else "bedrock") == "openai_compatible":
+        return "PrivateAI"
     return "Amazon Bedrock"
 
 

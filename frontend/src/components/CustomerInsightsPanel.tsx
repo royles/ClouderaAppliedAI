@@ -8,6 +8,12 @@ import {
   fetchCustomerInsights,
 } from "../api";
 import InsightActionModal from "./InsightActionModal";
+import {
+  isLlmGeneratedSource,
+  llmBrandName,
+  LlmProviderKind,
+  resolveLlmProvider,
+} from "../llmBrand";
 
 type Props = {
   customerId: number;
@@ -19,34 +25,62 @@ type OpenAction = {
   source: "recommendation" | "experience_note";
 };
 
+function brandForSource(
+  t: TFunction,
+  source: string | null | undefined,
+  fallbackProvider: LlmProviderKind,
+): string {
+  if (source === "openai_compatible") return llmBrandName(t, "openai_compatible");
+  if (source === "bedrock") return llmBrandName(t, "bedrock");
+  return llmBrandName(t, fallbackProvider);
+}
+
+function localOnlyHint(t: TFunction, provider: LlmProviderKind): string {
+  if (provider === "openai_compatible") return t("customer.insights.localOnlyPrivateAi");
+  if (provider === "bedrock") return t("customer.insights.localOnlyBedrock");
+  return t("customer.insights.localOnlyGeneric");
+}
+
+function envHint(t: TFunction, provider: LlmProviderKind, brand: string): string {
+  if (provider === "openai_compatible") {
+    return t("customer.insights.envHintPrivateAi", { brand });
+  }
+  return t("customer.insights.envHintBedrock", { brand });
+}
+
 function insightSubtitle(
   insights: CustomerInsights | null,
   bedrockStatus: BedrockStatus | null,
   loading: boolean,
   t: TFunction,
 ): string {
+  const provider = resolveLlmProvider(bedrockStatus);
+  const brand = llmBrandName(t, provider);
+
   if (loading && !insights) {
     if (bedrockStatus?.configured) {
-      return t("customer.insights.loadingBedrock");
+      return t("customer.insights.loadingLlm", { brand });
     }
     return t("customer.insights.loadingLocal");
   }
   if (!insights) {
     return t("customer.insights.idleHint");
   }
-  if (insights.source === "bedrock" || insights.source === "openai_compatible") {
+  if (isLlmGeneratedSource(insights.source)) {
     const model = insights.model_id ? ` (${insights.model_id})` : "";
-    return insights.source === "openai_compatible"
-      ? t("customer.insights.llmGenerated", { model })
-      : t("customer.insights.bedrockGenerated", { model });
+    const insightBrand = brandForSource(t, insights.source, provider);
+    return t("customer.insights.generatedBy", { brand: insightBrand, model });
   }
   if (insights.bedrock_configured) {
     if (insights.fallback_reason) {
-      return t("customer.insights.fallbackReason", { reason: insights.fallback_reason });
+      return t("customer.insights.fallbackReason", {
+        brand,
+        reason: insights.fallback_reason,
+      });
     }
-    return t("customer.insights.fallbackGeneric");
+    return t("customer.insights.fallbackGeneric", { brand });
   }
-  return t("customer.insights.localOnly");
+  return localOnlyHint(t, provider);
 }
 
 export default function CustomerInsightsPanel({ customerId, churnTier }: Props) {
@@ -115,8 +149,9 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
       : t("customer.insights.focusUpsell");
 
   const actionMeta = insights?.recommendation_actions ?? [];
-  const fromLlm =
-    insights?.source === "bedrock" || insights?.source === "openai_compatible";
+  const llmProvider = resolveLlmProvider(bedrockStatus);
+  const configuredBrand = llmBrandName(t, llmProvider);
+  const fromLlm = isLlmGeneratedSource(insights?.source);
   const subtitle = insightSubtitle(insights, bedrockStatus, loading, t);
 
   return (
@@ -141,7 +176,9 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
 
         {loading && !insights && (
           <p className="muted">
-            {bedrockStatus?.configured ? t("customer.insights.loadingBedrock") : t("customer.insights.loadingLocal")}
+            {bedrockStatus?.configured
+              ? t("customer.insights.loadingLlm", { brand: configuredBrand })
+              : t("customer.insights.loadingLocal")}
           </p>
         )}
         {error && <p className="error">{error}</p>}
@@ -155,9 +192,9 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
                 }
               >
                 {fromLlm
-                  ? insights.source === "openai_compatible"
-                    ? t("customer.insights.poweredLlm")
-                    : t("customer.insights.poweredBedrock")
+                  ? t("customer.insights.poweredBy", {
+                      brand: brandForSource(t, insights.source, llmProvider),
+                    })
                   : t("customer.insights.localAdvisor")}
               </span>
               <span
@@ -177,7 +214,9 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
               {fromLlm && insights.model_id && (
                 <span
                   className="muted small"
-                  title={t("customer.insights.modelIdTitle")}
+                  title={t("customer.insights.modelTitle", {
+                    brand: brandForSource(t, insights.source, llmProvider),
+                  })}
                 >
                   {t("customer.insights.modelId", { id: insights.model_id })}
                 </span>
@@ -243,17 +282,23 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
 
             {!fromLlm && insights.fallback_reason && (
               <p className="error small insights-hint">
-                {t("customer.insights.bedrockError", { reason: insights.fallback_reason })}
+                {t("customer.insights.llmError", {
+                  brand: configuredBrand,
+                  reason: insights.fallback_reason,
+                })}
               </p>
             )}
 
             {!fromLlm && !insights.bedrock_configured && (
               <p className="muted small insights-hint">
-                {t("customer.insights.envHint")}
+                {envHint(t, llmProvider, configuredBrand)}
               </p>
             )}
 
-            {!fromLlm && insights.bedrock_configured && !insights.fallback_reason && (
+            {!fromLlm &&
+              insights.bedrock_configured &&
+              !insights.fallback_reason &&
+              llmProvider === "bedrock" && (
               <p className="muted small insights-hint">
                 {t("customer.insights.regionHint")}
               </p>

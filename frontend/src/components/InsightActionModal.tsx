@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActionDraft,
+  BedrockStatus,
   SimulateSendResult,
   draftInsightAction,
+  fetchBedrockStatus,
   simulateInsightSend,
 } from "../api";
+import { isLlmGeneratedSource, llmBrandName, resolveLlmProvider } from "../llmBrand";
 import { maskEmail, maskPhone } from "../pii";
 
 type Props = {
@@ -30,7 +33,25 @@ export default function InsightActionModal({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<SimulateSendResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [llmStatus, setLlmStatus] = useState<BedrockStatus | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchBedrockStatus()
+      .then((status) => {
+        if (!cancelled) setLlmStatus(status);
+      })
+      .catch(() => {
+        if (!cancelled) setLlmStatus(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const llmProvider = resolveLlmProvider(llmStatus);
+  const configuredBrand = llmBrandName(t, llmProvider);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,7 +134,9 @@ export default function InsightActionModal({
         <p className="muted small modal-disclaimer">{t("customer.outreach.disclaimer")}</p>
 
         {loading && (
-          <p className="muted">{t("customer.outreach.loadingDraft")}</p>
+          <p className="muted">
+            {t("customer.outreach.loadingDraft", { brand: configuredBrand })}
+          </p>
         )}
         {error && <p className="error">{error}</p>}
 
@@ -128,10 +151,15 @@ export default function InsightActionModal({
             <p className="muted small">
               {t("customer.outreach.triggeredBy")} <em>{recommendation}</em>
             </p>
-            {draft.content_source === "bedrock" && (
+            {isLlmGeneratedSource(draft.content_source) && (
               <p className="insights-meta">
                 <span className="source-badge source-bedrock">
-                  {t("customer.outreach.draftedBedrock")}
+                  {t("customer.outreach.draftedBy", {
+                    brand:
+                      draft.content_source === "openai_compatible"
+                        ? llmBrandName(t, "openai_compatible")
+                        : llmBrandName(t, "bedrock"),
+                  })}
                 </span>
                 {draft.model_id && (
                   <span className="muted small">

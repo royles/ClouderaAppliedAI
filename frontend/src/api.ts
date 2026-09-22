@@ -672,6 +672,8 @@ export type AgentStatus = {
   enabled: boolean;
   mode: string;
   bedrock_configured: boolean;
+  llm_provider?: string;
+  llm_configured?: boolean;
 };
 
 export const fetchAgentStatus = () => getJson<AgentStatus>("/api/agent/status");

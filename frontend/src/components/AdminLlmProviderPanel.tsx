@@ -185,7 +185,7 @@ export default function AdminLlmProviderPanel() {
             checked={form.provider_type === "openai_compatible"}
             onChange={() => setForm({ ...form, provider_type: "openai_compatible" })}
           />
-          {t("admin.llm.providers.openaiCompatible")}
+          {t("admin.llm.providers.privateAi")}
         </label>
       </fieldset>
 
@@ -218,9 +218,9 @@ export default function AdminLlmProviderPanel() {
 
       {form.provider_type === "openai_compatible" && (
         <div className="admin-llm-section">
-          <h3 className="subsection-title">{t("admin.llm.openaiSection")}</h3>
+          <h3 className="subsection-title">{t("admin.llm.privateAiSection")}</h3>
           <label className="admin-field">
-            <span>{t("admin.llm.openaiBaseUrl")}</span>
+            <span>{t("admin.llm.privateAiBaseUrl")}</span>
             <input
               type="url"
               value={form.openai_base_url}
@@ -230,7 +230,7 @@ export default function AdminLlmProviderPanel() {
             />
           </label>
           <label className="admin-field">
-            <span>{t("admin.llm.openaiModelId")}</span>
+            <span>{t("admin.llm.privateAiModelId")}</span>
             <input
               type="text"
               value={form.openai_model_id}
@@ -240,7 +240,7 @@ export default function AdminLlmProviderPanel() {
             />
           </label>
           <label className="admin-field">
-            <span>{t("admin.llm.openaiToken")}</span>
+            <span>{t("admin.llm.privateAiToken")}</span>
             <input
               type="password"
               value={form.openai_api_token}

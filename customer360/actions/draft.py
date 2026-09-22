@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from customer360.actions.bedrock_draft import generate_communication_draft
 from customer360.llm.errors import LLMError
 from customer360.llm.router import is_llm_configured
-from customer360.llm_provider import get_active_provider, provider_label
+from customer360.llm_provider import get_active_provider, user_facing_brand
 from customer360.insights.context import load_customer_context
 
 
@@ -77,7 +77,7 @@ def build_action_draft(
             "action_kind": action_kind,
             "message": (
                 "Communication drafts require a configured LLM backend. "
-                "Use Data & Admin → Configuration → LLM provider (Bedrock or OpenAI-compatible)."
+                "Use Data & Admin → Configuration → LLM provider (Bedrock or PrivateAI)."
             ),
             "content_source": None,
             "bedrock_required": True,
@@ -99,10 +99,12 @@ def build_action_draft(
         phone = email_row["MOBILE_NO"] if "MOBILE_NO" in keys else None
 
     expected_channel = channel_for_action_kind(action_kind)
+    llm_provider = get_active_provider()
+    brand = user_facing_brand(llm_provider)
     channel_labels = {
-        "email": "Draft email (Bedrock)",
-        "sms": "Draft SMS (Bedrock)",
-        "call": "Call script (Bedrock)",
+        "email": f"Draft email ({brand})",
+        "sms": f"Draft SMS ({brand})",
+        "call": f"Call script ({brand})",
     }
 
     try:
@@ -123,15 +125,13 @@ def build_action_draft(
             "generation_error": str(exc),
         }
 
-    llm_provider = get_active_provider()
     draft_source = "openai_compatible" if llm_provider == "openai_compatible" else "bedrock"
-    provider_name = provider_label(llm_provider)
 
     return {
         "actionable": True,
         "action_kind": action_kind,
         "channel": generated["channel"],
-        "preview_label": channel_labels.get(generated["channel"], f"Draft ({provider_name})"),
+        "preview_label": channel_labels.get(generated["channel"], f"Draft ({brand})"),
         "recommendation": recommendation,
         "subject": generated.get("subject"),
         "body": generated["body"],
@@ -144,15 +144,16 @@ def build_action_draft(
 
 
 def simulate_send(channel: str, *, subject: str | None, body: str, customer_id: int) -> dict:
+    brand = user_facing_brand(get_active_provider())
     sent_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     if channel == "email":
-        detail = f"Email queued to customer {customer_id} (Bedrock-generated body)"
+        detail = f"Email queued to customer {customer_id} ({brand}-generated body)"
         if subject:
             detail += f" — subject: {subject[:80]}"
     elif channel == "sms":
-        detail = f"SMS queued to customer {customer_id} ({len(body)} chars, Bedrock-generated)"
+        detail = f"SMS queued to customer {customer_id} ({len(body)} chars, {brand}-generated)"
     else:
-        detail = f"Call script logged for customer {customer_id} (Bedrock-generated)"
+        detail = f"Call script logged for customer {customer_id} ({brand}-generated)"
 
     return {
         "status": "simulated",

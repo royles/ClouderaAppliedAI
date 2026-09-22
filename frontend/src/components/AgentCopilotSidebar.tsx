@@ -12,6 +12,7 @@ import {
 import { withCopilotFocus } from "../copilotNavigation";
 import { useMobileUx } from "../mobileUxContext";
 import RetentionPlaybookPanel from "./RetentionPlaybookPanel";
+import { llmBrandName } from "../llmBrand";
 
 function actionHref(action: AgentAction): string {
   const path = action.path ?? "/business";
@@ -87,7 +88,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
 
   const {
     bedrockConfigured,
-    agentMode,
+    llmProvider,
     panel,
     setPanel,
     turns,
@@ -186,6 +187,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
   );
 
   const setTab = (next: CopilotPanel) => setPanel(next);
+  const activeBrand = llmBrandName(t, llmProvider);
 
   return (
     <aside
@@ -199,9 +201,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
             {phoneHome ? t("assistant.lede.phone") : t("assistant.lede.desktop")}{" "}
             {!phoneHome &&
               (bedrockConfigured
-                ? agentMode === "openai_chat"
-                  ? t("assistant.poweredBy.llm")
-                  : t("assistant.poweredBy.bedrock")
+                ? t("assistant.poweredBy.configured", { brand: activeBrand })
                 : t("assistant.poweredBy.rules"))}
           </p>
         </div>
@@ -249,12 +249,10 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
                   {turn.role === "assistant" && turn.source && (
                     <span className="agent-copilot-source">
                       {turn.source === "bedrock_tools"
-                        ? t("assistant.source.bedrockTools")
-                        : turn.source === "bedrock"
-                          ? t("assistant.source.bedrock")
-                          : turn.source === "openai_compatible"
-                            ? t("assistant.source.openaiCompatible")
-                            : t("assistant.source.rules")}
+                        ? t("assistant.source.bedrockTools", { brand: activeBrand })
+                        : turn.source === "bedrock" || turn.source === "openai_compatible"
+                          ? t("assistant.source.bedrock", { brand: activeBrand })
+                          : t("assistant.source.rules")}
                     </span>
                   )}
                 </span>

@@ -11,6 +11,7 @@ import { useLocation } from "react-router-dom";
 import { AgentAction, CustomerSegment, fetchAgentStatus } from "./api";
 import { isBusinessArea } from "./appRoutes";
 import { parseBusinessSegment } from "./cohortQuery";
+import { LlmProviderKind, resolveLlmProvider } from "./llmBrand";
 
 export type CopilotPanel = "ask" | "retention_playbook";
 
@@ -27,6 +28,7 @@ type AgentCopilotContextValue = {
   enabled: boolean;
   agentMode: string;
   bedrockConfigured: boolean;
+  llmProvider: LlmProviderKind;
   open: boolean;
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
@@ -52,6 +54,7 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
   const [enabled, setEnabled] = useState(false);
   const [agentMode, setAgentMode] = useState("rules");
   const [bedrockConfigured, setBedrockConfigured] = useState(false);
+  const [llmProvider, setLlmProvider] = useState<LlmProviderKind>("none");
   const [open, setOpen] = useState(true);
   const [panel, setPanel] = useState<CopilotPanel>("ask");
   const [turns, setTurns] = useState<CopilotTurn[]>([]);
@@ -66,6 +69,12 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
           setEnabled(s.enabled);
           setAgentMode(s.mode);
           setBedrockConfigured(s.bedrock_configured);
+          setLlmProvider(
+            resolveLlmProvider({
+              provider: s.llm_provider,
+              configured: s.llm_configured ?? s.bedrock_configured,
+            }),
+          );
         }
       })
       .catch(() => {
@@ -104,6 +113,7 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
       enabled,
       agentMode,
       bedrockConfigured,
+      llmProvider,
       open,
       setOpen,
       toggleOpen,
@@ -121,6 +131,7 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
       enabled,
       agentMode,
       bedrockConfigured,
+      llmProvider,
       open,
       toggleOpen,
       panel,
