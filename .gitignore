@@ -3,8 +3,14 @@ data/*.db-wal
 data/*.db-shm
 data/models/
 __pycache__/
+*.py[cod]
 *.egg-info/
 *.pyc
+.pytest_cache/
 .venv/
+venv/
 frontend/node_modules/
 .tools/
+
+# Applied AI sentiment demo (see app/ + scripts/train.py)
+models/

@@ -197,3 +197,26 @@ To rebuild the UI in a standard Python 3.11 CAI session (no system Node):
 The script skips work if `frontend/dist/index.html` already exists. It downloads a
 portable Node.js binary into `.tools/` when `npm` is missing (requires outbound HTTPS
 to `nodejs.org`).
+
+## Applied AI sentiment reference service
+
+A minimal, self-contained **Applied AI** demo (TF-IDF + logistic regression via
+scikit-learn) served through **FastAPI** with a small static web UI. It lives
+alongside Customer 360 in this repo and uses its own dependencies
+(`applied-ai-sentiment-requirements.txt`).
+
+```
+app/              FastAPI app + model training/inference
+scripts/train.py  Trains models/sentiment.joblib
+static/index.html Demo UI
+tests/            pytest unit + API tests
+.cursor/          Optional Cloud Agent install/start helpers for this demo
+```
+
+```bash
+bash .cursor/install.sh   # train model + venv deps for sentiment demo
+bash .cursor/start.sh     # http://localhost:8000
+```
+
+Manual run: `pip install -r applied-ai-sentiment-requirements.txt`, then
+`python -m scripts.train` and `uvicorn app.main:app --host 0.0.0.0 --port 8000`.
