@@ -69,8 +69,8 @@ def answer_question(
             final_filters = payload.pop("_merged_list", None) or merged
             _attach_query_preview(payload, final_filters, seg)
             return payload
-        except (BedrockError, ValueError) as exc:
-            logger.warning("Bedrock copilot failed, using rules: %s", exc)
+        except Exception as exc:
+            logger.warning("Bedrock copilot failed, using rules: %s", exc, exc_info=True)
 
     payload = answer_question_rules(
         conn,

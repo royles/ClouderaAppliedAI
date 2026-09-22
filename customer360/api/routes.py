@@ -468,15 +468,18 @@ def agent_ask(
 ) -> AgentAskResponse:
     if not agent_enabled():
         raise HTTPException(status_code=503, detail="Executive copilot is disabled.")
-    list_ctx = (
+    resolved_list_context = (
         body.list_context.model_dump(exclude_none=True) if body.list_context else None
     )
-    payload = answer_question(
-        conn,
-        message=body.message,
-        segment=body.segment,
-        list_context=list_ctx,
-    )
+    try:
+        payload = answer_question(
+            conn,
+            message=body.message,
+            segment=body.segment,
+            list_context=resolved_list_context,
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
     return AgentAskResponse(**payload)
 
 
