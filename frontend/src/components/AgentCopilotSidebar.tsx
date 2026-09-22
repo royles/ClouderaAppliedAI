@@ -222,7 +222,11 @@ export default function AgentCopilotSidebar() {
                   {turn.role === "user" ? "You" : "Copilot"}
                   {turn.role === "assistant" && turn.source && (
                     <span className="agent-copilot-source">
-                      {turn.source === "bedrock" ? " · Bedrock" : " · Rules"}
+                      {turn.source === "bedrock_tools"
+                        ? " · Bedrock + tools"
+                        : turn.source === "bedrock"
+                          ? " · Bedrock"
+                          : " · Rules"}
                     </span>
                   )}
                 </span>
