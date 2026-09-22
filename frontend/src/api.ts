@@ -597,7 +597,6 @@ export type AgentAskResponse = {
   citations: string[];
   source: string;
   model_id?: string | null;
-  query_preview?: string | null;
   tools_used?: string[];
 };
 

@@ -15,19 +15,11 @@ from customer360.agent.list_filters import (
     parse_customer_list_intent,
     parse_refinement_intent,
 )
-from customer360.agent.query_builder import compile_customer_list_sql, count_matching_customers
+from customer360.agent.query_builder import count_matching_customers
 from customer360.agent.router import answer_question_rules
 from customer360.bedrock.client import BedrockError, is_bedrock_configured
 
 logger = logging.getLogger(__name__)
-
-
-def _attach_query_preview(payload: dict, filters: CustomerListFilters | None, seg: str) -> None:
-    if filters is None:
-        return
-    sql, params, description = compile_customer_list_sql(filters, default_segment=seg)
-    param_hint = ", ".join(repr(p) for p in params)
-    payload["query_preview"] = f"{description}\n{sql}\n-- params: [{param_hint}]"
 
 
 def answer_question(
@@ -67,8 +59,7 @@ def answer_question(
                 list_intent=merged,
                 list_context=list_context,
             )
-            final_filters = payload.pop("_merged_list", None) or merged
-            _attach_query_preview(payload, final_filters, seg)
+            payload.pop("_merged_list", None)
             return payload
         except Exception as exc:
             logger.warning("Bedrock copilot failed, using rules: %s", exc, exc_info=True)
@@ -82,5 +73,4 @@ def answer_question(
     )
     payload["source"] = "rules"
     payload["model_id"] = None
-    _attach_query_preview(payload, merged, seg)
     return payload

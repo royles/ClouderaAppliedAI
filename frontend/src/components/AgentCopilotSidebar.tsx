@@ -116,7 +116,6 @@ export default function AgentCopilotSidebar() {
           actions: res.actions,
           source: res.source,
           modelId: res.model_id ?? null,
-          queryPreview: res.query_preview ?? null,
         });
         requestAnimationFrame(() => {
           historyRef.current?.scrollTo({ top: historyRef.current.scrollHeight, behavior: "smooth" });
@@ -231,9 +230,6 @@ export default function AgentCopilotSidebar() {
                   )}
                 </span>
                 <p className="agent-copilot-turn-text">{turn.text}</p>
-                {turn.queryPreview && (
-                  <pre className="agent-copilot-sql">{turn.queryPreview}</pre>
-                )}
                 {turn.actions && turn.actions.length > 0 && (
                   <div className="agent-copilot-actions">
                     {turn.actions.map((action) => (

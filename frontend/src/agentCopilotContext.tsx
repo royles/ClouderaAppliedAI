@@ -21,7 +21,6 @@ export type CopilotTurn = {
   actions?: AgentAction[];
   source?: string | null;
   modelId?: string | null;
-  queryPreview?: string | null;
 };
 
 type AgentCopilotContextValue = {

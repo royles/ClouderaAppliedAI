@@ -14,7 +14,7 @@ from customer360.agent.list_filters import (
     merge_filters,
     filters_from_list_context,
 )
-from customer360.agent.query_builder import compile_customer_list_sql, count_matching_customers
+from customer360.agent.query_builder import count_matching_customers
 from customer360.agent.tools.context import ToolContext
 from customer360.agent.tools.registry import register_tool
 from customer360.api.customer_list import customer_list_where, normalize_city_name
@@ -70,12 +70,10 @@ def _filters_from_tool_input(ctx: ToolContext, tool_input: dict[str, Any]) -> Cu
 )
 def count_customers(ctx: ToolContext, tool_input: dict[str, Any]) -> dict[str, Any]:
     filters = _filters_from_tool_input(ctx, tool_input)
-    sql, params, description = compile_customer_list_sql(filters, default_segment=ctx.segment)
     total = count_matching_customers(ctx.conn, filters, default_segment=ctx.segment)
     return {
         "count": total,
         "filters": asdict(filters.normalized(default_segment=ctx.segment)),
-        "query_preview": f"{description}\n{sql}\n-- params: {params!r}",
     }
 
 
@@ -143,11 +141,9 @@ def prepare_customer_list_link(ctx: ToolContext, tool_input: dict[str, Any]) -> 
         else "customer"
     )
     action = action_customer_list(filters, default_segment=ctx.segment, entry_id=entry_id)
-    sql, params, description = compile_customer_list_sql(filters, default_segment=ctx.segment)
     return {
         "action": action,
         "customer_list": asdict(filters.normalized(default_segment=ctx.segment)),
-        "query_preview": f"{description}\n{sql}\n-- params: {params!r}",
     }
 
 
