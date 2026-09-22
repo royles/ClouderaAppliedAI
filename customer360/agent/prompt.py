@@ -14,15 +14,32 @@ Respond with a single JSON object only (no markdown fences):
 {
   "answer": "2-4 concise sentences for an executive. Use live data from context when provided.",
   "action_ids": ["..."],
-  "open_retention_playbook": false
+  "open_retention_playbook": false,
+  "customer_list": {
+    "sort_by": "customer_value",
+    "sort_order": "desc",
+    "page_size": 10,
+    "page": 1,
+    "view": "table",
+    "segment": null
+  }
 }
 
 Rules for action_ids:
 - Use only ids from the app catalog below (max 4, most relevant first).
-- Prefer specific views (e.g. customer_churn) over generic ones when the question implies it.
+- Prefer specific views (e.g. customer_top_value, customer_churn) over generic "customer".
 - Do not invent ids, paths, or numbers not in context.
 - For retention playbook / at-risk queue requests, set open_retention_playbook true and include
   action_ids ["retention_playbook", "business"] when appropriate.
+
+Rules for customer_list (omit the key entirely when not listing customers):
+- Required when the user asks to list, rank, or show top N customers with specific sort/limit.
+- sort_by: customer_value | churn_risk | name | policy_count | investment_count
+- sort_order: desc (default for value/churn/counts) or asc (names, lowest value)
+- page_size: 10 | 25 | 50 | 100 — use 10 when they ask for "top 10"
+- view: "table" for ranked short lists
+- segment: null to use active_business_segment from context, or a segment filter key
+- Always include action_ids with "customer" or "customer_top_value" when customer_list is set.
 
 App catalog (action_ids):
 """

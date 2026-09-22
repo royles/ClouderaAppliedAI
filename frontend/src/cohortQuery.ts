@@ -18,7 +18,7 @@ const VALID_SORT: CustomerSortBy[] = [
   "investment_count",
 ];
 
-export const CUSTOMER_PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
+export const CUSTOMER_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 export type CustomerPageSize = (typeof CUSTOMER_PAGE_SIZE_OPTIONS)[number];
 export const DEFAULT_CUSTOMER_PAGE_SIZE: CustomerPageSize = 50;
 export const MAX_CUSTOMER_PAGE_SIZE = 100;

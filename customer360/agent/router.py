@@ -5,9 +5,10 @@ from __future__ import annotations
 import re
 import sqlite3
 
-from customer360.agent.actions import action_navigate, action_playbook
+from customer360.agent.actions import action_customer_list, action_navigate, action_playbook
 from customer360.agent.catalog import CATALOG, CatalogEntry, ENTRY_BY_ID
 from customer360.agent.context import gather_context
+from customer360.agent.list_filters import CustomerListFilters
 from customer360.api.segments import normalize_segment
 
 _WORD = re.compile(r"[a-z0-9']+")
@@ -41,11 +42,17 @@ def _pick_entry(text: str) -> CatalogEntry | None:
     return best if best_score >= 2 else None
 
 
+def _join_snippets(snippets: list[str]) -> str:
+    return " ".join(s for s in snippets if s)
+
+
 def answer_question_rules(
     conn: sqlite3.Connection,
     *,
     message: str,
     segment: str | None = None,
+    list_intent: CustomerListFilters | None = None,
+    extra_snippets: list[str] | None = None,
 ) -> dict:
     text = (message or "").strip()
     seg = normalize_segment(segment)
@@ -54,16 +61,42 @@ def answer_question_rules(
             "answer": "Ask about the book, customers, products, engagement, or admin — "
             "for example: “Show high churn customers” or “Open the product heatmap”.",
             "actions": [
-                action_navigate(ENTRY_BY_ID["business"], segment=seg),
-                action_navigate(ENTRY_BY_ID["products"]),
-                action_navigate(ENTRY_BY_ID["customer_churn"]),
+                action_navigate(ENTRY_BY_ID["business"], segment=seg, default_segment=seg),
+                action_navigate(ENTRY_BY_ID["products"], default_segment=seg),
+                action_navigate(ENTRY_BY_ID["customer_churn"], default_segment=seg),
             ],
             "citations": [],
         }
 
     lowered = text.lower()
     ctx = gather_context(conn, message=text, segment=seg)
-    snippets = ctx["snippets"]
+    snippets = list(extra_snippets or ctx["snippets"])
+
+    if list_intent:
+        entry_id = (
+            "customer_top_value"
+            if list_intent.sort_by == "customer_value"
+            else "customer_churn"
+            if list_intent.sort_by == "churn_risk"
+            else "customer"
+        )
+        answer = (
+            f"Opening the customer list sorted by {list_intent.sort_by.replace('_', ' ')} "
+            f"({list_intent.sort_order}), showing {list_intent.page_size} per page."
+        )
+        if snippets:
+            answer = _join_snippets(snippets) + " " + answer
+        return {
+            "answer": answer,
+            "actions": [
+                action_customer_list(
+                    list_intent,
+                    default_segment=seg,
+                    entry_id=entry_id,
+                ),
+            ],
+            "citations": ["customer_list", entry_id],
+        }
 
     entry = _pick_entry(lowered)
     if entry is None:
@@ -73,11 +106,11 @@ def answer_question_rules(
             "or ask for high churn customers or the retention playbook."
         )
         if snippets:
-            answer = " ".join(snippets) + " " + answer
+            answer = _join_snippets(snippets) + " " + answer
         actions = [
-            action_navigate(ENTRY_BY_ID["business"], segment=seg),
-            action_navigate(ENTRY_BY_ID["customer"]),
-            action_navigate(ENTRY_BY_ID["products"]),
+            action_navigate(ENTRY_BY_ID["business"], segment=seg, default_segment=seg),
+            action_navigate(ENTRY_BY_ID["customer"], default_segment=seg),
+            action_navigate(ENTRY_BY_ID["products"], default_segment=seg),
         ]
         return {"answer": answer, "actions": actions, "citations": ["app_catalog"]}
 
@@ -89,29 +122,54 @@ def answer_question_rules(
             "Open it here in the copilot or go to The business for full KPI context."
         )
         if snippets:
-            answer = " ".join(snippets) + " " + answer
+            answer = _join_snippets(snippets) + " " + answer
         actions = [
             action_playbook(seg),
-            action_navigate(ENTRY_BY_ID["business"], segment=seg),
-            action_navigate(ENTRY_BY_ID["customer_churn"]),
+            action_navigate(ENTRY_BY_ID["business"], segment=seg, default_segment=seg),
+            action_navigate(
+                ENTRY_BY_ID["customer_churn"],
+                default_segment=seg,
+                list_filters=CustomerListFilters(
+                    sort_by="churn_risk",
+                    sort_order="desc",
+                    page_size=25,
+                    view="table",
+                ),
+            ),
         ]
         return {"answer": answer, "actions": actions, "citations": ["retention_playbook"]}
 
     answer = f"{entry.description}"
     if snippets:
-        answer = " ".join(snippets) + " " + answer
+        answer = _join_snippets(snippets) + " " + answer
     else:
         answer = answer + " Use the link below to open that view (the copilot stays open)."
 
     actions: list[dict] = []
+    list_filters = None
+    if entry.path == "/customer" and entry.search:
+        list_filters = CustomerListFilters(
+            sort_by="churn_risk" if entry.entry_id == "customer_churn" else "customer_value",
+            sort_order="desc",
+            page_size=25,
+            view="table",
+        )
+
     actions.append(
-        action_navigate(entry, segment=seg if entry.path == "/business" else None),
+        action_navigate(
+            entry,
+            segment=seg if entry.path == "/business" else None,
+            list_filters=list_filters,
+            default_segment=seg,
+        ),
     )
 
     if entry.entry_id == "business":
         actions.append(action_playbook(seg))
     elif entry.entry_id == "customer_churn":
-        actions.append(action_navigate(ENTRY_BY_ID["customer"], segment=seg))
+        actions.append(
+            action_navigate(ENTRY_BY_ID["customer"], default_segment=seg, list_filters=list_filters),
+        )
 
     return {
         "answer": answer,

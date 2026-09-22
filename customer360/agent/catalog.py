@@ -39,6 +39,14 @@ CATALOG: tuple[CatalogEntry, ...] = (
         phrases=("high churn", "churn risk", "at risk customers", "lapse"),
     ),
     CatalogEntry(
+        "customer_top_value",
+        "Top customers by value",
+        "Customer list sorted by book value (highest first); use with customer_list page_size.",
+        "/customer",
+        "sort=customer_value&order=desc&view=table",
+        phrases=("top value", "most valuable", "highest value", "worth"),
+    ),
+    CatalogEntry(
         "products",
         "Products",
         "Product heatmap by class; drill down to customers per product.",
