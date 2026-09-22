@@ -40,6 +40,7 @@ export default function DashboardPage() {
     null,
   );
   const [portfolioLoading, setPortfolioLoading] = useState(true);
+  const [portfolioError, setPortfolioError] = useState<string | null>(null);
   const portfolioCacheRef = useRef<PortfolioSegmentCache>(new Map());
   const prefetchStartedRef = useRef(false);
   const segmentRef = useRef(segment);
@@ -96,13 +97,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
-    if (applySegmentFromCache(segment)) return;
+    if (applySegmentFromCache(segment)) {
+      setPortfolioError(null);
+      return;
+    }
 
     let cancelled = false;
     setPortfolioAnalytics((prev) =>
       portfolioAnalyticsMatchesSegment(prev, segment) ? prev : null,
     );
     setPortfolioLoading(true);
+    setPortfolioError(null);
     void (async () => {
       try {
         const data = clonePortfolioAnalytics(await fetchPortfolioAnalytics(segment));
@@ -111,10 +116,14 @@ export default function DashboardPage() {
         syncBookBaselineFromCache();
         if (segmentRef.current === segment) {
           setPortfolioAnalytics(data);
+          setPortfolioError(null);
         }
-      } catch {
+      } catch (e) {
         if (!cancelled && segmentRef.current === segment) {
           setPortfolioAnalytics(null);
+          setPortfolioError(
+            e instanceof Error ? e.message : t("errors.portfolioLoadFailed"),
+          );
         }
       } finally {
         if (!cancelled && segmentRef.current === segment) {
@@ -205,6 +214,9 @@ export default function DashboardPage() {
           helperText={t("business.domainFilter.helperAnalytics")}
         />
         )}
+        {portfolioError && !portfolioLoading ? (
+          <p className="error">{portfolioError}</p>
+        ) : null}
         <PortfolioAnalyticsSection
           data={
             portfolioAnalyticsMatchesSegment(portfolioAnalytics, segment)
@@ -212,7 +224,10 @@ export default function DashboardPage() {
               : null
           }
           bookBaseline={bookBaseline}
-          loading={portfolioLoading || !portfolioAnalyticsMatchesSegment(portfolioAnalytics, segment)}
+          loading={
+            !portfolioError &&
+            (portfolioLoading || !portfolioAnalyticsMatchesSegment(portfolioAnalytics, segment))
+          }
           refreshing={false}
           cohortLabel={activeDomain?.domain ?? null}
           segment={segment}

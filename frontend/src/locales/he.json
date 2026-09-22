@@ -71,6 +71,7 @@
   },
   "errors": {
     "overviewLoadFailed": "טעינת הסקירה נכשלה",
+    "portfolioLoadFailed": "טעינת אנליטיקת התיק נכשלה. הפעל מחדש את ה-API והרץ scripts/init_db.py אם בסיס הנתונים חסר.",
     "productsLoadFailed": "טעינת המוצרים נכשלה",
     "engagementLoadFailed": "טעinen מרכז המעורבות נכשלה",
     "adminLoadFailed": "טעינת נתוני הניהול נכשלה",

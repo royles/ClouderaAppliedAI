@@ -71,6 +71,7 @@
   },
   "errors": {
     "overviewLoadFailed": "Failed to load overview",
+    "portfolioLoadFailed": "Failed to load portfolio analytics. Restart the API and run scripts/init_db.py if the database is missing.",
     "productsLoadFailed": "Failed to load products",
     "engagementLoadFailed": "Failed to load engagement hub",
     "adminLoadFailed": "Failed to load admin data",

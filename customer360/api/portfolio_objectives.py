@@ -228,7 +228,7 @@ def fetch_engagement_trend(
                         THEN e.RATING
                     END
                 ),
-                2,
+                2
             ) AS avg_review_rating
         FROM APP_CUSTOMER_INTERACTION_EVENTS e
         INNER JOIN scoped sc ON sc.CUSTOMER_ID = e.CUSTOMER_ID
