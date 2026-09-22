@@ -20,7 +20,9 @@ export default function CustomerAvatar({
   const px = SIZE_PX[size];
   const label = customerName?.trim() || `Customer ${customerId}`;
 
-  if (failed) {
+  const src = customerAvatarUrl(customerId);
+
+  if (failed || !src) {
     return (
       <span
         className={`customer-avatar customer-avatar-fallback customer-avatar-${size}${className ? ` ${className}` : ""}`}
@@ -34,7 +36,7 @@ export default function CustomerAvatar({
   return (
     <img
       className={`customer-avatar customer-avatar-${size}${className ? ` ${className}` : ""}`}
-      src={customerAvatarUrl(customerId)}
+      src={src}
       alt=""
       width={px}
       height={px}

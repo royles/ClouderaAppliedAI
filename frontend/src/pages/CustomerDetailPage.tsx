@@ -11,11 +11,12 @@ import {
   ValueHistoryPoint,
 } from "../api";
 import CustomerInsightsPanel from "../components/CustomerInsightsPanel";
-import CustomerSummaryCard from "../components/CustomerSummaryCard";
+import CustomerSummaryCard, {
+  CustomerCardProfileDetails,
+} from "../components/CustomerSummaryCard";
 import CustomerValueChart from "../components/CustomerValueChart";
 import { formatMoneyIls } from "../formatMoney";
 import {
-  formatCity,
   formatLastLogin,
   maskDate,
   displayCustomerName,
@@ -146,7 +147,7 @@ export default function CustomerDetailPage() {
 
   const customerCard = useMemo(() => {
     if (!detail) return null;
-    const { profile, policies, investments, churn } = detail;
+    const { profile, policies, investments, churn, interaction_summary } = detail;
     const investmentCount = new Set(
       investments.map((inv) => `${inv.policy_num}-${inv.fund_id ?? ""}`),
     ).size;
@@ -154,18 +155,31 @@ export default function CustomerDetailPage() {
       valueHistory.length > 0
         ? valueHistory[valueHistory.length - 1].total_value
         : 0;
+    const profileDetails: CustomerCardProfileDetails = {
+      customer_type_dsc: profile.customer_type_dsc,
+      birth_date: profile.birth_date,
+      marital_status_dsc: profile.marital_status_dsc,
+      street_name: profile.street_name,
+      communication_dsc: profile.communication_dsc,
+      last_interaction_ts: interaction_summary?.last_event_ts ?? null,
+      churn_scored_at: churn?.scored_at ?? null,
+      churn_model_version: churn?.model_version ?? null,
+    };
     return {
-      customer_id: profile.customer_id,
-      customer_name: profile.customer_name,
-      city_name: profile.city_name,
-      email: profile.email,
-      mobile_no: profile.mobile_no,
-      last_login: profile.last_login,
-      policy_count: policies.length,
-      investment_count: investmentCount,
-      customer_value: customerValue,
-      churn_probability: churn?.churn_probability,
-      churn_risk_tier: churn?.churn_risk_tier,
+      summary: {
+        customer_id: profile.customer_id,
+        customer_name: profile.customer_name,
+        city_name: profile.city_name,
+        email: profile.email,
+        mobile_no: profile.mobile_no,
+        last_login: profile.last_login,
+        policy_count: policies.length,
+        investment_count: investmentCount,
+        customer_value: customerValue,
+        churn_probability: churn?.churn_probability,
+        churn_risk_tier: churn?.churn_risk_tier,
+      },
+      profileDetails,
     };
   }, [detail, valueHistory]);
 
@@ -231,7 +245,11 @@ export default function CustomerDetailPage() {
       <section className="panel customer-detail-hero">
         <div className={`customer-detail-hero-grid${mobileFocus ? " customer-detail-hero-grid-compact" : ""}`}>
           {customerCard && (
-            <CustomerSummaryCard variant="static" customer={customerCard} />
+            <CustomerSummaryCard
+              variant="static"
+              customer={customerCard.summary}
+              profileDetails={customerCard.profileDetails}
+            />
           )}
           {!mobileFocus && (
           <CustomerValueChart
@@ -252,28 +270,6 @@ export default function CustomerDetailPage() {
           />
           )}
         </div>
-        {mobileFocus && (
-          <p className="muted small">
-            {t("customer.mobile.summaryLine", {
-              city: formatCity(profile.city_name),
-              policies: policies.length,
-              value: formatMoneyIls(customerCard?.customer_value),
-            })}
-          </p>
-        )}
-        {!mobileFocus && detail.churn?.scored_at && (
-          <p className="muted small customer-detail-churn-meta">
-            {t("customer.churn.scoredAt", {
-              date: formatLastLogin(detail.churn.scored_at),
-            })}
-            {detail.churn.model_version ? ` · ${detail.churn.model_version}` : ""}
-          </p>
-        )}
-        {!mobileFocus && (
-        <p className="muted small customer-detail-privacy">
-          {t("customer.privacyNotice")}
-        </p>
-        )}
       </section>
 
       {!mobileFocus && engagementActionHint && (

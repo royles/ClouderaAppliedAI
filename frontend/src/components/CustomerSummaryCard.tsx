@@ -9,8 +9,10 @@ import {
   displayCustomerName,
   formatCity,
   formatLastLogin,
+  maskDate,
   maskEmail,
   maskPhone,
+  maskStreet,
 } from "../pii";
 
 export type CustomerSummaryCardData = Pick<
@@ -28,11 +30,25 @@ export type CustomerSummaryCardData = Pick<
   | "churn_risk_tier"
 >;
 
+/** Extra profile fields for the customer detail hero card (not shown on directory tiles). */
+export type CustomerCardProfileDetails = {
+  customer_type_dsc?: string | null;
+  birth_date?: string | null;
+  marital_status_dsc?: string | null;
+  street_name?: string | null;
+  communication_dsc?: string | null;
+  last_interaction_ts?: string | null;
+  churn_scored_at?: string | null;
+  churn_model_version?: string | null;
+};
+
 type BaseProps = {
   customer: CustomerSummaryCardData;
   showRank?: boolean;
   rank?: number;
   className?: string;
+  /** Full profile block for detail view — single source for customer demographics. */
+  profileDetails?: CustomerCardProfileDetails | null;
 };
 
 type LinkProps = BaseProps & {
@@ -47,10 +63,21 @@ type StaticProps = BaseProps & {
 
 type Props = LinkProps | StaticProps;
 
+function formatAddress(
+  street: string | null | undefined,
+  city: string | null | undefined,
+  emDash: string,
+): string {
+  const parts = [maskStreet(street), formatCity(city)].filter((x) => x !== emDash);
+  return parts.length ? parts.join(", ") : emDash;
+}
+
 export default function CustomerSummaryCard(props: Props) {
   const { t } = useTranslation();
-  const { customer, showRank, rank, className = "" } = props;
-  const cardClass = `customer-card${props.variant === "static" ? " customer-card-static" : ""}${className ? ` ${className}` : ""}`;
+  const emDash = t("common.emDash");
+  const { customer, showRank, rank, className = "", profileDetails } = props;
+  const showProfile = Boolean(profileDetails);
+  const cardClass = `customer-card${props.variant === "static" ? " customer-card-static" : ""}${showProfile ? " customer-card-full-profile" : ""}${className ? ` ${className}` : ""}`;
 
   const body = (
     <>
@@ -58,7 +85,7 @@ export default function CustomerSummaryCard(props: Props) {
         <CustomerAvatar
           customerId={customer.customer_id}
           customerName={customer.customer_name}
-          size="lg"
+          size={showProfile ? "lg" : "md"}
         />
         <div className="customer-card-main">
           <div className="customer-card-headline">
@@ -76,9 +103,9 @@ export default function CustomerSummaryCard(props: Props) {
               </h3>
               <p className="muted small customer-card-id">
                 {displayCustomerId(customer.customer_id)}
-                {formatCity(customer.city_name) !== "—"
-                  ? ` · ${formatCity(customer.city_name)}`
-                  : ""}
+                {!showProfile &&
+                  formatCity(customer.city_name) !== emDash &&
+                  ` · ${formatCity(customer.city_name)}`}
               </p>
             </div>
             <ChurnBadge
@@ -93,6 +120,60 @@ export default function CustomerSummaryCard(props: Props) {
         </div>
       </div>
 
+      {showProfile && profileDetails && (
+        <dl className="customer-card-profile">
+          <div>
+            <dt>{t("customer.profile.type")}</dt>
+            <dd>{profileDetails.customer_type_dsc ?? emDash}</dd>
+          </div>
+          <div>
+            <dt>{t("customer.profile.birthDate")}</dt>
+            <dd>{maskDate(profileDetails.birth_date)}</dd>
+          </div>
+          <div>
+            <dt>{t("customer.profile.maritalStatus")}</dt>
+            <dd>{profileDetails.marital_status_dsc ?? emDash}</dd>
+          </div>
+          <div className="customer-card-profile-span2">
+            <dt>{t("customer.profile.address")}</dt>
+            <dd>
+              {formatAddress(
+                profileDetails.street_name,
+                customer.city_name,
+                emDash,
+              )}
+            </dd>
+          </div>
+          <div>
+            <dt>{t("customer.profile.communication")}</dt>
+            <dd>{profileDetails.communication_dsc ?? emDash}</dd>
+          </div>
+          <div>
+            <dt>{t("customer.card.lastLogin")}</dt>
+            <dd>{formatLastLogin(customer.last_login)}</dd>
+          </div>
+          <div>
+            <dt>{t("customer.profile.lastInteraction")}</dt>
+            <dd>
+              {profileDetails.last_interaction_ts
+                ? formatLastLogin(profileDetails.last_interaction_ts)
+                : emDash}
+            </dd>
+          </div>
+          {profileDetails.churn_scored_at && (
+            <div className="customer-card-profile-span2">
+              <dt>{t("customer.card.churnScored")}</dt>
+              <dd>
+                {formatLastLogin(profileDetails.churn_scored_at)}
+                {profileDetails.churn_model_version
+                  ? ` · ${profileDetails.churn_model_version}`
+                  : ""}
+              </dd>
+            </div>
+          )}
+        </dl>
+      )}
+
       <dl className="customer-card-stats">
         <div>
           <dt>{t("customer.card.policies")}</dt>
@@ -102,19 +183,39 @@ export default function CustomerSummaryCard(props: Props) {
           <dt>{t("customer.card.investments")}</dt>
           <dd>{customer.investment_count ?? 0}</dd>
         </div>
-        <div>
-          <dt>{t("customer.card.lastLogin")}</dt>
-          <dd>{formatLastLogin(customer.last_login)}</dd>
-        </div>
+        {!showProfile && (
+          <div>
+            <dt>{t("customer.card.lastLogin")}</dt>
+            <dd>{formatLastLogin(customer.last_login)}</dd>
+          </div>
+        )}
+        {showProfile && (
+          <div>
+            <dt>{t("customer.table.columns.email")}</dt>
+            <dd className="customer-card-stat-contact">{maskEmail(customer.email)}</dd>
+          </div>
+        )}
+        {showProfile && (
+          <div>
+            <dt>{t("customer.table.columns.mobile")}</dt>
+            <dd className="customer-card-stat-contact">{maskPhone(customer.mobile_no)}</dd>
+          </div>
+        )}
       </dl>
 
-      <p className="customer-card-contact muted small">
-        <span>{maskEmail(customer.email)}</span>
-        <span className="customer-card-contact-sep" aria-hidden>
-          ·
-        </span>
-        <span>{maskPhone(customer.mobile_no)}</span>
-      </p>
+      {!showProfile && (
+        <p className="customer-card-contact muted small">
+          <span>{maskEmail(customer.email)}</span>
+          <span className="customer-card-contact-sep" aria-hidden>
+            ·
+          </span>
+          <span>{maskPhone(customer.mobile_no)}</span>
+        </p>
+      )}
+
+      {showProfile && (
+        <p className="muted small customer-card-privacy">{t("customer.privacyNotice")}</p>
+      )}
     </>
   );
 

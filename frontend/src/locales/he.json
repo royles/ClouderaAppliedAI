@@ -419,6 +419,7 @@
       "policies": "Policies",
       "investments": "Investments",
       "lastLogin": "Last login",
+      "churnScored": "Churn scored",
       "a11ySummary": "Customer summary"
     },
     "insights": {

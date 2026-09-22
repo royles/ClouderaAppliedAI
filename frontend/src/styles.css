@@ -795,16 +795,17 @@ select.control {
   text-decoration: none;
   color: inherit;
   box-shadow:
-    0 1px 2px rgba(15, 61, 94, 0.04),
-    0 4px 16px rgba(15, 61, 94, 0.07);
+    0 2px 4px rgba(15, 45, 70, 0.08),
+    0 8px 24px rgba(15, 45, 70, 0.12);
   transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
 }
 
 .customer-card:hover {
   border-color: var(--theme-brand-200);
   box-shadow:
-    0 2px 4px rgba(15, 61, 94, 0.06),
-    0 8px 24px rgba(15, 61, 94, 0.1);
+    0 4px 8px rgba(15, 45, 70, 0.1),
+    0 14px 32px rgba(15, 45, 70, 0.14);
+  transform: translateY(-1px);
 }
 
 .customer-card-top {
@@ -960,14 +961,58 @@ select.control {
 .customer-card-static:hover {
   border-color: #e6ebf0;
   box-shadow:
-    0 1px 2px rgba(15, 61, 94, 0.04),
-    0 4px 16px rgba(15, 61, 94, 0.07);
+    0 2px 4px rgba(15, 45, 70, 0.08),
+    0 8px 24px rgba(15, 45, 70, 0.12);
   transform: none;
+}
+
+.customer-card-full-profile {
+  padding: 1rem 1.1rem;
+}
+
+.customer-card-profile {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+  padding: 0.65rem 0 0;
+  border-top: 1px solid #e8edf2;
+}
+
+.customer-card-profile dt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #8a96a3;
+  margin: 0;
+}
+
+.customer-card-profile dd {
+  margin: 0.12rem 0 0;
+  font-size: 0.88rem;
+  color: var(--theme-text);
+}
+
+.customer-card-profile-span2 {
+  grid-column: 1 / -1;
+}
+
+.customer-card-stat-contact {
+  font-size: 0.82rem;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.customer-card-privacy {
+  margin: 0;
+  padding-top: 0.35rem;
+  border-top: 1px dashed #e6ebf0;
 }
 
 .customer-detail-hero-grid {
   display: grid;
-  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
   gap: 1rem;
   align-items: stretch;
   min-height: clamp(20rem, 42vh, 28rem);

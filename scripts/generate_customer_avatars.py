@@ -6,7 +6,7 @@ from __future__ import annotations
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "frontend" / "public" / "customer-avatars"
+OUT = ROOT / "frontend" / "src" / "assets" / "customer-avatars"
 
 PALETTES = [
     ("#e8eef4", "#f0c8a8", "#3d2914", "#0f6db8", "#134a6e"),
