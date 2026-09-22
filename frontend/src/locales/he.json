@@ -74,13 +74,13 @@
     "boundary": {
       "title": "משהו השתבש",
       "hint": "נסה רענון מלא. אם הבעיה נמשכת, הפעל מחדש את האפליקציה וודא ש-frontend/dist תואם לגרסת ה-API.",
-      "reload": "טען מחדש"
+      "reload": "טען מחדש את העמוד"
     },
     "assistantUnreachable": "לא ניתן להגיע לעוזר. ודא שה-API פועל."
   },
   "cohort": {
     "fullBook": "ספר מלא",
-    "filteredCohort": "קohort מסונן",
+    "filteredCohort": "Cohort מסונן",
     "filteredBy": "מסונן לפי \"{{label}}\"",
     "fullActiveBook": "ספר לקוחות פעיל מלא",
     "segments": {
@@ -101,7 +101,7 @@
       "allBookFoot": "{{policies}} פוליסות · {{active}} פעילות"
     },
     "cohort": {
-      "filteredBadge": "קohort מסונן",
+      "filteredBadge": "Cohort מסונן",
       "vsBookLead": "פרוסה זו היא {{share}} מערך הלקוח הכולל בספר המלא (התייחסות למטה).",
       "shareOfBook": "{{pct}}% מהספר"
     },
@@ -175,7 +175,7 @@
       "subtitleCohort": "קווים מלאים = cohort מסונן; אפור מקווקו = ספר פעיל מלא.",
       "empty": "אין היסטוריית ספר ל-cohort זה.",
       "totalBook": "ספר כולל",
-      "cohortTotalBook": "ספר cohort כולל",
+      "cohortTotalBook": "ספר Cohort כולל",
       "investments": "השקעות",
       "coverageSavings": "כיסוי וחיסכון",
       "fullBookRef": "ספר מלא (התייחסות)"
@@ -196,7 +196,7 @@
       "empty": "אין עדיין מגמת פרמיה לספר הפעיל."
     },
     "savingsAum": {
-      "title": "חיסכון ארוך טווח (AUM)",
+      "title": "חיסכון לטווח ארוך (AUM)",
       "subtitle": "AUM (שמאל) ומספר פוליסות חיסכון (ימין) — מספר פוליסות לחוסך הוא תקין.",
       "empty": "אין היסטוריית צילומי חיסכון לספר הפעיל."
     },
@@ -214,7 +214,7 @@
       "latestTotal": "סה\"כ אחרון",
       "vsStart": "מול התחלה",
       "projected": "חזוי {{months}} חודשים",
-      "lapseHigh": "תחזית lapse tier HIGH",
+      "lapseHigh": "חיזוי Lapse בדרגת HIGH",
       "legendActual": "ערך כולל בפועל",
       "legendProjected": "חזוי (כללי tier)",
       "legendInvestmentAcc": "צבירת השקעות",
@@ -225,24 +225,24 @@
     "recent": {
       "title": "נצפו לאחרונה"
     },
-    "homeLink": "Customer home",
+    "homeLink": "דף הבית של הלקוח",
     "back": {
-      "engagement": "← Back to engagement",
-      "list": "← Back to customers",
-      "business": "← Back to the business"
+      "engagement": "← חזרה למעורבות",
+      "list": "← חזרה ללקוחות",
+      "business": "← חזרה לעסק"
     },
     "link": {
-      "engagementHub": "Back to engagement hub",
-      "list": "Back to customer list",
-      "businessPortfolio": "Portfolio in the business"
+      "engagementHub": "חזרה למרכז המעורבות",
+      "list": "חזרה לרשימת הלקוחות",
+      "businessPortfolio": "תיק בעמוד העסק"
     },
     "mobile": {
       "summaryLine": "{{city}} · {{policies}} policies · {{value}}"
     },
     "churn": {
       "scoredAt": "Churn scored {{date}}",
-      "notScored": "Not scored",
-      "likelihoodTitle": "Churn likelihood {{pct}}",
+      "notScored": "לא נצוק",
+      "likelihoodTitle": "סבירות נטישה {{pct}}",
       "tier": {
         "HIGH": "גבוה",
         "MEDIUM": "בינוני",
@@ -252,34 +252,34 @@
     "privacyNotice": "City and last login are shown in full; other PII fields are masked in this demo.",
     "profile": {
       "type": "Type",
-      "birthDate": "Birth date",
-      "maritalStatus": "Marital status",
+      "birthDate": "תאריך לידה",
+      "maritalStatus": "מצב משפחתי",
       "address": "Address",
       "communication": "Communication",
-      "lastInteraction": "Last interaction"
+      "lastInteraction": "אינטראקציה אחרונה"
     },
     "engagementHint": {
-      "prefix": "Suggested from Engagement hub:"
+      "prefix": "הוצע ממרכז המעורבות:"
     },
     "tabs": {
-      "policies": "Policies",
-      "foreclosures": "Foreclosures",
-      "investments": "Investments",
-      "interactions": "Interactions"
+      "policies": "פוליסות",
+      "foreclosures": "עיקולים",
+      "investments": "השקעות",
+      "interactions": "אינטראקציות"
     },
     "policies": {
-      "title": "Policies",
+      "title": "פוליסות",
       "hint": "Click a policy to filter investment snapshots.",
       "columns": {
-        "number": "Number",
-        "type": "Type",
-        "status": "Status",
-        "active": "Active",
-        "monthlyPremium": "Monthly premium"
+        "number": "מספר",
+        "type": "סוג",
+        "status": "סטטוס",
+        "active": "פעיל",
+        "monthlyPremium": "פרמיה חודשית"
       }
     },
     "foreclosures": {
-      "title": "Foreclosures & encumbrances",
+      "title": "עיקולים ושעבודים",
       "empty": "No foreclosure records.",
       "columns": {
         "proceeding": "Proceeding #",
@@ -289,7 +289,7 @@
       }
     },
     "interactions": {
-      "title": "Interaction timeline",
+      "title": "ציר זמן אינטראקציות",
       "lede": "Synthetic omnichannel events from the warehouse engagement layer.",
       "stats": {
         "last90d": "Last 90 days: {{count}} events",
@@ -299,20 +299,20 @@
       "empty": "No interaction events recorded.",
       "eventType": {
         "review": "Review",
-        "agentQuestion": "Agent question",
-        "webSearch": "Web search"
+        "agentQuestion": "שאלת סוכן",
+        "webSearch": "חיפוש ברשת"
       },
       "signal": {
         "stars": "{{rating}}/5 stars",
         "resolved": "Resolved",
         "open": "Open",
-        "helpSearch": "Help search",
-        "productSearch": "Product search"
+        "helpSearch": "חיפוש עזרה",
+        "productSearch": "חיפוש מוצר"
       }
     },
     "investments": {
-      "title": "Latest investment snapshots",
-      "policyFilter": "Policy filter:",
+      "title": "צילומי השקעה אחרונים",
+      "policyFilter": "מסנן פוליסה:",
       "empty": "No investment snapshots for this selection.",
       "columns": {
         "policy": "Policy",
@@ -324,7 +324,7 @@
     },
     "directory": {
       "title": "לקוחות",
-      "titleCompact": "Matching customers",
+      "titleCompact": "לקוחות תואמים",
       "chartFilter": {
         "prefix": "צילום מגרף:",
         "clear": "נקה סינון תאריך",
@@ -349,21 +349,21 @@
       },
       "allCohort": "Showing all current customers in this cohort",
       "sort": {
-        "label": "Rank by",
+        "label": "דירוג לפי",
         "options": {
           "churn_risk": "Churn, then value",
           "customer_value": "Value, then churn",
-          "name": "Name (A–Z)",
-          "policy_count": "Policy count",
-          "investment_count": "Investment tracks"
+          "name": "שם (א–ת)",
+          "policy_count": "מספר פוליסות",
+          "investment_count": "מסלולי השקעה"
         },
         "order": {
-          "valueDesc": "Highest value first ↓",
-          "valueAsc": "Lowest value first ↑",
-          "riskDesc": "High risk first ↓",
-          "riskAsc": "Low risk first ↑",
-          "defaultDesc": "Highest first ↓",
-          "defaultAsc": "Lowest first ↑"
+          "valueDesc": "ערך גבוה ראשון ↓",
+          "valueAsc": "ערך נמוך ראשון ↑",
+          "riskDesc": "סיכון גבוה ראשון ↓",
+          "riskAsc": "סיכון נמוך ראשון ↑",
+          "defaultDesc": "הגבוה ראשון ↓",
+          "defaultAsc": "הנמוך ראשון ↑"
         }
       },
       "search": {
@@ -372,7 +372,7 @@
       },
       "view": {
         "label": "Layout",
-        "grid": "Cards",
+        "grid": "כרטיסים",
         "table": "Table"
       },
       "updating": "Updating cards/table…",
@@ -380,10 +380,10 @@
       "pagination": {
         "summaryAll": "Showing all {{total}} customers",
         "summaryRange": "Showing {{from}}–{{to}} of {{total}}",
-        "perPage": "Per page",
+        "perPage": "לעמוד",
         "previous": "Previous",
         "next": "Next",
-        "pageOf": "Page {{page}} of {{pages}}"
+        "pageOf": "עמוד {{page}} מתוך {{pages}}"
       }
     },
     "table": {
@@ -395,7 +395,7 @@
         "churn": "Churn",
         "policies": "Policies",
         "investments": "Investments",
-        "lastLogin": "Last login",
+        "lastLogin": "כניסה אחרונה",
         "id": "מזהה",
         "email": "דוא\"ל",
         "mobile": "נייד"
@@ -403,16 +403,16 @@
     },
     "card": {
       "rankA11y": "Rank {{rank}}",
-      "value": "Customer value",
+      "value": "ערך לקוח",
       "policies": "Policies",
       "investments": "Investments",
-      "lastLogin": "Last login",
-      "churnScored": "Churn scored",
-      "a11ySummary": "Customer summary"
+      "lastLogin": "כניסה אחרונה",
+      "churnScored": "ציון נטישה",
+      "a11ySummary": "סיכום לקוח"
     },
     "insights": {
-      "title": "AI insights & next best action",
-      "refresh": "Refresh insights",
+      "title": "תובנות AI והפעולה המומלצת הבאה",
+      "refresh": "רענון תובנות",
       "loadingLlm": "קורא ל-{{brand}} עם נתוני המחסן והאינטראקציות של לקוח זה…",
       "loadingGeneric": "מייצר תובנות מנתוני המחסן והאינטראקציות…",
       "streamPreview": "מרכיב תובנה…",
@@ -421,12 +421,12 @@
       "generatedBy": "תובנות אלה נוצרו על ידי {{brand}}{{model}} מפרופיל הלקוח, הפוליסות, האינטראקציות וציון הנטישה.",
       "fallbackReason": "{{brand}} מוגדר אך התשובה הזו השתמשה ביועץ המקומי. סיבה: {{reason}}",
       "fallbackGeneric": "מציגים את היועץ המקומי — {{brand}} לא החזיר תשובה שמישה. נסה רענון תובנות.",
-      "localOnlyBedrock": "מציגים את היועץ המקומי. הגדר AWS ו-CUSTOMER360_BEDROCK_* או ספק LLM בניהול נתונים.",
-      "localOnlyPrivateAi": "מציגים את היועץ המקומי. הגדר PrivateAI בניהול נתונים → Configuration → LLM provider.",
-      "localOnlyGeneric": "מציגים את היועץ המקומי. הגדר ספק LLM בניהול נתונים → Configuration → LLM provider.",
+      "localOnlyBedrock": "מציגים את היועץ המקומי. הגדר AWS ו-CUSTOMER360_BEDROCK_* או ספק LLM בנתונים וניהול.",
+      "localOnlyPrivateAi": "מציגים את היועץ המקומי. הגדר PrivateAI בנתונים וניהול → הגדרות → ספק LLM.",
+      "localOnlyGeneric": "מציגים את היועץ המקומי. הגדר ספק LLM בנתונים וניהול → הגדרות → ספק LLM.",
       "loadError": "Could not load insights",
       "focusChurn": "מיקוד נטישה",
-      "focusUpsell": "מיקוד צמיחה / upsell",
+      "focusUpsell": "מיקוד צמיחה / Upsell",
       "modelTitle": "מזהה מודל {{brand}}",
       "poweredBy": "מופעל על ידי {{brand}}",
       "localAdvisor": "יועץ מקומי",
@@ -440,12 +440,12 @@
       "bestNextTouch": "מגע הבא מומלץ",
       "llmError": "שגיאת {{brand}}: {{reason}}",
       "envHintBedrock": "להפעלת טקסט מ-{{brand}}, הגדר AWS ו-CUSTOMER360_BEDROCK_* (ראה .env.example).",
-      "envHintPrivateAi": "להפעלת טקסט מ-{{brand}}, השלם את הגדרות LLM provider בניהול נתונים.",
+      "envHintPrivateAi": "להפעלת טקסט מ-{{brand}}, השלם את הגדרות ספק ה-LLM בנתונים וניהול.",
       "regionHint": "אם הבעיה נמשכת אחרי רענון, ודא גישה למודל ב-Bedrock והגדר CUSTOMER360_BEDROCK_REGION (למשל us-east-1).",
       "focusRetention": "מיקוד שימור"
     },
     "outreach": {
-      "title": "Draft outreach",
+      "title": "טיוטת פנייה",
       "disclaimer": "Send is simulated — no message leaves this browser.",
       "to": "To",
       "email": "Email",
@@ -454,7 +454,7 @@
       "subject": "Subject",
       "body": "Body",
       "cancel": "Cancel",
-      "send": "Send (simulated)",
+      "send": "שליחה (מדומה)",
       "sent": "Simulated send recorded.",
       "loadingDraft": "יוצר טיוטה עם {{brand}} מנתוני החשבון…",
       "streaming": "מרכיב טיוטה…",
@@ -464,7 +464,7 @@
       "notActionable": "לא ניתן לפעולה.",
       "triggeredBy": "הופעל על ידי:",
       "draftedBy": "נוצר על ידי {{brand}}",
-      "copy": "העתק גוף",
+      "copy": "העתק גוף ההודעה",
       "copied": "הועתק",
       "previewEmail": "טיוטת אימייל ({{brand}})",
       "previewSms": "טיוטת SMS ({{brand}})",
@@ -536,11 +536,11 @@
     },
     "actions": {
       "resolve_agent_question": {
-        "title": "סגור שאלת סוכן פתוחה",
+        "title": "סגירת שאלת סוכן פתוחה",
         "detail": "{{count}} שאלה/ות שלא נפתרו ב-90 הימים האחרונים — התקשר או שלח הודעה בזמן שההקשר טרי."
       },
       "retention_call": {
-        "title": "שיחת retention (ערוץ חם)",
+        "title": "שיחת שימור (ערוץ חם)",
         "detail": "סיכון נטישה גבוה אך מגעים אחרונים — תעדף שיחת retention אנושית."
       },
       "reengagement_outreach": {
@@ -548,11 +548,11 @@
         "detail": "אין קשר לאחרונה — שלח בדיקת מצב מותאמת (אימייל או SMS) והצע סקירה דיגיטלית."
       },
       "invite_review": {
-        "title": "הזמן משוב אחרי חיפוש דיגיטלי",
+        "title": "הזמנת משוב אחרי חיפוש דיגיטלי",
         "detail": "הלקוח מחפש מוצרים/עזרה ברשת — בקש ביקורת קצרה או דופק שביעות רצון."
       },
       "relationship_review": {
-        "title": "קבע סקירת קשר",
+        "title": "קביעת סקירת קשר",
         "detail": "מעורבות יציבה — קבע סקירה יזומה לדיון בכיסוי וביעדי חיסכון."
       }
     }
@@ -619,7 +619,7 @@
       },
       "qualityFlags": {
         "label": "דגלי איכות",
-        "sub": "בדיקות שלמות שאינן OK"
+        "sub": "בדיקות שלמות שאינן תקינות"
       }
     },
     "tables": {
@@ -637,7 +637,7 @@
     "schema": {
       "title": "מפת סכימה",
       "lede": "כל כרטיס מציג עמודות SQLite חיות לטבלאות הדמו; הפניה ל-join מציגה קשרים.",
-      "joinReference": "הפניה ל-join",
+      "joinReference": "הפניה ל-Join",
       "joinColumns": {
         "from": "מ",
         "to": "אל",
@@ -651,7 +651,7 @@
     "config": {
       "title": "הגדרות",
       "lede": "חיבור למחסן ויעדי KPI עסקיים בעמוד העסק.",
-      "a11y": "Admin configuration",
+      "a11y": "הגדרות ניהול",
       "tabs": {
         "warehouse": "Backend מחסן",
         "llm": "ספק LLM",
@@ -688,16 +688,16 @@
       "tokenPlaceholderEmpty": "הדבק טוקן API",
       "tokenHintSet": "טוקן כבר שמור. השאר ריק כדי לשמור אותו, או הזן טוקן חדש להחלפה.",
       "clearToken": "הסר טוקן API שמור",
-      "samplingSection": "מגבלות generation (כל הספקים)",
-      "maxTokens": "מקסימום tokens",
+      "samplingSection": "מגבלות Generation (כל הספקים)",
+      "maxTokens": "מקסימום Tokens",
       "temperature": "Temperature"
     },
     "datasource": {
       "title": "Backend מחסן",
-      "modeLegend": "Backend mode",
+      "modeLegend": "מצב Backend",
       "sqlite": "SQLite file (demo)",
       "trino": "Trino / Iceberg",
-      "sqlitePath": "SQLite path",
+      "sqlitePath": "נתיב SQLite",
       "trinoHost": "Trino JDBC URL",
       "catalog": "Catalog",
       "schema": "Schema",
@@ -709,20 +709,20 @@
       "error": "לא ניתן לשמור הגדרות",
       "lastUpdated": "Last updated {{date}}",
       "loadingConfig": "טוען הגדרות backend…",
-      "backendTypeLegend": "סוג backend",
+      "backendTypeLegend": "סוג Backend",
       "sqliteDefault": "SQLite (ברירת מחדל)",
       "cdwJdbc": "Cloudera Data Warehouse (JDBC)",
       "lakehouseIceberg": "Lakehouse (Iceberg)",
       "sqliteFilePath": "נתיב קובץ SQLite",
       "jdbcUrl": "כתובת JDBC",
-      "cdwHostOptional": "מארח CDW (אופציונלי אם JDBC URL מוגדר)",
+      "cdwHostOptional": "מארח CDW (אופציונלי אם הוגדר JDBC URL)",
       "port": "פורט",
       "user": "משתמש",
       "password": "סיסמה",
       "passwordPlaceholder": "•••••• (ללא שינוי אם ריק)",
       "useTlsTrino": "השתמש ב-TLS לבדיקת Trino HTTP",
-      "icebergRestUri": "כתובת Iceberg REST catalog",
-      "catalogName": "שם catalog",
+      "icebergRestUri": "כתובת Iceberg REST Catalog",
+      "catalogName": "שם Catalog",
       "namespace": "Namespace",
       "saveError": "לא ניתן לשמור הגדרות",
       "loadError": "לא ניתן לטעון הגדרות מקור נתונים",
@@ -778,7 +778,7 @@
       "cachesTitle": "מטמון, הגדרות והתייחסות",
       "cachesLede": "טבלאות API מחושבות מראש והגדרות ניהול (joins לוגיים בעיקר דרך מפתח לקוח או ספר).",
       "legendPk": "מפתח ראשי",
-      "legendFk": "עמודת join / FK",
+      "legendFk": "עמודת Join / FK",
       "legendArrows": "חצים לפי מטא-דאטה של קשרים ב-API; רחף על קו לתווית join.",
       "rowsSuffix": "שורות",
       "notCreated": "לא נוצר",
@@ -829,7 +829,7 @@
         "detail": "רענן עם scripts/refresh_api_caches.py אם מיושן."
       },
       "policy_coverage": {
-        "label": "לקוחות עם ≥1 פוליסה",
+        "label": "לקוחות עם לפחות פוליסה אחת",
         "summary": "חלק הלקוחות עם לפחות פוליסה אחת."
       },
       "scd_uniqueness": {
@@ -862,7 +862,7 @@
       },
       "llm": {
         "label": "ספק LLM",
-        "detail": "הגדר Bedrock עם אישורי AWS או בחר PrivateAI תחת ניהול נתונים → הגדרות → ספק LLM."
+        "detail": "הגדר Bedrock עם אישורי AWS או בחר PrivateAI תחת נתונים וניהול → הגדרות → ספק LLM."
       },
       "churn_model": {
         "label": "ציון נטישה",
@@ -883,7 +883,7 @@
     },
     "tabs": {
       "conversation": "שיחה",
-      "retention": "תור retention"
+      "retention": "תור שימור"
     },
     "empty": {
       "hint": "נסה: \"הצג את מפת החום של המוצרים\" או \"מי בסיכון נטישה הגבוה ביותר?\""
@@ -926,7 +926,7 @@
       "lede": "מדורג לפי ערך בסיכון נטישה (פעולה מומלצת לכל לקוח).",
       "actions": {
         "retention_call": {
-          "title": "שיחת retention בעדיפות",
+          "title": "שיחת שימור בעדיפות",
           "detail": "סיכון נטישה גבוה על ערך מהותי — פתח באמפתיה ואפשרויות תשלום/כיסוי."
         },
         "proactive_review": {
