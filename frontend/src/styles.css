@@ -277,18 +277,6 @@ body,
   z-index: 1100;
 }
 
-/* Same look open or closed — header navy, not inverted on press */
-.copilot-toggle.header-copilot-btn {
-  background: rgba(15, 61, 94, 0.92);
-  border-color: rgba(255, 255, 255, 0.35);
-  color: #fff;
-}
-
-.copilot-toggle.header-copilot-btn:hover,
-.copilot-toggle.header-copilot-btn[aria-pressed="true"] {
-  background: #0f3d5e;
-}
-
 .header-copilot-btn {
   box-sizing: border-box;
   width: 2rem;
@@ -307,6 +295,22 @@ body,
 .header-copilot-btn:hover,
 .header-copilot-btn.is-active {
   background: rgba(255, 255, 255, 0.22);
+}
+
+/* Inverted control on light content — identical when panel open or closed */
+.copilot-toggle.header-copilot-btn {
+  color: #0f3d5e;
+  border: 1px solid #c5d4e0;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(15, 61, 94, 0.12);
+}
+
+.copilot-toggle.header-copilot-btn:hover,
+.copilot-toggle.header-copilot-btn:focus-visible,
+.copilot-toggle.header-copilot-btn[aria-pressed="true"] {
+  color: #0f3d5e;
+  border-color: #a8bdd0;
+  background: #eef4f9;
 }
 
 .copilot-panel-icon {
