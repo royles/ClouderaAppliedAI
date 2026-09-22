@@ -778,7 +778,8 @@
       "bedrockTools": "Amazon Bedrock · tools",
       "bedrock": "Amazon Bedrock",
       "rules": "Built-in rules",
-      "rulesFallback": "Built-in rules ({{brand}} did not respond)"
+      "rulesFallback": "Built-in rules ({{brand}} did not respond)",
+      "localCatalog": "Book data · product catalog"
     },
     "input": {
       "label": "Ask Customer 360",

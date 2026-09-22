@@ -169,11 +169,64 @@ def parse_refinement_intent(message: str) -> CustomerListFilters | None:
     return None
 
 
-def _is_policy_product_question(text: str) -> bool:
+def is_policy_product_question(text: str) -> bool:
     """Policy/investment product heatmap — not a ranked customer directory request."""
-    if "product" not in text:
+    lowered = (text or "").lower()
+    if "product" not in lowered and "policy type" not in lowered and "heatmap" not in lowered:
         return False
-    return not any(w in text for w in ("customer", "customers", "client", "clients", "who"))
+    return not any(w in lowered for w in ("customer", "customers", "client", "clients", "who"))
+
+
+def _is_policy_product_question(text: str) -> bool:
+    return is_policy_product_question(text)
+
+
+def message_targets_customer_list(message: str) -> bool:
+    """True when the user is asking to view, refine, or sort the customer directory."""
+    if parse_customer_list_intent(message) is not None:
+        return True
+    if parse_refinement_intent(message) is not None:
+        return True
+    text = (message or "").lower()
+    continuation = (
+        "those customers",
+        "these customers",
+        "same list",
+        "that list",
+        "this list",
+        "customer list",
+        "filter",
+        "narrow",
+        "refine",
+        "restrict",
+        "sort by",
+        "page ",
+        "next page",
+        "previous page",
+        "customers who",
+        "who live",
+        "who have",
+        "show me customers",
+        "list customers",
+    )
+    return any(c in text for c in continuation)
+
+
+def merge_list_state_for_message(
+    message: str,
+    list_context: dict | None,
+    *,
+    default_segment: str,
+) -> CustomerListFilters | None:
+    """
+    Merge UI list_context only when the message is about the customer directory.
+    Avoids treating passive page context (e.g. on /customer) as a list command for
+    general questions like "What is our best product?"
+    """
+    list_intent = parse_customer_list_intent(message)
+    refinement = parse_refinement_intent(message)
+    prior = filters_from_list_context(list_context) if message_targets_customer_list(message) else None
+    return merge_filters(prior, list_intent, refinement, default_segment=default_segment)
 
 
 def parse_customer_list_intent(message: str) -> CustomerListFilters | None:

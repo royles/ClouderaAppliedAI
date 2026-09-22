@@ -9,6 +9,7 @@ from customer360.agent.actions import action_customer_list, action_navigate, act
 from customer360.agent.catalog import CATALOG, CatalogEntry, ENTRY_BY_ID
 from customer360.agent.context import gather_context
 from customer360.agent.list_filters import CustomerListFilters
+from customer360.agent.product_rules import try_product_catalog_answer
 from customer360.api.segments import normalize_segment
 
 _WORD = re.compile(r"[a-z0-9']+")
@@ -71,6 +72,15 @@ def answer_question_rules(
     lowered = text.lower()
     ctx = gather_context(conn, message=text, segment=seg)
     snippets = list(extra_snippets or ctx["snippets"])
+
+    product_answer = try_product_catalog_answer(
+        conn,
+        message=text,
+        segment=seg,
+        extra_snippets=snippets,
+    )
+    if product_answer is not None:
+        return product_answer
 
     if merged_list:
         fl = merged_list

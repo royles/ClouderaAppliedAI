@@ -778,7 +778,8 @@
       "bedrockTools": "Amazon Bedrock · כלים",
       "bedrock": "Amazon Bedrock",
       "rules": "כללים מובנים",
-      "rulesFallback": "כללים מובנים ({{brand}} לא הגיב)"
+      "rulesFallback": "כללים מובנים ({{brand}} לא הגיב)",
+      "localCatalog": "נתוני ספר · קטלוג מוצרים"
     },
     "input": {
       "label": "שאל את Customer 360",

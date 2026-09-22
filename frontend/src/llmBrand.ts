@@ -97,6 +97,9 @@ export function assistantSourceLabel(
   if (effective === "rules") {
     return t("assistant.source.rules");
   }
+  if (effective === "local_catalog") {
+    return t("assistant.source.localCatalog");
+  }
   return null;
 }
 

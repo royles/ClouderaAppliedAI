@@ -13,11 +13,8 @@ from customer360.llm_provider import get_active_provider
 from customer360.agent.context import gather_context
 from customer360.agent.customer_snippet import top_customers_snippet
 from customer360.agent.list_filters import (
-    CustomerListFilters,
-    filters_from_list_context,
-    merge_filters,
-    parse_customer_list_intent,
-    parse_refinement_intent,
+    merge_list_state_for_message,
+    message_targets_customer_list,
 )
 from customer360.agent.query_builder import count_matching_customers
 from customer360.agent.router import answer_question_rules
@@ -38,10 +35,11 @@ def answer_question(
     ctx = gather_context(conn, message=message, segment=segment)
     seg = ctx["segment"]
 
-    list_intent = parse_customer_list_intent(message)
-    refinement = parse_refinement_intent(message)
-    prior = filters_from_list_context(list_context)
-    merged = merge_filters(prior, list_intent, refinement, default_segment=seg)
+    merged = merge_list_state_for_message(
+        message,
+        list_context,
+        default_segment=seg,
+    )
 
     if merged:
         count = count_matching_customers(conn, merged, default_segment=seg)
@@ -76,7 +74,9 @@ def answer_question(
                 message=message.strip(),
                 segment=seg,
                 snippets=ctx["snippets"],
-                list_context=list_context,
+                list_context=(
+                    list_context if message_targets_customer_list(message) else None
+                ),
                 locale=locale,
             )
             parsed, _raw, model_id = complete_agent_model_json(

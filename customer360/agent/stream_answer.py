@@ -10,10 +10,8 @@ from customer360.agent.bedrock_agent import _build_payload
 from customer360.agent.context import gather_context
 from customer360.agent.customer_snippet import top_customers_snippet
 from customer360.agent.list_filters import (
-    filters_from_list_context,
-    merge_filters,
-    parse_customer_list_intent,
-    parse_refinement_intent,
+    merge_list_state_for_message,
+    message_targets_customer_list,
 )
 from customer360.agent.llm_resilience import stream_agent_deltas_then_parse
 from customer360.agent.prompt import build_system_prompt, build_user_prompt
@@ -38,10 +36,11 @@ def _prepare_agent_context(
     ctx = gather_context(conn, message=message, segment=segment)
     seg = ctx["segment"]
 
-    list_intent = parse_customer_list_intent(message)
-    refinement = parse_refinement_intent(message)
-    prior = filters_from_list_context(list_context)
-    merged = merge_filters(prior, list_intent, refinement, default_segment=seg)
+    merged = merge_list_state_for_message(
+        message,
+        list_context,
+        default_segment=seg,
+    )
 
     if merged:
         count = count_matching_customers(conn, merged, default_segment=seg)
@@ -97,11 +96,14 @@ def stream_agent_answer(
         yield ("done", attach_agent_llm_meta(payload, llm_attempted=False))
         return
 
+    prompt_list_context = (
+        list_context if message_targets_customer_list(message) else None
+    )
     user_prompt = build_user_prompt(
         message=message.strip(),
         segment=seg,
         snippets=ctx["snippets"],
-        list_context=list_context,
+        list_context=prompt_list_context,
         locale=locale,
     )
     system_prompt = build_system_prompt(locale)
