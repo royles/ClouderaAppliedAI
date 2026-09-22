@@ -1,0 +1,12 @@
+-- AI-generated customer insights (Bedrock or local fallback), cached per customer.
+
+CREATE TABLE IF NOT EXISTS APP_CUSTOMER_AI_INSIGHTS (
+    CUSTOMER_ID     INTEGER PRIMARY KEY,
+    SUMMARY         TEXT NOT NULL,
+    PRIMARY_FOCUS   TEXT NOT NULL,
+    RECOMMENDATIONS TEXT NOT NULL,
+    SOURCE          TEXT NOT NULL,
+    MODEL_ID        TEXT,
+    CONTEXT_HASH    TEXT NOT NULL,
+    GENERATED_AT    TEXT NOT NULL
+);

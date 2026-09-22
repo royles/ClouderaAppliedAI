@@ -1,0 +1,29 @@
+# Cloudera AI AMP catalog entry — register this file in Site Administration > AMPs.
+# See docs/CAI_APPLICATION.md for deploy steps.
+name: Cloudera Applied AI
+
+entries:
+  - title: Insurance Customer 360
+    label: insurance-customer-360
+    short_description: >
+      Customer 360 dashboard with warehouse analytics, churn ML, interaction events,
+      and Amazon Bedrock insights plus outreach drafts.
+    long_description: >-
+      End-to-end Cloudera AI application for insurance Customer 360: DDS-aligned SQLite
+      warehouse, logistic-regression churn scores with interaction features, synthetic
+      omnichannel events, and a FastAPI + React dashboard. Amazon Bedrock generates
+      per-customer summaries, recommendations, and email/SMS/call drafts when AWS
+      credentials and model access are configured. Import runs automated install, UI
+      build, database seed, churn training, and starts the web application on the
+      platform application port.
+    tags:
+      - Customer 360
+      - Insurance
+      - Churn
+      - FastAPI
+      - React
+      - Amazon Bedrock
+      - GenAI
+    git_url: "https://github.com/royles/ClouderaAppliedAI"
+    git_ref: main
+    is_prototype: true

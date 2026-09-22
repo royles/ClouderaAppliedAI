@@ -42,7 +42,7 @@ python start.py
 
 - Frontend: [http://127.0.0.1:5173](http://127.0.0.1:5173) (or `CDSW_APP_PORT` on CML/CDSW)  
 - Backend API: [http://127.0.0.1:8000](http://127.0.0.1:8000) (or `CDSW_READONLY_PORT` on CML/CDSW)  
-- Swagger: http://127.0.0.1:{backend port}/docs
+- Swagger: [http://127.0.0.1:{backend](http://127.0.0.1:{backend) port}/docs
 
 On Cloudera Machine Learning / CDSW, the platform sets:
 

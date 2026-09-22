@@ -9,10 +9,12 @@ credentials
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 .Python
 venv/
 .venv/
 backend/venv/
+bedrock-playground/backend/venv/
 env/
 *.egg-info/
 build/
@@ -21,9 +23,19 @@ build/
 
 # Node
 node_modules/
+frontend/node_modules/
 frontend/.vite/
+bedrock-playground/frontend/node_modules/
 *.log
 npm-debug.log*
+
+# Customer 360 / Applied AI (from main)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/models/
+models/
+.tools/
 
 # IDE / OS
 .idea/

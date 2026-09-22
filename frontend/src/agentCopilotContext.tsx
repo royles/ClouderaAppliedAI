@@ -1,0 +1,174 @@
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { useLocation } from "react-router-dom";
+import { AgentAction, CustomerSegment, fetchAgentStatus, fetchBedrockStatus } from "./api";
+import { isBusinessArea } from "./appRoutes";
+import { parseBusinessSegment } from "./cohortQuery";
+import { LlmProviderKind, resolveLlmProvider } from "./llmBrand";
+
+export type CopilotPanel = "ask" | "retention_playbook";
+
+export type CopilotTurn = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  actions?: AgentAction[];
+  source?: string | null;
+  modelId?: string | null;
+  /** LLM provider from API (`bedrock` / `openai_compatible`) for source badges */
+  responseLlmProvider?: string | null;
+};
+
+type AgentCopilotContextValue = {
+  enabled: boolean;
+  agentMode: string;
+  bedrockConfigured: boolean;
+  llmProvider: LlmProviderKind;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  toggleOpen: () => void;
+  panel: CopilotPanel;
+  setPanel: (panel: CopilotPanel) => void;
+  turns: CopilotTurn[];
+  appendTurn: (turn: CopilotTurn) => void;
+  updateTurn: (id: string, patch: Partial<CopilotTurn>) => void;
+  askSegment: CustomerSegment;
+  playbookSegment: CustomerSegment;
+  setPlaybookSegment: (segment: CustomerSegment) => void;
+  playbookCohortLabel: string | null;
+  openRetentionPlaybook: (segment: CustomerSegment, cohortLabel?: string | null) => void;
+};
+
+const AgentCopilotContext = createContext<AgentCopilotContextValue | null>(null);
+
+function newTurnId() {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function AgentCopilotProvider({ children }: { children: ReactNode }) {
+  const location = useLocation();
+  const [enabled, setEnabled] = useState(false);
+  const [agentMode, setAgentMode] = useState("rules");
+  const [bedrockConfigured, setBedrockConfigured] = useState(false);
+  const [llmProvider, setLlmProvider] = useState<LlmProviderKind>("none");
+  const [open, setOpen] = useState(true);
+  const [panel, setPanel] = useState<CopilotPanel>("ask");
+  const [turns, setTurns] = useState<CopilotTurn[]>([]);
+  const [playbookSegment, setPlaybookSegment] = useState<CustomerSegment>("customers_all");
+  const [playbookCohortLabel, setPlaybookCohortLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.all([fetchAgentStatus(), fetchBedrockStatus()])
+      .then(([s, bedrock]) => {
+        if (!cancelled) {
+          setEnabled(s.enabled);
+          setAgentMode(s.mode);
+          setBedrockConfigured(s.bedrock_configured);
+          const providerRaw = s.llm_provider ?? bedrock.provider;
+          setLlmProvider(
+            resolveLlmProvider({
+              provider: providerRaw,
+              configured: s.llm_configured ?? bedrock.configured,
+            }),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setEnabled(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const askSegment = useMemo((): CustomerSegment => {
+    if (isBusinessArea(location.pathname)) {
+      return parseBusinessSegment(new URLSearchParams(location.search));
+    }
+    return "customers_all";
+  }, [location.pathname, location.search]);
+
+  const openRetentionPlaybook = useCallback(
+    (segment: CustomerSegment, cohortLabel?: string | null) => {
+      setPlaybookSegment(segment);
+      setPlaybookCohortLabel(cohortLabel ?? null);
+      setPanel("retention_playbook");
+      setOpen(true);
+    },
+    [],
+  );
+
+  const appendTurn = useCallback((turn: CopilotTurn) => {
+    setTurns((prev) => [...prev, turn]);
+  }, []);
+
+  const updateTurn = useCallback((id: string, patch: Partial<CopilotTurn>) => {
+    setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }, []);
+
+  const toggleOpen = useCallback(() => setOpen((v) => !v), []);
+
+  const value = useMemo(
+    (): AgentCopilotContextValue => ({
+      enabled,
+      agentMode,
+      bedrockConfigured,
+      llmProvider,
+      open,
+      setOpen,
+      toggleOpen,
+      panel,
+      setPanel,
+      turns,
+      appendTurn,
+      updateTurn,
+      askSegment,
+      playbookSegment,
+      setPlaybookSegment,
+      playbookCohortLabel,
+      openRetentionPlaybook,
+    }),
+    [
+      enabled,
+      agentMode,
+      bedrockConfigured,
+      llmProvider,
+      open,
+      toggleOpen,
+      panel,
+      turns,
+      appendTurn,
+      updateTurn,
+      askSegment,
+      playbookSegment,
+      playbookCohortLabel,
+      openRetentionPlaybook,
+    ],
+  );
+
+  return (
+    <AgentCopilotContext.Provider value={value}>{children}</AgentCopilotContext.Provider>
+  );
+}
+
+export function useAgentCopilot() {
+  const ctx = useContext(AgentCopilotContext);
+  if (!ctx) {
+    throw new Error("useAgentCopilot must be used within AgentCopilotProvider");
+  }
+  return ctx;
+}
+
+export function useAgentCopilotOptional() {
+  return useContext(AgentCopilotContext);
+}
+
+export { newTurnId };
