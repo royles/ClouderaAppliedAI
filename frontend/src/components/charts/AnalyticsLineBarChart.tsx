@@ -8,6 +8,7 @@ import {
   formatAxisAverage,
   formatAxisCount,
   formatAxisMoney,
+  formatAxisPct,
   formatPeriodAxisLabel,
   formatPeriodLabel,
   historyLabelIndicesForPlot,
@@ -40,10 +41,15 @@ type Props = {
   points: ComboChartPoint[];
   line: SeriesValues;
   bars: SeriesValues;
+  referenceLine?: SeriesValues;
   loading?: boolean;
   emptyMessage?: string;
   lineFormat?: ChartValueFormat;
   barFormat?: ChartValueFormat;
+  /** When true, bars may be omitted for some months (line-only months). */
+  allowSparseBars?: boolean;
+  interactive?: boolean;
+  onPeriodSelect?: (selection: { period: string; kind?: string }) => void;
 };
 
 function boundsForValues(
@@ -58,6 +64,12 @@ function boundsForValues(
   const pad =
     (rawMax - rawMin) * 0.08 ||
     (format === "count" ? 1 : rawMax * 0.05 || 1);
+  if (format === "percent") {
+    return {
+      minY: Math.min(0, rawMin - pad),
+      maxY: Math.max(0, rawMax + pad),
+    };
+  }
   const minY =
     format === "count" || format === "average"
       ? Math.max(0, rawMin - pad)
@@ -65,6 +77,13 @@ function boundsForValues(
   const maxY =
     format === "count" || format === "average" ? rawMax + pad : rawMax * 1.05;
   return { minY, maxY };
+}
+
+function formatAxisFor(format: ChartValueFormat, n: number) {
+  if (format === "percent") return formatAxisPct(n);
+  if (format === "average") return formatAxisAverage(n);
+  if (format === "count") return formatAxisCount(n);
+  return formatAxisMoney(n);
 }
 
 function yForValue(
@@ -86,8 +105,12 @@ export default function AnalyticsLineBarChart({
   bars,
   loading,
   emptyMessage,
+  referenceLine,
   lineFormat = "money",
   barFormat = "average",
+  allowSparseBars = false,
+  interactive = false,
+  onPeriodSelect,
 }: Props) {
   const { t } = useTranslation();
   const resolvedEmpty = emptyMessage ?? t("charts.common.empty");
@@ -141,7 +164,11 @@ export default function AnalyticsLineBarChart({
     );
   }
 
-  if (points.length === 0 || lineFlat.length === 0 || barFlat.length === 0) {
+  if (
+    points.length === 0 ||
+    lineFlat.length === 0 ||
+    (!allowSparseBars && barFlat.length === 0)
+  ) {
     return (
       <div className="analytics-chart-panel">
         <h3 className="analytics-chart-title">{title}</h3>
@@ -170,16 +197,53 @@ export default function AnalyticsLineBarChart({
     padBottom,
   );
 
+  const referenceD =
+    referenceLine &&
+    linePath(
+      referenceLine.values,
+      width,
+      height,
+      padX,
+      padTop,
+      lineBounds.minY,
+      lineBounds.maxY,
+      padBottom,
+    );
+
+  const zeroBarY =
+    barFormat === "percent"
+      ? yForValue(0, barBounds.minY, barBounds.maxY, plotBottom, plotHeight)
+      : plotBottom;
+
+  const handlePlotClick = useCallback(
+    (e: ReactMouseEvent<SVGRectElement>) => {
+      if (!interactive || !onPeriodSelect) return;
+      const svg = svgRef.current;
+      if (!svg || points.length === 0) return;
+      const hit = chartPointerFromSvgEvent(e, svg, points.length, width, padX);
+      if (!hit) return;
+      const p = points[hit.index];
+      if (!p || p.kind === "forecast") return;
+      onPeriodSelect({ period: p.period, kind: p.kind });
+    },
+    [interactive, onPeriodSelect, points, width, padX],
+  );
+
   const active = activeIndex != null ? points[activeIndex] : null;
 
   return (
     <div className="analytics-chart-panel">
       <h3 className="analytics-chart-title">{title}</h3>
       {subtitle && <p className="muted small analytics-chart-sub">{subtitle}</p>}
+      {interactive && onPeriodSelect && (
+        <p className="muted small chart-interactive-hint">
+          {t("charts.common.interactiveHint")}
+        </p>
+      )}
       <div className="value-chart-canvas">
         <svg
           ref={svgRef}
-          className="value-chart-svg analytics-chart-svg"
+          className={`value-chart-svg analytics-chart-svg${interactive ? " analytics-chart-svg-interactive" : ""}`}
           viewBox={`0 0 ${width} ${height}`}
           preserveAspectRatio="xMidYMid meet"
           role="img"
@@ -193,7 +257,7 @@ export default function AnalyticsLineBarChart({
             className="chart-axis"
           />
           <text x={padX - 8} y={padTop} className="chart-axis-label" textAnchor="end">
-            {formatAxisMoney(lineBounds.maxY)}
+            {formatAxisFor(lineFormat, lineBounds.maxY)}
           </text>
           <text
             x={padX - 8}
@@ -201,7 +265,7 @@ export default function AnalyticsLineBarChart({
             className="chart-axis-label"
             textAnchor="end"
           >
-            {formatAxisMoney(lineBounds.minY)}
+            {formatAxisFor(lineFormat, lineBounds.minY)}
           </text>
           <text
             x={width - padX + 8}
@@ -209,9 +273,7 @@ export default function AnalyticsLineBarChart({
             className="chart-axis-label chart-axis-label-right"
             textAnchor="start"
           >
-            {(barFormat === "average" ? formatAxisAverage : formatAxisCount)(
-              barBounds.maxY,
-            )}
+            {formatAxisFor(barFormat, barBounds.maxY)}
           </text>
           <text
             x={width - padX + 8}
@@ -219,16 +281,30 @@ export default function AnalyticsLineBarChart({
             className="chart-axis-label chart-axis-label-right"
             textAnchor="start"
           >
-            {(barFormat === "average" ? formatAxisAverage : formatAxisCount)(
-              barBounds.minY,
-            )}
+            {formatAxisFor(barFormat, barBounds.minY)}
           </text>
+          {barFormat === "percent" && zeroBarY > padTop && zeroBarY < plotBottom ? (
+            <line
+              x1={padX}
+              y1={zeroBarY}
+              x2={width - padX}
+              y2={zeroBarY}
+              className="chart-zero-line"
+              pointerEvents="none"
+            />
+          ) : null}
           {bars.values.map((v, i) => {
             if (v == null) return null;
             const x = xForIndex(i, points.length, width, padX);
-            const y = yForValue(v, barBounds.minY, barBounds.maxY, plotBottom, plotHeight);
-            const barH = plotBottom - y;
+            const yVal = yForValue(v, barBounds.minY, barBounds.maxY, plotBottom, plotHeight);
             const isActive = activeIndex === i;
+            const negative = v < 0;
+            let y = yVal;
+            let barH = zeroBarY - yVal;
+            if (negative) {
+              y = zeroBarY;
+              barH = yVal - zeroBarY;
+            }
             return (
               <rect
                 key={`bar-${bars.id}-${i}`}
@@ -236,13 +312,28 @@ export default function AnalyticsLineBarChart({
                 y={y}
                 width={barWidth}
                 height={Math.max(0, barH)}
-                className={`analytics-bar-fill analytics-bar-fill-behind${isActive ? " analytics-bar-fill-active" : ""}`}
-                fill={barFill}
+                className={`analytics-bar-fill analytics-bar-fill-behind${
+                  negative ? " analytics-bar-fill-negative" : ""
+                }${isActive ? " analytics-bar-fill-active" : ""}`}
+                fill={negative ? undefined : barFill}
                 rx={2}
                 pointerEvents="none"
               />
             );
           })}
+          {referenceD ? (
+            <path
+              d={referenceD}
+              fill="none"
+              stroke={SERIES_VISUAL["return-baseline-balance"].stroke}
+              strokeWidth={SERIES_VISUAL["return-baseline-balance"].strokeWidth}
+              strokeDasharray={SERIES_VISUAL["return-baseline-balance"].strokeDasharray}
+              opacity={SERIES_VISUAL["return-baseline-balance"].opacity ?? 1}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ) : null}
           {lineD ? (
             <path
               d={lineD}
@@ -290,9 +381,10 @@ export default function AnalyticsLineBarChart({
             y={padTop}
             width={plotWidth}
             height={plotHeight}
-            className="chart-plot-hit"
+            className={`chart-plot-hit${interactive ? " chart-plot-hit-actionable" : ""}`}
             onMouseMove={handlePlotMove}
             onMouseLeave={clearHover}
+            onClick={interactive ? handlePlotClick : undefined}
           />
         </svg>
       </div>
@@ -305,6 +397,12 @@ export default function AnalyticsLineBarChart({
         </ChartFloatingTooltip>
       )}
       <ul className="chart-legend chart-legend-compact">
+        {referenceLine ? (
+          <li>
+            <LegendSwatch visualKey="return-baseline-balance" />
+            {referenceLine.label}
+          </li>
+        ) : null}
         <li>
           <LegendSwatch visualKey={line.visualKey} />
           {line.label}

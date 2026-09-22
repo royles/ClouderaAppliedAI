@@ -2318,6 +2318,21 @@ a.engagement-act-link {
   opacity: 0.65;
 }
 
+.analytics-bar-fill-negative {
+  fill: #c25565;
+  opacity: 0.75;
+}
+
+.analytics-bar-fill-negative.analytics-bar-fill-active {
+  opacity: 0.95;
+}
+
+.chart-zero-line {
+  stroke: #cbd5e1;
+  stroke-width: 1;
+  stroke-dasharray: 4 3;
+}
+
 .legend-bar-swatch {
   display: inline-block;
   width: 14px;

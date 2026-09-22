@@ -198,8 +198,14 @@
     },
     "investmentReturns": {
       "title": "תשואות השקעה",
-      "subtitle": "תשואה YTD ממוצעת על צילומי השקעה.",
-      "empty": "אין היסטוריית השקעות ל-cohort זה."
+      "subtitle": "תשואה מצטברת % (קו, שמאל) ותשואת תקופה % חודשית (עמודות, ימין). עמודות מתחת לאפס = הפסד חודשי.",
+      "subtitleFallback": "יתרת השקעה כשאין היסטוריית תשואות.",
+      "empty": "אין היסטוריית השקעות ל-cohort זה.",
+      "legendCumulative": "תשואה מצטברת",
+      "legendPeriod": "תשואת תקופה",
+      "legendBalance": "יתרת השקעה",
+      "legendCohortBalance": "יתרת השקעה ב-cohort",
+      "legendBookCumulative": "תשואה מצטברת בספר מלא (השוואה)"
     },
     "premiumMomentum": {
       "title": "פוליסות פעילות ופרמיה",

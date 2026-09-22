@@ -198,8 +198,14 @@
     },
     "investmentReturns": {
       "title": "Investment Returns",
-      "subtitle": "Average YTD return across investment snapshots.",
-      "empty": "No investment history for this cohort."
+      "subtitle": "Cumulative return % (line, left) and month-over-month period return % (bars, right). Bars below zero are monthly losses.",
+      "subtitleFallback": "Investment balance when return history is not available.",
+      "empty": "No investment history for this cohort.",
+      "legendCumulative": "Cumulative return",
+      "legendPeriod": "Period return",
+      "legendBalance": "Investment balance",
+      "legendCohortBalance": "Cohort investment balance",
+      "legendBookCumulative": "Full book cumulative return (reference)"
     },
     "premiumMomentum": {
       "title": "Active Policies and Premium",
