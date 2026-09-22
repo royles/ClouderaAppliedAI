@@ -7,6 +7,13 @@ import AdminLlmProviderPanel from "./AdminLlmProviderPanel";
 
 type ConfigTab = "warehouse" | "llm" | "kpi_benchmarks" | "appearance";
 
+const TAB_BUTTON_ID: Record<ConfigTab, string> = {
+  warehouse: "admin-config-tab-warehouse",
+  llm: "admin-config-tab-llm",
+  kpi_benchmarks: "admin-config-tab-kpi",
+  appearance: "admin-config-tab-appearance",
+};
+
 export default function AdminConfigurationTabs() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<ConfigTab>("warehouse");
@@ -19,7 +26,9 @@ export default function AdminConfigurationTabs() {
         <button
           type="button"
           role="tab"
+          id="admin-config-tab-warehouse"
           aria-selected={tab === "warehouse"}
+          aria-controls="admin-config-panel"
           className={`admin-config-tab${tab === "warehouse" ? " is-active" : ""}`}
           onClick={() => setTab("warehouse")}
         >
@@ -28,7 +37,9 @@ export default function AdminConfigurationTabs() {
         <button
           type="button"
           role="tab"
+          id="admin-config-tab-llm"
           aria-selected={tab === "llm"}
+          aria-controls="admin-config-panel"
           className={`admin-config-tab${tab === "llm" ? " is-active" : ""}`}
           onClick={() => setTab("llm")}
         >
@@ -37,7 +48,9 @@ export default function AdminConfigurationTabs() {
         <button
           type="button"
           role="tab"
+          id="admin-config-tab-kpi"
           aria-selected={tab === "kpi_benchmarks"}
+          aria-controls="admin-config-panel"
           className={`admin-config-tab${tab === "kpi_benchmarks" ? " is-active" : ""}`}
           onClick={() => setTab("kpi_benchmarks")}
         >
@@ -46,14 +59,21 @@ export default function AdminConfigurationTabs() {
         <button
           type="button"
           role="tab"
+          id="admin-config-tab-appearance"
           aria-selected={tab === "appearance"}
+          aria-controls="admin-config-panel"
           className={`admin-config-tab${tab === "appearance" ? " is-active" : ""}`}
           onClick={() => setTab("appearance")}
         >
           {t("admin.config.tabs.appearance")}
         </button>
       </div>
-      <div className="admin-config-tab-panel" role="tabpanel">
+      <div
+        className="admin-config-tab-panel"
+        role="tabpanel"
+        id="admin-config-panel"
+        aria-labelledby={TAB_BUTTON_ID[tab]}
+      >
         {tab === "warehouse" && <AdminDataSourcePanel layout="embedded" />}
         {tab === "llm" && <AdminLlmProviderPanel />}
         {tab === "kpi_benchmarks" && <AdminKpiBenchmarksPanel />}

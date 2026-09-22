@@ -51,6 +51,11 @@ export default function DomainFilterGrid({
             const avgPoliciesPerCustomer =
               customersInCohort > 0 ? policyTotal / customersInCohort : 0;
 
+            const description = d.description || d.domain;
+            const stateLabel = selected
+              ? t("common.a11y.selected")
+              : t("common.a11y.notSelected");
+
             return (
               <button
                 key={filterKey + d.domain}
@@ -59,7 +64,13 @@ export default function DomainFilterGrid({
                 onClick={() =>
                   onCardClick({ ...d, filter_key: filterKey } as DomainCount)
                 }
-                title={d.description || d.domain}
+                title={description}
+                aria-pressed={selected}
+                aria-label={t("common.a11y.filterToggle", {
+                  label: d.domain,
+                  description,
+                  state: stateLabel,
+                })}
               >
                 {isPolicyBookCard ? (
                   <>

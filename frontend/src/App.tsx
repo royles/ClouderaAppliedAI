@@ -130,6 +130,9 @@ function AppLayout() {
         phoneCopilotHome ? " layout-phone-copilot" : ""
       }${mobileFocus ? " layout-phone-content" : ""}`}
     >
+      <a href="#main-content" className="skip-link">
+        {t("app.a11y.skipToMain")}
+      </a>
       {!phoneCopilotHome && (
         <header className={`header${isPhone ? " header-phone" : ""}`}>
           <Link to={BUSINESS_BASE} className="brand">
@@ -148,7 +151,12 @@ function AppLayout() {
       >
         {!isPhone && <AppSideNav />}
         {showMain && (
-          <main className="main app-main">
+          <main
+            id="main-content"
+            className="main app-main"
+            tabIndex={-1}
+            aria-label={t("app.a11y.mainContent")}
+          >
             {!isPhone && <DataFreshnessStrip />}
             {mobileFocus && <MobileFocusBar />}
             <Routes>

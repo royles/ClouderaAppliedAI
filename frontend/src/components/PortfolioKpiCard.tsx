@@ -25,11 +25,15 @@ export default function PortfolioKpiCard({
 }: Props) {
   const { t } = useTranslation();
   const interactive = Boolean(onClick) && !loading;
+  const interactiveLabel = interactive
+    ? [label, loading ? t("common.a11y.loading") : value, actionHint].filter(Boolean).join(". ")
+    : undefined;
   return (
     <div
       className={`portfolio-kpi${progress ? " portfolio-kpi-with-thermo" : ""}${interactive ? " portfolio-kpi-action" : ""}`}
       role={interactive ? "button" : undefined}
       tabIndex={interactive ? 0 : undefined}
+      aria-label={interactiveLabel}
       onClick={interactive ? onClick : undefined}
       onKeyDown={
         interactive

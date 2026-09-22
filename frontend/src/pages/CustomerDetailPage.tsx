@@ -26,6 +26,8 @@ import { useMobileFocus } from "../mobileUxContext";
 
 type Tab = "policies" | "foreclosures" | "investments" | "interactions";
 
+const CUSTOMER_TAB_PANEL_ID = "customer-records-tabpanel";
+
 function formatEventType(t: (key: string) => string, type: string) {
   if (type === "REVIEW") return t("customer.interactions.eventType.review");
   if (type === "AGENT_QUESTION") return t("customer.interactions.eventType.agentQuestion");
@@ -293,9 +295,17 @@ export default function CustomerDetailPage() {
       {!mobileFocus && (
         <section className="panel customer-detail-records-panel">
           <div className="customer-detail-tabs-pane">
-            <div className="tab-bar customer-detail-tab-bar">
+            <div
+              className="tab-bar customer-detail-tab-bar"
+              role="tablist"
+              aria-label={t("customer.tabs.listLabel")}
+            >
               <button
                 type="button"
+                role="tab"
+                id="customer-tab-policies"
+                aria-selected={tab === "policies"}
+                aria-controls={CUSTOMER_TAB_PANEL_ID}
                 className={tab === "policies" ? "tab active" : "tab"}
                 onClick={() => setTab("policies")}
               >
@@ -303,6 +313,10 @@ export default function CustomerDetailPage() {
               </button>
               <button
                 type="button"
+                role="tab"
+                id="customer-tab-foreclosures"
+                aria-selected={tab === "foreclosures"}
+                aria-controls={CUSTOMER_TAB_PANEL_ID}
                 className={tab === "foreclosures" ? "tab active" : "tab"}
                 onClick={() => setTab("foreclosures")}
               >
@@ -310,6 +324,10 @@ export default function CustomerDetailPage() {
               </button>
               <button
                 type="button"
+                role="tab"
+                id="customer-tab-investments"
+                aria-selected={tab === "investments"}
+                aria-controls={CUSTOMER_TAB_PANEL_ID}
                 className={tab === "investments" ? "tab active" : "tab"}
                 onClick={() => setTab("investments")}
               >
@@ -317,6 +335,10 @@ export default function CustomerDetailPage() {
               </button>
               <button
                 type="button"
+                role="tab"
+                id="customer-tab-interactions"
+                aria-selected={tab === "interactions"}
+                aria-controls={CUSTOMER_TAB_PANEL_ID}
                 className={tab === "interactions" ? "tab active" : "tab"}
                 onClick={() => setTab("interactions")}
               >
@@ -325,7 +347,12 @@ export default function CustomerDetailPage() {
               </button>
             </div>
 
-            <div className="customer-detail-tab-body">
+            <div
+              className="customer-detail-tab-body"
+              role="tabpanel"
+              id={CUSTOMER_TAB_PANEL_ID}
+              aria-labelledby={`customer-tab-${tab}`}
+            >
       {tab === "policies" && (
         <div className="customer-detail-tab-content">
           <h2 className="subsection-title">{t("customer.policies.title")}</h2>
@@ -342,19 +369,31 @@ export default function CustomerDetailPage() {
                 </tr>
               </thead>
               <tbody>
-                {policies.map((p) => (
+                {policies.map((p) => {
+                  const selected = activePolicy === p.policy_num;
+                  const togglePolicy = () =>
+                    setActivePolicy((prev) =>
+                      prev === p.policy_num ? null : p.policy_num,
+                    );
+                  return (
                   <tr
                     key={p.policy_num}
-                    className={
-                      activePolicy === p.policy_num
-                        ? "table-row-selected"
-                        : "table-row-click"
+                    className={selected ? "table-row-selected" : "table-row-click"}
+                    tabIndex={0}
+                    role="button"
+                    aria-pressed={selected}
+                    aria-label={
+                      selected
+                        ? t("customer.policies.rowSelectedA11y", { number: p.policy_num })
+                        : t("customer.policies.rowA11y", { number: p.policy_num })
                     }
-                    onClick={() =>
-                      setActivePolicy((prev) =>
-                        prev === p.policy_num ? null : p.policy_num,
-                      )
-                    }
+                    onClick={togglePolicy}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        togglePolicy();
+                      }
+                    }}
                   >
                     <td>{p.policy_num}</td>
                     <td>{p.policy_type_desc ?? emDash}</td>
@@ -362,7 +401,8 @@ export default function CustomerDetailPage() {
                     <td>{p.is_active ? t("common.yes") : t("common.no")}</td>
                     <td>{formatMoneyIls(p.bruto_monthly_premium)}</td>
                   </tr>
-                ))}
+                );
+                })}
               </tbody>
             </table>
           </div>

@@ -17,8 +17,14 @@ export default function ChurnBadge({ probability, tier }: Props) {
     probability != null ? `${Math.round(probability * 100)}%` : t("common.emDash");
   const className = `churn-badge churn-${level.toLowerCase()}`;
 
+  const label = t("customer.churn.badgeA11y", { tier: tierLabel, pct });
+
   return (
-    <span className={className} title={t("customer.churn.likelihoodTitle", { pct })}>
+    <span
+      className={className}
+      title={t("customer.churn.likelihoodTitle", { pct })}
+      aria-label={label}
+    >
       {tierLabel} · {pct}
     </span>
   );

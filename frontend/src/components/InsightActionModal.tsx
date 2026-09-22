@@ -19,6 +19,7 @@ import {
   type DraftStreamMeta,
 } from "../outreachDraft";
 import { maskEmail, maskPhone } from "../pii";
+import { useModalDialog } from "../a11y/useModalDialog";
 import { apiLocaleCode } from "../i18n/index";
 
 type Props = {
@@ -52,6 +53,7 @@ export default function InsightActionModal({
   const [contentSource, setContentSource] = useState<string | null>(null);
   const [modelId, setModelId] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  useModalDialog(dialogRef, onClose);
 
   const llmProvider = resolveLlmProvider(llmStatus);
   const configuredBrand = llmBrandName(t, llmProvider);
@@ -224,18 +226,27 @@ export default function InsightActionModal({
         ref={dialogRef}
         className="modal panel modal-draft-outreach"
         role="dialog"
+        aria-modal="true"
         aria-labelledby="action-draft-title"
+        aria-describedby="action-draft-disclaimer"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="panel-head">
           <h2 id="action-draft-title">{draft?.preview_label ?? previewLabel}</h2>
-          <button type="button" className="link-btn" onClick={onClose}>
+          <button
+            type="button"
+            className="link-btn"
+            onClick={onClose}
+            aria-label={t("customer.outreach.cancel")}
+          >
             {t("customer.outreach.cancel")}
           </button>
         </div>
 
-        <p className="muted small modal-disclaimer">{t("customer.outreach.disclaimer")}</p>
+        <p id="action-draft-disclaimer" className="muted small modal-disclaimer">
+          {t("customer.outreach.disclaimer")}
+        </p>
 
         {streaming && (
           <p className="muted small draft-stream-status">

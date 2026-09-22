@@ -68,7 +68,7 @@ function SchemaCard({
         placed ? " warehouse-schema-card--placed" : ""
       }${table.table_exists ? "" : " warehouse-schema-card--missing"}`}
       style={style}
-      aria-label={`${table.table_name} schema`}
+      aria-label={t("admin.schemaDiagram.tableSchemaA11y", { name: table.table_name })}
     >
       <header className="warehouse-schema-card-head">
         <code className="warehouse-schema-card-name">{table.table_name}</code>

@@ -177,7 +177,7 @@ export default function CustomerInsightsPanel({
 
   return (
     <>
-      <Shell className={shellClass}>
+      <Shell className={shellClass} aria-busy={loading || refreshing}>
         <div className="panel-head">
           <div>
             <h2>{t("customer.insights.title")}</h2>
@@ -188,6 +188,7 @@ export default function CustomerInsightsPanel({
               type="button"
               className="btn secondary"
               disabled={loading || refreshing}
+              aria-busy={refreshing}
               onClick={() => load(true)}
             >
               {refreshing ? t("common.loading") : t("customer.insights.refresh")}
@@ -203,7 +204,11 @@ export default function CustomerInsightsPanel({
             {streamPreview}
           </div>
         )}
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
 
         {insights && (
           <>

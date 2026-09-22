@@ -46,11 +46,18 @@ function ProductCard({
     page: 1,
   })}`;
 
+  const cardLabel = t("products.a11y.productCard", {
+    name: product.policy_type_desc,
+    count: formatNumber(product.customer_count),
+    policies: formatNumber(product.active_policy_count),
+  });
+
   return (
     <Link
       to={href}
       className={`product-heatmap-card product-heat-${level}`}
-      title={t("products.customersCount", { count: formatNumber(product.customer_count) })}
+      title={cardLabel}
+      aria-label={cardLabel}
     >
       <span className="product-heatmap-count">{formatNumber(product.customer_count)}</span>
       <span className="product-heatmap-name">{product.policy_type_desc}</span>

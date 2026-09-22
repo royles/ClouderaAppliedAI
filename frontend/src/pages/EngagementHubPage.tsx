@@ -198,9 +198,15 @@ export default function EngagementHubPage() {
                     )}
                   </p>
                 </div>
-                <div className="engagement-influence-score" title={t("engagement.a11y.influenceTitle")}>
+                <div
+                  className="engagement-influence-score"
+                  title={t("engagement.a11y.influenceTitle")}
+                  aria-label={t("engagement.a11y.influenceScore", {
+                    score: row.influence_score.toFixed(0),
+                  })}
+                >
                   <span className="label">{t("engagement.influence.label")}</span>
-                  <strong>{row.influence_score.toFixed(0)}</strong>
+                  <strong aria-hidden>{row.influence_score.toFixed(0)}</strong>
                 </div>
               </div>
 

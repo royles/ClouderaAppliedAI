@@ -9,7 +9,9 @@
     },
     "a11y": {
       "applicationAreas": "Application Areas",
-      "administrationNav": "Administration"
+      "administrationNav": "Administration",
+      "skipToMain": "Skip to main content",
+      "mainContent": "Main content"
     },
     "dataFreshness": {
       "label": "Data Freshness",
@@ -60,7 +62,11 @@
     "showAll": "Show all",
     "emDash": "—",
     "a11y": {
-      "breadcrumb": "Breadcrumb"
+      "breadcrumb": "Breadcrumb",
+      "selected": "Selected",
+      "notSelected": "Not selected",
+      "filterToggle": "{{label}}. {{description}} {{state}}.",
+      "loading": "Loading"
     }
   },
   "errors": {
@@ -247,7 +253,8 @@
         "HIGH": "High",
         "MEDIUM": "Medium",
         "LOW": "Low"
-      }
+      },
+      "badgeA11y": "Churn risk {{tier}}, likelihood {{pct}}"
     },
     "privacyNotice": "City and last login are shown in full; other PII fields are masked in this demo.",
     "profile": {
@@ -265,7 +272,8 @@
       "policies": "Policies",
       "foreclosures": "Foreclosures",
       "investments": "Investments",
-      "interactions": "Interactions"
+      "interactions": "Interactions",
+      "listLabel": "Customer record sections"
     },
     "policies": {
       "title": "Policies",
@@ -276,7 +284,9 @@
         "status": "Status",
         "active": "Active",
         "monthlyPremium": "Monthly Premium"
-      }
+      },
+      "rowA11y": "Policy {{number}}, click to filter investments",
+      "rowSelectedA11y": "Policy {{number}}, selected for investment filter"
     },
     "foreclosures": {
       "title": "Foreclosures and Encumbrances",
@@ -515,7 +525,8 @@
       "label": "Influence"
     },
     "a11y": {
-      "influenceTitle": "Propensity to Influence"
+      "influenceTitle": "Propensity to Influence",
+      "influenceScore": "Influence score {{score}} out of 100"
     },
     "touchpoints": {
       "count90": "{{count}} touchpoints (90d)",
@@ -573,7 +584,8 @@
       "lighter": "Lighter"
     },
     "a11y": {
-      "legend": "Customer Count Intensity"
+      "legend": "Customer Count Intensity",
+      "productCard": "{{name}}, {{count}} customers, {{policies}} active policies"
     },
     "filters": {
       "cohort": "Customer Cohort",
@@ -782,7 +794,8 @@
       "legendArrows": "Arrows follow API relationship metadata; hover a line for the join label.",
       "rowsSuffix": "rows",
       "notCreated": "not created",
-      "noColumns": "No Columns (Table Missing in DB)"
+      "noColumns": "No Columns (Table Missing in DB)",
+      "tableSchemaA11y": "Table {{name}} schema"
     },
     "appearance": {
       "modeLegend": "Light / Dark Mode",
@@ -883,7 +896,8 @@
     },
     "tabs": {
       "conversation": "Conversation",
-      "retention": "Retention Queue"
+      "retention": "Retention Queue",
+      "listA11y": "Assistant panels"
     },
     "empty": {
       "hint": "Try: “Show the product heatmap” or “Who is at highest churn risk?”"

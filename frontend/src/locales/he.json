@@ -9,7 +9,9 @@
     },
     "a11y": {
       "applicationAreas": "אזורי יישום",
-      "administrationNav": "ניהול"
+      "administrationNav": "ניהול",
+      "skipToMain": "דלג לתוכן הראשי",
+      "mainContent": "תוכן ראשי"
     },
     "dataFreshness": {
       "label": "רעננות נתונים",
@@ -60,7 +62,11 @@
     "showAll": "הצג הכל",
     "emDash": "—",
     "a11y": {
-      "breadcrumb": "פירורי לחם"
+      "breadcrumb": "פירורי לחם",
+      "selected": "נבחר",
+      "notSelected": "לא נבחר",
+      "filterToggle": "{{label}}. {{description}} {{state}}.",
+      "loading": "טוען"
     }
   },
   "errors": {
@@ -247,7 +253,8 @@
         "HIGH": "גבוה",
         "MEDIUM": "בינוני",
         "LOW": "נמוך"
-      }
+      },
+      "badgeA11y": "סיכון נטישה {{tier}}, סבירות {{pct}}"
     },
     "privacyNotice": "City and last login are shown in full; other PII fields are masked in this demo.",
     "profile": {
@@ -265,7 +272,8 @@
       "policies": "פוליסות",
       "foreclosures": "עיקולים",
       "investments": "השקעות",
-      "interactions": "אינטראקציות"
+      "interactions": "אינטראקציות",
+      "listLabel": "מקטעי רשומת לקוח"
     },
     "policies": {
       "title": "פוליסות",
@@ -276,7 +284,9 @@
         "status": "סטטוס",
         "active": "פעיל",
         "monthlyPremium": "פרמיה חודשית"
-      }
+      },
+      "rowA11y": "פוליסה {{number}}, לחץ לסינון השקעות",
+      "rowSelectedA11y": "פוליסה {{number}}, נבחרה לסינון השקעות"
     },
     "foreclosures": {
       "title": "עיקולים ושעבודים",
@@ -515,7 +525,8 @@
       "label": "השפעה"
     },
     "a11y": {
-      "influenceTitle": "סבירות להשפיע"
+      "influenceTitle": "סבירות להשפיע",
+      "influenceScore": "ציון השפעה {{score}} מתוך 100"
     },
     "touchpoints": {
       "count90": "{{count}} נקודות מגע (90 יום)",
@@ -573,7 +584,8 @@
       "lighter": "קל יותר"
     },
     "a11y": {
-      "legend": "עוצמת מספר לקוחות"
+      "legend": "עוצמת מספר לקוחות",
+      "productCard": "{{name}}, {{count}} לקוחות, {{policies}} פוליסות פעילות"
     },
     "filters": {
       "cohort": "Cohort לקוחות",
@@ -782,7 +794,8 @@
       "legendArrows": "חצים לפי מטא-דאטה של קשרים ב-API; רחף על קו לתווית join.",
       "rowsSuffix": "שורות",
       "notCreated": "לא נוצר",
-      "noColumns": "אין עמודות (טבלה חסרה ב-DB)"
+      "noColumns": "אין עמודות (טבלה חסרה ב-DB)",
+      "tableSchemaA11y": "סכימת טבלה {{name}}"
     },
     "appearance": {
       "modeLegend": "מצב בהיר / כהה",
@@ -883,7 +896,8 @@
     },
     "tabs": {
       "conversation": "שיחה",
-      "retention": "תור שימור"
+      "retention": "תור שימור",
+      "listA11y": "לוחות עוזר"
     },
     "empty": {
       "hint": "נסה: \"הצג את מפת החום של המוצרים\" או \"מי בסיכון נטישה הגבוה ביותר?\""

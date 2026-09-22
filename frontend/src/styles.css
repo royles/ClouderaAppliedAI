@@ -530,6 +530,60 @@ body,
   border: 0;
 }
 
+.skip-link {
+  position: absolute;
+  left: 0.75rem;
+  top: 0.75rem;
+  z-index: 10000;
+  padding: 0.5rem 0.85rem;
+  border-radius: 0.35rem;
+  background: var(--theme-brand-900);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  transform: translateY(-160%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.main.app-main:focus {
+  outline: none;
+}
+
+.main.app-main:focus-visible {
+  outline: 2px solid var(--theme-brand-500);
+  outline-offset: -2px;
+}
+
+.btn:focus-visible,
+.tab:focus-visible,
+.link-btn:focus-visible,
+.app-side-tab:focus-visible,
+.stat-card-btn:focus-visible,
+.admin-config-tab:focus-visible,
+.agent-copilot-tab:focus-visible,
+.lang-switcher button:focus-visible {
+  outline: 2px solid var(--theme-brand-500);
+  outline-offset: 2px;
+}
+
+.table-row-click:focus-visible,
+.table-row-selected:focus-visible {
+  outline: 2px solid var(--theme-brand-500);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}
+
 .brand {
   color: #fff;
   font-weight: 600;

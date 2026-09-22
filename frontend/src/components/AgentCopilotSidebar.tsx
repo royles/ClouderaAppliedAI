@@ -236,11 +236,17 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
         </div>
       </header>
 
-      <div className="agent-copilot-tabs" role="tablist">
+      <div
+        className="agent-copilot-tabs"
+        role="tablist"
+        aria-label={t("assistant.tabs.listA11y")}
+      >
         <button
           type="button"
           role="tab"
+          id="copilot-tab-ask"
           aria-selected={panel === "ask"}
+          aria-controls="copilot-panel-ask"
           className={`agent-copilot-tab${panel === "ask" ? " is-active" : ""}`}
           onClick={() => setTab("ask")}
         >
@@ -249,7 +255,9 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
         <button
           type="button"
           role="tab"
+          id="copilot-tab-retention"
           aria-selected={panel === "retention_playbook"}
+          aria-controls="copilot-panel-retention"
           className={`agent-copilot-tab${panel === "retention_playbook" ? " is-active" : ""}`}
           onClick={() => {
             setPlaybookSegment(askSegment);
@@ -262,7 +270,13 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
 
       {panel === "ask" && (
         <>
-          <div ref={historyRef} className="agent-copilot-history">
+          <div
+            ref={historyRef}
+            className="agent-copilot-history"
+            role="tabpanel"
+            id="copilot-panel-ask"
+            aria-labelledby="copilot-tab-ask"
+          >
             {turns.length === 0 && (
               <p className="muted small agent-copilot-empty">
                 {t("assistant.empty.hint")}
@@ -337,7 +351,12 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
       )}
 
       {panel === "retention_playbook" && (
-        <div className="agent-copilot-playbook-wrap">
+        <div
+          className="agent-copilot-playbook-wrap"
+          role="tabpanel"
+          id="copilot-panel-retention"
+          aria-labelledby="copilot-tab-retention"
+        >
           <RetentionPlaybookPanel
             segment={playbookSegment}
             cohortLabel={playbookCohortLabel}

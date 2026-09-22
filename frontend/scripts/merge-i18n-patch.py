@@ -20,7 +20,11 @@ def deep_merge(base: dict, patch: dict) -> dict:
 def main() -> None:
     for lang in ("en", "he"):
         target = ROOT / f"{lang}.json"
-        for patch_name in (f"i18n-patch-{lang}.json", f"i18n-patch-{lang}-titles.json"):
+        for patch_name in (
+            f"i18n-patch-{lang}.json",
+            f"i18n-patch-{lang}-titles.json",
+            f"i18n-patch-a11y-{lang}.json",
+        ):
             patch_path = ROOT / patch_name
             if not patch_path.is_file():
                 continue
