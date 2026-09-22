@@ -14,6 +14,7 @@ import DomainFilterGrid from "../components/DomainFilterGrid";
 import { parseBusinessSegment, patchBusinessSegment } from "../dashboardUrl";
 import { displayCustomerName, formatCity } from "../pii";
 import { formatMoneyIls } from "../formatMoney";
+import { useMobileFocus } from "../mobileUxContext";
 
 function channelLabel(hint: string) {
   if (hint === "email") return "Email";
@@ -23,6 +24,7 @@ function channelLabel(hint: string) {
 }
 
 export default function EngagementHubPage() {
+  const mobileFocus = useMobileFocus();
   const [searchParams, setSearchParams] = useSearchParams();
   const segment = useMemo(() => parseBusinessSegment(searchParams), [searchParams]);
 
@@ -78,7 +80,8 @@ export default function EngagementHubPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "Engagement & touchpoints" }]} />
+      {!mobileFocus && <Breadcrumbs items={[{ label: "Engagement & touchpoints" }]} />}
+      {!mobileFocus && (
       <section className="panel engagement-hub-intro">
         <h1 className="page-title">Engagement & touchpoints</h1>
         <p className="muted engagement-hub-lede">
@@ -86,8 +89,9 @@ export default function EngagementHubPage() {
           signals, open questions, and relationship value — then act with a clear next step.
         </p>
       </section>
+      )}
 
-      {overview && (
+      {!mobileFocus && overview && (
         <section className="panel">
           <DomainFilterGrid
             overview={overview}
@@ -98,6 +102,7 @@ export default function EngagementHubPage() {
         </section>
       )}
 
+      {!mobileFocus && (
       <section className="panel">
         <div className="engagement-summary-grid">
           <div className="engagement-summary-card">
@@ -124,15 +129,20 @@ export default function EngagementHubPage() {
           </div>
         </div>
       </section>
+      )}
 
       <section className="panel">
         <div className="panel-head">
           <div>
-            <h2 className="subsection-title">Influence priority list</h2>
+            <h2 className="subsection-title">
+              {mobileFocus ? "Top outreach" : "Influence priority list"}
+            </h2>
+            {!mobileFocus && (
             <p className="muted small">
               Ranked by influence score (value, recency, open items, and churn context).
               {hub != null && !loading ? ` Showing ${hub.opportunities.length} of ${hub.total}.` : ""}
             </p>
+            )}
           </div>
         </div>
 
@@ -182,6 +192,7 @@ export default function EngagementHubPage() {
                 </div>
               </div>
 
+              {!mobileFocus && (
               <div className="engagement-touchpoint-strip">
                 <span className="touchpoint-chip">
                   {row.touchpoints.events_last_90d} touchpoints (90d)
@@ -201,6 +212,7 @@ export default function EngagementHubPage() {
                   {Math.round(row.touchpoints.days_since_last_touch)}d since last touch
                 </span>
               </div>
+              )}
 
               <div className="engagement-action-block">
                 <div>

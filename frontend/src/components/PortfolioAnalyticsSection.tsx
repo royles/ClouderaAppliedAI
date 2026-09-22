@@ -30,6 +30,8 @@ type Props = {
   cohortLabel?: string | null;
   segment: CustomerSegment;
   chartInteractive?: boolean;
+  /** Phone / copilot focus: KPI cards only. */
+  minimal?: boolean;
 };
 
 function formatPct(rate: number | null | undefined, digits = 1) {
@@ -77,6 +79,7 @@ export default function PortfolioAnalyticsSection({
   cohortLabel,
   segment,
   chartInteractive = true,
+  minimal = false,
 }: Props) {
   const navigate = useNavigate();
   const { openRetentionPlaybook } = useAgentCopilot();
@@ -128,29 +131,36 @@ export default function PortfolioAnalyticsSection({
       className={`portfolio-analytics in-panel${cohortScoped ? " portfolio-analytics-filtered" : ""}`}
       key={chartScopeKey}
     >
-      {showBookCompare && (
+      {showBookCompare && !minimal && (
         <CohortVsBookBanner
           cohortLabel={cohortLabel ?? "Filtered cohort"}
           cohort={data}
           book={bookBaseline}
         />
       )}
-      <div className="panel-head value-chart-head">
-        <div>
-          <h2 className="subsection-title">Book growth &amp; churn outlook</h2>
-          <p className="muted small">
-            {cohortScoped
-              ? `${cohortCaption} — KPIs and charts reload when you change the overview cards above.`
-              : "Portfolio KPIs with industry-aligned churn forecast on total customer value."}
-            {historyPeriodRange && (
-              <>
-                {" "}
-                Book history: {historyPeriodRange}.
-              </>
-            )}
-          </p>
+      {!minimal && (
+        <div className="panel-head value-chart-head">
+          <div>
+            <h2 className="subsection-title">Book growth &amp; churn outlook</h2>
+            <p className="muted small">
+              {cohortScoped
+                ? `${cohortCaption} — KPIs and charts reload when you change the overview cards above.`
+                : "Portfolio KPIs with industry-aligned churn forecast on total customer value."}
+              {historyPeriodRange && (
+                <>
+                  {" "}
+                  Book history: {historyPeriodRange}.
+                </>
+              )}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
+      {minimal && (
+        <p className="muted small mobile-focus-lead">
+          {cohortCaption} · benchmark status on each card
+        </p>
+      )}
 
       <div className="portfolio-kpi-grid">
         <PortfolioKpiCard
@@ -262,6 +272,7 @@ export default function PortfolioAnalyticsSection({
         />
       </div>
 
+      {!minimal && (
       <div
         className={`portfolio-charts-grid${refreshing ? " portfolio-charts-refreshing" : ""}`}
       >
@@ -287,7 +298,10 @@ export default function PortfolioAnalyticsSection({
           onPeriodSelect={goToCustomerList("at_risk")}
         />
       </div>
+      )}
 
+      {!minimal && (
+      <>
       <div className="portfolio-objectives-head">
         <h2 className="subsection-title">Strategic objective trends</h2>
         <p className="muted small">
@@ -312,11 +326,13 @@ export default function PortfolioAnalyticsSection({
           loading={chartLoading}
         />
       </div>
-      {refreshing && (
+      </>
+      )}
+      {refreshing && !minimal && (
         <p className="value-chart-refresh-label muted small">Updating analytics…</p>
       )}
 
-      {data?.methodology_note && (
+      {data?.methodology_note && !minimal && (
         <p className="muted small portfolio-methodology">{data.methodology_note}</p>
       )}
 

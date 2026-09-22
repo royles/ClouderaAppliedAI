@@ -14,6 +14,9 @@ import {
 import { AgentCopilotProvider, useAgentCopilot } from "./agentCopilotContext";
 import CopilotRail from "./components/CopilotRail";
 import DataFreshnessStrip from "./components/DataFreshnessStrip";
+import MobileCopilotDock from "./components/MobileCopilotDock";
+import MobileFocusBar from "./components/MobileFocusBar";
+import { MobileUxProvider, useMobileUx } from "./mobileUxContext";
 import ProductsPage from "./pages/ProductsPage";
 import AdminPage from "./pages/AdminPage";
 import DashboardPage from "./pages/DashboardPage";
@@ -112,22 +115,41 @@ function AppSideNav() {
 
 function AppLayout() {
   const { enabled, open } = useAgentCopilot();
+  const { isPhone, mobilePane, mobileFocus } = useMobileUx();
+  const showMain = !isPhone || mobilePane === "content";
+  const phoneCopilotHome = isPhone && mobilePane === "copilot";
 
   return (
-    <div className="layout">
-      <header
-        className={`header${enabled && !open ? " header-with-copilot-toggle" : ""}`}
+    <div
+      className={`layout${isPhone ? " layout-phone" : ""}${
+        phoneCopilotHome ? " layout-phone-copilot" : ""
+      }${mobileFocus ? " layout-phone-content" : ""}`}
+    >
+      {!phoneCopilotHome && (
+        <header
+          className={`header${isPhone ? " header-phone" : ""}${
+            enabled && !open && !isPhone ? " header-with-copilot-toggle" : ""
+          }`}
+        >
+          <Link to={BUSINESS_BASE} className="brand">
+            Insurance Customer 360
+          </Link>
+          {!isPhone && (
+            <span className="tag">Cloudera AI · Business &amp; customer views</span>
+          )}
+        </header>
+      )}
+      <div
+        className={`app-body${open && !phoneCopilotHome ? " app-body-copilot-open" : ""}${
+          phoneCopilotHome ? " app-body-phone-copilot" : ""
+        }`}
       >
-        <Link to={BUSINESS_BASE} className="brand">
-          Insurance Customer 360
-        </Link>
-        <span className="tag">Cloudera AI · Business &amp; customer views</span>
-      </header>
-      <div className={`app-body${open ? " app-body-copilot-open" : ""}`}>
-        <AppSideNav />
-        <main className="main app-main">
-          <DataFreshnessStrip />
-          <Routes>
+        {!isPhone && <AppSideNav />}
+        {showMain && (
+          <main className="main app-main">
+            {!isPhone && <DataFreshnessStrip />}
+            {mobileFocus && <MobileFocusBar />}
+            <Routes>
             <Route path="/" element={<LegacyRootRedirect />} />
             <Route path={BUSINESS_BASE} element={<DashboardPage />} />
             <Route path={CUSTOMER_BASE} element={<CustomerHubPage />} />
@@ -137,9 +159,11 @@ function AppLayout() {
             <Route path={ADMIN_BASE} element={<AdminPage />} />
             <Route path="/customers/:customerId" element={<LegacyCustomerRedirect />} />
             <Route path="*" element={<Navigate to={BUSINESS_BASE} replace />} />
-          </Routes>
-        </main>
+            </Routes>
+          </main>
+        )}
         <CopilotRail />
+        {mobileFocus && <MobileCopilotDock />}
       </div>
     </div>
   );
@@ -148,7 +172,9 @@ function AppLayout() {
 export default function App() {
   return (
     <AgentCopilotProvider>
-      <AppLayout />
+      <MobileUxProvider>
+        <AppLayout />
+      </MobileUxProvider>
     </AgentCopilotProvider>
   );
 }

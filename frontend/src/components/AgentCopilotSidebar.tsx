@@ -8,6 +8,8 @@ import {
   newTurnId,
   useAgentCopilot,
 } from "../agentCopilotContext";
+import { withCopilotFocus } from "../copilotNavigation";
+import { useMobileUx } from "../mobileUxContext";
 import RetentionPlaybookPanel from "./RetentionPlaybookPanel";
 
 function actionHref(action: AgentAction): string {
@@ -21,9 +23,13 @@ function actionHref(action: AgentAction): string {
 function ActionButton({
   action,
   onOpenPanel,
+  isPhone,
+  onNavigateContent,
 }: {
   action: AgentAction;
   onOpenPanel: (action: AgentAction) => void;
+  isPhone: boolean;
+  onNavigateContent: () => void;
 }) {
   if (action.action_type === "open_panel" && action.panel === "retention_playbook") {
     return (
@@ -37,16 +43,27 @@ function ActionButton({
     );
   }
 
-  const href = actionHref(action);
+  const href = withCopilotFocus(actionHref(action), isPhone);
   return (
-    <Link to={href} className="agent-copilot-action">
+    <Link
+      to={href}
+      className="agent-copilot-action"
+      onClick={() => {
+        if (isPhone) onNavigateContent();
+      }}
+    >
       {action.label}
     </Link>
   );
 }
 
-export default function AgentCopilotSidebar() {
+type Props = {
+  phoneHome?: boolean;
+};
+
+export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
   const navigate = useNavigate();
+  const { isPhone, enterMobileContent } = useMobileUx();
   const location = useLocation();
   const listContext = useMemo(() => {
     if (!isCustomerArea(location.pathname)) return null;
@@ -86,14 +103,24 @@ export default function AgentCopilotSidebar() {
     (action: AgentAction) => {
       const seg = (action.segment as typeof askSegment) || askSegment;
       if (action.path) {
-        navigate(actionHref(action));
+        navigate(withCopilotFocus(actionHref(action), isPhone));
+        if (isPhone) enterMobileContent();
       }
       if (action.panel === "retention_playbook") {
         openRetentionPlaybook(seg, playbookCohortLabel);
         setPanel("retention_playbook");
+        if (isPhone) enterMobileContent();
       }
     },
-    [askSegment, navigate, openRetentionPlaybook, playbookCohortLabel, setPanel],
+    [
+      askSegment,
+      enterMobileContent,
+      isPhone,
+      navigate,
+      openRetentionPlaybook,
+      playbookCohortLabel,
+      setPanel,
+    ],
   );
 
   const runAsk = useCallback(
@@ -156,15 +183,21 @@ export default function AgentCopilotSidebar() {
   const setTab = (next: CopilotPanel) => setPanel(next);
 
   return (
-    <aside className="agent-copilot-sidebar" aria-label="Executive copilot">
+    <aside
+      className={`agent-copilot-sidebar${phoneHome ? " agent-copilot-sidebar-phone-home" : ""}`}
+      aria-label="Executive copilot"
+    >
       <header className="agent-copilot-head">
         <div>
           <h2 className="agent-copilot-title">Executive copilot</h2>
           <p className="muted small">
-            Ask about the book; links change the main view.
-            {bedrockConfigured
-              ? " Powered by Amazon Bedrock (rules fallback if the model is unavailable)."
-              : " Using rule-based routing until Bedrock is configured."}
+            {phoneHome
+              ? "Ask about the book, then open a link for a focused mobile view."
+              : "Ask about the book; links change the main view."}
+            {!phoneHome &&
+              (bedrockConfigured
+                ? " Powered by Amazon Bedrock (rules fallback if the model is unavailable)."
+                : " Using rule-based routing until Bedrock is configured.")}
           </p>
         </div>
       </header>
@@ -227,6 +260,8 @@ export default function AgentCopilotSidebar() {
                         key={action.action_id}
                         action={action}
                         onOpenPanel={handleOpenPanelAction}
+                        isPhone={isPhone}
+                        onNavigateContent={enterMobileContent}
                       />
                     ))}
                   </div>

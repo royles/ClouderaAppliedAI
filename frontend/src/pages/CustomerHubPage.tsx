@@ -9,7 +9,10 @@ import DomainFilterGrid from "../components/DomainFilterGrid";
 import { parseCohortSearch, patchCohortParams } from "../cohortQuery";
 import { displayCustomerId, displayCustomerName, formatCity } from "../pii";
 import { loadRecentCustomerIds } from "../recentCustomers";
+import { useMobileFocus } from "../mobileUxContext";
+
 export default function CustomerHubPage() {
+  const mobileFocus = useMobileFocus();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const { segment } = useMemo(() => parseCohortSearch(searchParams), [searchParams]);
@@ -101,7 +104,8 @@ export default function CustomerHubPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "The customer" }]} />
+      {!mobileFocus && <Breadcrumbs items={[{ label: "The customer" }]} />}
+      {!mobileFocus && (
       <section className="panel">
         <DomainFilterGrid
           overview={overview}
@@ -111,15 +115,17 @@ export default function CustomerHubPage() {
           updatedAt={overviewUpdatedAt}
         />
       </section>
+      )}
 
       <CustomerDirectoryPanel
         segment={segment}
         overviewDomains={overview?.domains}
         overviewReady={!overviewLoading}
         onClearFilter={() => setSegment("customers_all")}
+        compact={mobileFocus}
       />
 
-      {recentDetails.length > 0 && (
+      {!mobileFocus && recentDetails.length > 0 && (
         <section className="panel">
           <h2>Recently viewed</h2>
           <ul className="customer-hub-list">

@@ -3114,3 +3114,149 @@ a.engagement-act-link {
   margin-right: 0.25rem;
   vertical-align: middle;
 }
+
+/* —— Phone UX: copilot-first + focus views —— */
+@media (max-width: 640px) {
+  .layout-phone-copilot .app-main {
+    display: none;
+  }
+
+  .layout-phone-copilot .app-body-phone-copilot {
+    flex-direction: column;
+  }
+
+  .layout-phone-copilot .copilot-rail-phone-full {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .layout-phone-copilot .copilot-rail-phone-full .agent-copilot-sidebar {
+    border-left: none;
+    height: 100%;
+    padding-top: max(0.5rem, env(safe-area-inset-top, 0));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0));
+  }
+
+  .layout-phone-content .app-main {
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0));
+  }
+
+  .layout-phone-content .panel {
+    margin-left: 0.75rem;
+    margin-right: 0.75rem;
+  }
+
+  .header-phone {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .header-phone .brand {
+    font-size: 1rem;
+  }
+
+  .mobile-focus-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.65rem 0.85rem;
+    background: #fff;
+    border-bottom: 1px solid #d0dbe6;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+  }
+
+  .mobile-focus-back {
+    border: none;
+    background: transparent;
+    color: #0f6db8;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.25rem 0;
+    cursor: pointer;
+  }
+
+  .mobile-focus-title {
+    font-weight: 600;
+    color: #0f3d5e;
+    font-size: 0.95rem;
+  }
+
+  .mobile-copilot-dock {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1200;
+    padding: 0.5rem 0.85rem calc(0.5rem + env(safe-area-inset-bottom, 0));
+    background: linear-gradient(transparent, rgba(244, 246, 249, 0.92) 24%);
+    pointer-events: none;
+  }
+
+  .mobile-copilot-dock-btn {
+    pointer-events: auto;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1rem;
+    border-radius: 999px;
+    border: 1px solid #c5d4e0;
+    background: #0f3d5e;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 16px rgba(15, 61, 94, 0.25);
+    cursor: pointer;
+  }
+
+  .mobile-copilot-dock-btn .copilot-panel-icon {
+    filter: brightness(10);
+  }
+
+  .mobile-product-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mobile-product-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.15rem 0.75rem;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border: 1px solid #e6ebf0;
+    border-radius: 8px;
+    text-decoration: none;
+    color: inherit;
+    background: #f7fafc;
+  }
+
+  .mobile-product-name {
+    grid-column: 1 / -1;
+    font-weight: 600;
+    color: #0f3d5e;
+  }
+
+  .customer-detail-hero-grid-compact {
+    grid-template-columns: 1fr;
+  }
+
+  .portfolio-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .agent-copilot-sidebar-phone-home .agent-copilot-history {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .agent-copilot-form {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}

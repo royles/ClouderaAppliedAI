@@ -14,6 +14,7 @@ import {
   patchProductsParams,
   PRODUCT_COHORT_OPTIONS,
 } from "../productsQuery";
+import { useMobileFocus } from "../mobileUxContext";
 
 function heatLevel(count: number, max: number): "low" | "med" | "high" | "peak" {
   if (max <= 0 || count <= 0) return "low";
@@ -59,6 +60,7 @@ function ProductCard({
 }
 
 export default function ProductsPage() {
+  const mobileFocus = useMobileFocus();
   const [searchParams, setSearchParams] = useSearchParams();
   const { segment, city } = useMemo(
     () => parseProductsSearch(searchParams),
@@ -113,17 +115,26 @@ export default function ProductsPage() {
     setSearchParams(new URLSearchParams(), { replace: true });
   };
 
+  const flatProducts = catalog
+    ? catalog.classes.flatMap((g) =>
+        g.products.map((p) => ({ ...p, class_label: g.class_label })),
+      )
+    : [];
+  flatProducts.sort((a, b) => b.customer_count - a.customer_count);
+
   return (
     <>
-      <Breadcrumbs items={[{ label: "Products" }]} />
+      {!mobileFocus && <Breadcrumbs items={[{ label: "Products" }]} />}
       <section className="panel">
         <div className="panel-head">
           <div>
-            <h1 className="section-title">Products</h1>
+            <h1 className="section-title">{mobileFocus ? "Top products" : "Products"}</h1>
+            {!mobileFocus && (
             <p className="muted small">
               Policy products grouped by class. Counts reflect the customer filters below — click a
               card to open the matching customer list.
             </p>
+            )}
             {filtersActive && (
               <p className="filter-banner">
                 Showing{" "}
@@ -137,6 +148,7 @@ export default function ProductsPage() {
               </p>
             )}
           </div>
+          {!mobileFocus && (
           <ul className="product-heatmap-legend" aria-label="Customer count intensity">
             {legend.map((item) => (
               <li key={item.level}>
@@ -145,8 +157,10 @@ export default function ProductsPage() {
               </li>
             ))}
           </ul>
+          )}
         </div>
 
+        {!mobileFocus && (
         <div className="toolbar product-filter-toolbar">
           <div className="toolbar-item">
             <label htmlFor="product-cohort">Customer cohort</label>
@@ -196,10 +210,32 @@ export default function ProductsPage() {
             </select>
           </div>
         </div>
+        )}
 
         {loading && <p className="muted small">Loading product catalog…</p>}
         {error && <p className="error">{error}</p>}
-        {catalog &&
+        {mobileFocus && catalog && (
+          <ul className="mobile-product-list">
+            {flatProducts.slice(0, 12).map((product) => (
+              <li key={product.policy_type_code}>
+                <Link
+                  to={`${CUSTOMER_BASE}${cohortSearchString({
+                    segment,
+                    policyTypeCode: product.policy_type_code,
+                    city,
+                    page: 1,
+                  })}`}
+                  className="mobile-product-row"
+                >
+                  <span className="mobile-product-name">{product.policy_type_desc}</span>
+                  <span className="muted small">{product.class_label}</span>
+                  <strong>{product.customer_count.toLocaleString()} customers</strong>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        {!mobileFocus && catalog &&
           catalog.classes.map((group) => (
             <div key={group.class_key} className="product-class-block">
               <div className="product-class-head">

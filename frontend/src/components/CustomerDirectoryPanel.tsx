@@ -27,6 +27,7 @@ type Props = {
   overviewDomains?: DomainCount[] | null;
   overviewReady: boolean;
   onClearFilter?: () => void;
+  compact?: boolean;
 };
 
 export default function CustomerDirectoryPanel({
@@ -34,6 +35,7 @@ export default function CustomerDirectoryPanel({
   overviewDomains,
   overviewReady,
   onClearFilter,
+  compact = false,
 }: Props) {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -219,10 +221,10 @@ export default function CustomerDirectoryPanel({
     sortBy === "investment_count";
 
   return (
-    <section className="panel">
+    <section className={`panel${compact ? " panel-compact" : ""}`}>
       <div className="panel-head">
         <div>
-          <h2>Customers</h2>
+          <h2>{compact ? "Matching customers" : "Customers"}</h2>
           {asOf ? (
             <p className="filter-banner chart-date-filter-banner">
               Chart snapshot: <strong>{formatPeriodLabel(asOf)}</strong> (
@@ -275,7 +277,8 @@ export default function CustomerDirectoryPanel({
             <p className="muted small">Showing all current customers in this cohort</p>
           )}
         </div>
-        <div className="toolbar">
+        <div className={`toolbar${compact ? " toolbar-compact" : ""}`}>
+          {!compact && (
           <div className="toolbar-item">
             <label htmlFor="customer-sort-by">Rank by</label>
             <select
@@ -291,6 +294,8 @@ export default function CustomerDirectoryPanel({
               <option value="investment_count">Investment tracks</option>
             </select>
           </div>
+          )}
+          {!compact && (
           <button type="button" className="control control-btn" onClick={toggleSortOrder}>
             {sortBy === "customer_value"
               ? sortOrder === "desc"
@@ -304,6 +309,7 @@ export default function CustomerDirectoryPanel({
                   ? "Highest first ↓"
                   : "Lowest first ↑"}
           </button>
+          )}
           <div className="toolbar-item toolbar-item-grow">
             <label htmlFor="customer-search">Search</label>
             <input
@@ -314,6 +320,7 @@ export default function CustomerDirectoryPanel({
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          {!compact && (
           <div className="toolbar-item">
             <span className="toolbar-label-static" id="customer-view-label">
               Layout
@@ -341,6 +348,7 @@ export default function CustomerDirectoryPanel({
               </button>
             </div>
           </div>
+          )}
         </div>
       </div>
       {error && <p className="error">{error}</p>}
@@ -354,7 +362,7 @@ export default function CustomerDirectoryPanel({
             Updating {view === "grid" ? "cards" : "table"}…
           </p>
         )}
-        {view === "grid" ? (
+        {!compact && view === "grid" ? (
           <CustomerCardGrid
             customers={customers}
             showRank={showRank}

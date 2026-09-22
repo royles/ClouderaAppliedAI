@@ -25,6 +25,7 @@ import {
   PortfolioSegmentCache,
   prefetchPortfolioAnalytics,
 } from "../portfolioSegmentCache";
+import { useMobileFocus } from "../mobileUxContext";
 
 const COMPARE_OPTIONS: CustomerSegment[] = [
   "customers_all",
@@ -36,6 +37,7 @@ const COMPARE_OPTIONS: CustomerSegment[] = [
 ];
 
 export default function DashboardPage() {
+  const mobileFocus = useMobileFocus();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const segment = useMemo(() => parseBusinessSegment(searchParams), [searchParams]);
@@ -253,14 +255,17 @@ export default function DashboardPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "The business" }]} />
+      {!mobileFocus && <Breadcrumbs items={[{ label: "The business" }]} />}
       <section className="panel">
+        {!mobileFocus && (
         <DomainFilterGrid
           overview={overview}
           segment={segment}
           onSelect={setSegment}
           helperText="Click a card to filter analytics. Click again to clear."
         />
+        )}
+        {!mobileFocus && (
         <div className="cohort-compare-toolbar">
           <label className="cohort-compare-label" htmlFor="cohort-compare-select">
             Compare to
@@ -279,7 +284,8 @@ export default function DashboardPage() {
             ))}
           </select>
         </div>
-        {compareSegment &&
+        )}
+        {!mobileFocus && compareSegment &&
           compareSegment !== segment &&
           compareAnalytics &&
           portfolioAnalytics &&
@@ -293,7 +299,7 @@ export default function DashboardPage() {
               compareSegment={compareSegment}
             />
           )}
-        {compareLoading && compareSegment && (
+        {!mobileFocus && compareLoading && compareSegment && (
           <p className="muted small cohort-compare-loading">Loading comparison cohort…</p>
         )}
         <PortfolioAnalyticsSection
@@ -303,6 +309,8 @@ export default function DashboardPage() {
           refreshing={portfolioLoading && portfolioAnalytics != null}
           cohortLabel={activeDomain?.domain ?? null}
           segment={segment}
+          minimal={mobileFocus}
+          chartInteractive={!mobileFocus}
         />
       </section>
     </>

@@ -3,6 +3,7 @@ import AdminConfigurationTabs from "../components/AdminConfigurationTabs";
 import Breadcrumbs from "../components/Breadcrumbs";
 import WarehouseSchemaDiagram from "../components/WarehouseSchemaDiagram";
 import { fetchWarehouseAdmin, WarehouseAdmin } from "../api";
+import { useMobileFocus } from "../mobileUxContext";
 
 function formatBytes(n: number) {
   if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)} GB`;
@@ -25,6 +26,7 @@ function statusClass(status: string) {
 }
 
 export default function AdminPage() {
+  const mobileFocus = useMobileFocus();
   const [data, setData] = useState<WarehouseAdmin | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +59,28 @@ export default function AdminPage() {
     data?.quality_checks.filter((c) => c.status !== "ok").length ?? 0;
   const healthIssues =
     data?.health_checks.filter((c) => c.status !== "ok").length ?? 0;
+
+  if (mobileFocus) {
+    return (
+      <section className="panel">
+        <h2 className="subsection-title">Warehouse snapshot</h2>
+        {loading && <p className="muted small">Loading…</p>}
+        {error && <p className="error">{error}</p>}
+        {data && (
+          <>
+            <p className="muted small">
+              {data.database_path} · {formatBytes(data.database_size_bytes)}
+            </p>
+            <p>
+              Quality flags: <strong>{qualityIssues}</strong> · Health flags:{" "}
+              <strong>{healthIssues}</strong>
+            </p>
+            <p className="muted small">Open desktop view for schema map and KPI benchmarks.</p>
+          </>
+        )}
+      </section>
+    );
+  }
 
   return (
     <>

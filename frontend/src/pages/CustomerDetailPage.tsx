@@ -19,6 +19,7 @@ import {
   displayCustomerName,
   maskStreet,
 } from "../pii";
+import { useMobileFocus } from "../mobileUxContext";
 
 function formatMoney(n?: number | null) {
   if (n == null) return "—";
@@ -46,6 +47,7 @@ function interactionIcon(type: string) {
 }
 
 export default function CustomerDetailPage() {
+  const mobileFocus = useMobileFocus();
   const { customerId } = useParams();
   const location = useLocation();
   const id = Number(customerId);
@@ -213,12 +215,15 @@ export default function CustomerDetailPage() {
 
   return (
     <>
+      {!mobileFocus && (
       <Breadcrumbs
         items={[
           { label: hubBackLabel, to: listBack },
           { label: displayCustomerName(profile.customer_name) },
         ]}
       />
+      )}
+      {!mobileFocus && (
       <p className="muted small customer-area-links">
         <Link to={listBack}>{secondaryHubLinkText}</Link>
         {!backFromCustomerList && (
@@ -228,11 +233,13 @@ export default function CustomerDetailPage() {
           </>
         )}
       </p>
+      )}
       <section className="panel customer-detail-hero">
-        <div className="customer-detail-hero-grid">
+        <div className={`customer-detail-hero-grid${mobileFocus ? " customer-detail-hero-grid-compact" : ""}`}>
           {customerCard && (
             <CustomerSummaryCard variant="static" customer={customerCard} />
           )}
+          {!mobileFocus && (
           <CustomerValueChart
             className="customer-detail-value-chart"
             fillContainer
@@ -249,16 +256,26 @@ export default function CustomerDetailPage() {
                 : null
             }
           />
+          )}
         </div>
-        {detail.churn?.scored_at && (
+        {mobileFocus && (
+          <p className="muted small">
+            {formatCity(profile.city_name)} · {policies.length} policies ·{" "}
+            {formatMoney(customerCard?.customer_value)}
+          </p>
+        )}
+        {!mobileFocus && detail.churn?.scored_at && (
           <p className="muted small customer-detail-churn-meta">
             Churn scored {formatLastLogin(detail.churn.scored_at)}
             {detail.churn.model_version ? ` · ${detail.churn.model_version}` : ""}
           </p>
         )}
+        {!mobileFocus && (
         <p className="muted small customer-detail-privacy">
           City and last login are shown in full; other sensitive fields remain masked.
         </p>
+        )}
+        {!mobileFocus && (
         <div className="detail-grid customer-detail-profile-grid">
           <div>
             <span className="label">Type</span>
@@ -293,20 +310,25 @@ export default function CustomerDetailPage() {
             </div>
           </div>
         </div>
+        )}
       </section>
 
-      {engagementActionHint && (
+      {!mobileFocus && engagementActionHint && (
         <p className="engagement-action-banner muted small">
           Suggested from Engagement hub: <strong>{engagementActionHint}</strong>
         </p>
       )}
+      {!mobileFocus && (
       <div id="customer-insights-anchor">
         <CustomerInsightsPanel
           customerId={profile.customer_id}
           churnTier={detail.churn?.churn_risk_tier}
         />
       </div>
+      )}
 
+      {!mobileFocus && (
+      <>
       <div className="tab-bar">
         <button
           type="button"
@@ -527,6 +549,8 @@ export default function CustomerDetailPage() {
             </div>
           )}
         </section>
+      )}
+      </>
       )}
     </>
   );
