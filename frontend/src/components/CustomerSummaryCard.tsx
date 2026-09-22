@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { CustomerSummary } from "../api";
 import ChurnBadge from "../ChurnBadge";
+import CustomerAvatar from "./CustomerAvatar";
 import { formatMoneyIls } from "../formatMoney";
 import {
   displayCustomerId,
@@ -54,28 +55,42 @@ export default function CustomerSummaryCard(props: Props) {
   const body = (
     <>
       <div className="customer-card-top">
-        <div className="customer-card-identity">
-          {showRank && rank != null && (
-            <span className="customer-card-rank" aria-label={t("customer.card.rankA11y", { rank })}>
-              #{rank}
-            </span>
-          )}
-          <h3 className="customer-card-name">{displayCustomerName(customer.customer_name)}</h3>
-          <p className="muted small customer-card-id">
-            {displayCustomerId(customer.customer_id)}
-            {formatCity(customer.city_name) !== "—"
-              ? ` · ${formatCity(customer.city_name)}`
-              : ""}
-          </p>
+        <CustomerAvatar
+          customerId={customer.customer_id}
+          customerName={customer.customer_name}
+          size="lg"
+        />
+        <div className="customer-card-main">
+          <div className="customer-card-headline">
+            <div className="customer-card-identity">
+              {showRank && rank != null && (
+                <span
+                  className="customer-card-rank"
+                  aria-label={t("customer.card.rankA11y", { rank })}
+                >
+                  #{rank}
+                </span>
+              )}
+              <h3 className="customer-card-name">
+                {displayCustomerName(customer.customer_name)}
+              </h3>
+              <p className="muted small customer-card-id">
+                {displayCustomerId(customer.customer_id)}
+                {formatCity(customer.city_name) !== "—"
+                  ? ` · ${formatCity(customer.city_name)}`
+                  : ""}
+              </p>
+            </div>
+            <ChurnBadge
+              probability={customer.churn_probability}
+              tier={customer.churn_risk_tier}
+            />
+          </div>
           <p className="customer-card-value">
             <span className="label">{t("customer.card.value")}</span>
             <strong>{formatMoneyIls(customer.customer_value)}</strong>
           </p>
         </div>
-        <ChurnBadge
-          probability={customer.churn_probability}
-          tier={customer.churn_risk_tier}
-        />
       </div>
 
       <dl className="customer-card-stats">
