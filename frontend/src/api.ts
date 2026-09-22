@@ -518,13 +518,32 @@ export type ProductClassGroup = {
   products: ProductCatalogItem[];
 };
 
+export type ProductCatalogFilters = {
+  segment: CustomerSegment;
+  city?: string | null;
+};
+
 export type ProductCatalog = {
   max_customer_count: number;
   classes: ProductClassGroup[];
+  filters: ProductCatalogFilters;
+  city_options: string[];
 };
 
-export const fetchProductCatalog = () =>
-  getJson<ProductCatalog>("/api/products/catalog");
+export const fetchProductCatalog = (options?: {
+  segment?: CustomerSegment | null;
+  city?: string | null;
+}) => {
+  const params = new URLSearchParams();
+  if (options?.segment && options.segment !== "customers_all") {
+    params.set("segment", options.segment);
+  }
+  if (options?.city?.trim()) {
+    params.set("city", options.city.trim());
+  }
+  const qs = params.toString();
+  return getJson<ProductCatalog>(`/api/products/catalog${qs ? `?${qs}` : ""}`);
+};
 
 export type RetentionPlaybookItem = {
   customer_id: number;

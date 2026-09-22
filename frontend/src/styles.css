@@ -2967,6 +2967,11 @@ a.engagement-act-link {
   font-weight: 600;
 }
 
+.product-filter-toolbar {
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
 .product-class-block {
   margin-top: 1.25rem;
 }

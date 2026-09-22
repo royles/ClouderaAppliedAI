@@ -509,9 +509,16 @@ class ProductClassGroup(BaseModel):
     products: list[ProductCatalogItem] = Field(default_factory=list)
 
 
+class ProductCatalogFilters(BaseModel):
+    segment: str = "customers_all"
+    city: str | None = None
+
+
 class ProductCatalogResponse(BaseModel):
     max_customer_count: int = 0
     classes: list[ProductClassGroup] = Field(default_factory=list)
+    filters: ProductCatalogFilters = Field(default_factory=ProductCatalogFilters)
+    city_options: list[str] = Field(default_factory=list)
 
 
 class PlaybookAction(BaseModel):

@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import sqlite3
 
+from customer360.api.customer_list import normalize_city_name
+from customer360.api.segments import SEGMENT_WHERE, normalize_segment
+
 PRODUCT_CLASSES: list[tuple[str, str, tuple[int, ...]]] = [
     ("life_protection", "Life & protection", (101, 102)),
     ("health", "Health & supplementary", (201,)),
@@ -12,9 +15,36 @@ PRODUCT_CLASSES: list[tuple[str, str, tuple[int, ...]]] = [
 ]
 
 
-def fetch_product_catalog(conn: sqlite3.Connection) -> dict:
+def fetch_product_catalog_city_options(conn: sqlite3.Connection) -> list[str]:
     rows = conn.execute(
         """
+        SELECT DISTINCT c.CITY_NAME AS city_name
+        FROM DWH_DIM_CUSTOMERS_UNIQUE c
+        WHERE c.CURRENT_IND = 1
+          AND c.CITY_NAME IS NOT NULL
+          AND TRIM(c.CITY_NAME) != ''
+        ORDER BY city_name ASC
+        """
+    ).fetchall()
+    return [str(r["city_name"]) for r in rows]
+
+
+def fetch_product_catalog(
+    conn: sqlite3.Connection,
+    *,
+    segment: str | None = None,
+    city: str | None = None,
+) -> dict:
+    seg = normalize_segment(segment)
+    city_canon = normalize_city_name(city)
+    customer_where = f"c.CURRENT_IND = 1 AND ({SEGMENT_WHERE[seg]})"
+    params: list[object] = []
+    if city_canon:
+        customer_where += " AND c.CITY_NAME = ?"
+        params.append(city_canon)
+
+    rows = conn.execute(
+        f"""
         SELECT
             p.POLICY_TYPE_CODE AS policy_type_code,
             MAX(p.POLICY_TYPE_DESC) AS policy_type_desc,
@@ -24,10 +54,11 @@ def fetch_product_catalog(conn: sqlite3.Connection) -> dict:
         FROM DWH_DIM_ALL_POLICY p
         INNER JOIN DWH_DIM_CUSTOMERS_UNIQUE c
             ON CAST(c.CUSTOMER_ID AS TEXT) = p.CUSTOMER_ID
-           AND c.CURRENT_IND = 1
+        WHERE {customer_where}
         GROUP BY p.POLICY_TYPE_CODE
         ORDER BY customer_count DESC, policy_type_code ASC
-        """
+        """,
+        params,
     ).fetchall()
 
     by_code = {
@@ -60,4 +91,9 @@ def fetch_product_catalog(conn: sqlite3.Connection) -> dict:
     return {
         "max_customer_count": max_customers,
         "classes": classes,
+        "filters": {
+            "segment": seg,
+            "city": city_canon,
+        },
+        "city_options": fetch_product_catalog_city_options(conn),
     }

@@ -450,8 +450,18 @@ def data_freshness(
 @router.get("/products/catalog", response_model=ProductCatalogResponse)
 def products_catalog(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
+    segment: str | None = Query(
+        None,
+        description="Overview cohort filter applied to customers (e.g. with_policies)",
+    ),
+    city: str | None = Query(
+        None,
+        description="Filter to customers in this city (CITY_NAME on customer dimension)",
+    ),
 ) -> ProductCatalogResponse:
-    return ProductCatalogResponse(**fetch_product_catalog(conn))
+    return ProductCatalogResponse(
+        **fetch_product_catalog(conn, segment=segment, city=city),
+    )
 
 
 @router.get("/agent/status", response_model=AgentStatusResponse)
