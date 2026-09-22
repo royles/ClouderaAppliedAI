@@ -109,11 +109,13 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
       setForm(configToForm(cfg));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load data source settings");
+      setError(
+        e instanceof Error ? e.message : t("admin.datasource.loadError"),
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -135,7 +137,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
       setForm(configToForm(updated));
       setSavedNote(t("admin.datasource.saved"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("admin.datasource.saveError"));
     } finally {
       setSaving(false);
     }
@@ -148,11 +150,14 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
     setError(null);
     try {
       const result = await testDataSourceConnection(buildUpdatePayload(form));
+      const statusLabel = result.ok
+        ? t("admin.datasource.testOk")
+        : t("admin.datasource.testFailedShort");
       setTestMessage(
-        `${result.ok ? "OK" : "Failed"}: ${result.message}${result.detail ? ` — ${result.detail}` : ""}`,
+        `${statusLabel}: ${result.message}${result.detail ? ` — ${result.detail}` : ""}`,
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Connection test failed");
+      setError(err instanceof Error ? err.message : t("admin.datasource.testError"));
     } finally {
       setTesting(false);
     }

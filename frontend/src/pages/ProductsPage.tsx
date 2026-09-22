@@ -13,6 +13,7 @@ import { cohortSearchString } from "../cohortQuery";
 import { CUSTOMER_SEGMENTS } from "../customerSegments";
 import { parseProductsSearch, patchProductsParams } from "../productsQuery";
 import { cohortSegmentLabel } from "../i18n/segments";
+import { productClassLabel } from "../i18n/productClasses";
 import { formatNumber } from "../localeFormat";
 import { useMobileFocus } from "../mobileUxContext";
 
@@ -120,10 +121,17 @@ export default function ProductsPage() {
 
   const flatProducts = catalog
     ? catalog.classes.flatMap((g) =>
-        g.products.map((p) => ({ ...p, class_label: g.class_label })),
+        g.products.map((p) => ({
+          ...p,
+          class_key: g.class_key,
+          class_label: g.class_label,
+        })),
       )
     : [];
   flatProducts.sort((a, b) => b.customer_count - a.customer_count);
+
+  const classLabel = (classKey: string, fallback: string) =>
+    productClassLabel(t, classKey, fallback);
 
   return (
     <>
@@ -229,7 +237,9 @@ export default function ProductsPage() {
                   className="mobile-product-row"
                 >
                   <span className="mobile-product-name">{product.policy_type_desc}</span>
-                  <span className="muted small">{product.class_label}</span>
+                  <span className="muted small">
+                    {classLabel(product.class_key ?? "", product.class_label)}
+                  </span>
                   <strong>{t("products.customersCount", { count: formatNumber(product.customer_count) })}</strong>
                 </Link>
               </li>
@@ -240,7 +250,9 @@ export default function ProductsPage() {
           catalog.classes.map((group) => (
             <div key={group.class_key} className="product-class-block">
               <div className="product-class-head">
-                <h2 className="subsection-title">{group.class_label}</h2>
+                <h2 className="subsection-title">
+                  {classLabel(group.class_key, group.class_label)}
+                </h2>
                 <span className="muted small">
                   {t("products.classStats", {
                     customers: formatNumber(group.customer_count),

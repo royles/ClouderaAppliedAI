@@ -1,5 +1,7 @@
 /** Match backend classify_recommendation + channel_for_action_kind (client-side shell). */
 
+import type { TFunction } from "i18next";
+
 export type DraftChannel = "email" | "sms" | "call";
 
 export function inferDraftChannel(recommendation: string): DraftChannel {
@@ -13,11 +15,24 @@ export function draftPreviewTitle(
   channel: DraftChannel,
   brand: string,
   fallback: string,
+  t: TFunction,
 ): string {
-  if (channel === "email") return `Draft email (${brand})`;
-  if (channel === "sms") return `Draft SMS (${brand})`;
-  if (channel === "call") return `Call script (${brand})`;
+  if (channel === "email") {
+    return t("customer.outreach.previewEmail", { brand, defaultValue: fallback });
+  }
+  if (channel === "sms") {
+    return t("customer.outreach.previewSms", { brand, defaultValue: fallback });
+  }
+  if (channel === "call") {
+    return t("customer.outreach.previewCall", { brand, defaultValue: fallback });
+  }
   return fallback;
+}
+
+export function draftChannelLabel(channel: DraftChannel, t: TFunction): string {
+  if (channel === "call") return t("engagement.channel.phone");
+  if (channel === "sms") return t("engagement.channel.sms");
+  return t("engagement.channel.email");
 }
 
 export type DraftStreamMeta = {

@@ -10,6 +10,7 @@ import {
   formatNumber,
   qualityStatusClass,
 } from "../localeFormat";
+import { translateAdminCheck, translateCheckStatus } from "../i18n/adminChecks";
 import { useMobileFocus } from "../mobileUxContext";
 
 export default function AdminPage() {
@@ -98,19 +99,24 @@ export default function AdminPage() {
             <h2>{t("admin.health.title")}</h2>
             <p className="muted small">{t("admin.health.lede")}</p>
             <ul className="admin-health-grid">
-              {data.health_checks.map((check) => (
+              {data.health_checks.map((check) => {
+                const copy = translateAdminCheck(t, check);
+                return (
                 <li
                   key={check.id}
                   className={`admin-health-card admin-health-${check.status}`}
                 >
-                  <span className={qualityStatusClass(check.status)}>{check.status}</span>
-                  <strong>{check.label}</strong>
-                  <p className="muted small">{check.summary}</p>
-                  {check.detail && (
-                    <p className="muted small admin-health-detail">{check.detail}</p>
+                  <span className={qualityStatusClass(check.status)}>
+                    {translateCheckStatus(t, check.status)}
+                  </span>
+                  <strong>{copy.label}</strong>
+                  <p className="muted small">{copy.summary}</p>
+                  {copy.detail && (
+                    <p className="muted small admin-health-detail">{copy.detail}</p>
                   )}
                 </li>
-              ))}
+              );
+              })}
             </ul>
             {healthIssues > 0 && (
               <p className="muted small admin-health-note">
@@ -219,16 +225,21 @@ export default function AdminPage() {
           <section className="panel">
             <h2>{t("admin.quality.title")}</h2>
             <ul className="admin-quality-list">
-              {data.quality_checks.map((check) => (
+              {data.quality_checks.map((check) => {
+                const copy = translateAdminCheck(t, check);
+                return (
                 <li key={check.id} className="admin-quality-item">
-                  <span className={qualityStatusClass(check.status)}>{check.status}</span>
+                  <span className={qualityStatusClass(check.status)}>
+                    {translateCheckStatus(t, check.status)}
+                  </span>
                   <div>
-                    <strong>{check.label}</strong>
-                    <p className="muted small">{check.summary}</p>
-                    {check.detail && <p className="muted small">{check.detail}</p>}
+                    <strong>{copy.label}</strong>
+                    <p className="muted small">{copy.summary}</p>
+                    {copy.detail && <p className="muted small">{copy.detail}</p>}
                   </div>
                 </li>
-              ))}
+              );
+              })}
             </ul>
           </section>
         </>

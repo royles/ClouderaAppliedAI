@@ -16,6 +16,7 @@ import CustomerSummaryCard, {
 } from "../components/CustomerSummaryCard";
 import CustomerValueChart from "../components/CustomerValueChart";
 import { formatMoneyIls } from "../localeFormat";
+import { engagementRecommendedAction } from "../i18n/recommendedActions";
 import {
   formatLastLogin,
   maskDate,
@@ -74,11 +75,29 @@ export default function CustomerDetailPage() {
     initialTab?: Tab;
     scrollToInsights?: boolean;
     engagementAction?: string;
+    engagementActionCode?: string;
+    engagementUnresolvedCount?: number;
   } | null;
   const [tab, setTab] = useState<Tab>(navState?.initialTab ?? "policies");
-  const [engagementActionHint] = useState<string | null>(
-    navState?.engagementAction ?? null,
-  );
+  const engagementActionHint = useMemo(() => {
+    if (navState?.engagementActionCode) {
+      return engagementRecommendedAction(
+        t,
+        {
+          action_code: navState.engagementActionCode,
+          title: navState.engagementAction ?? "",
+          detail: "",
+        },
+        { unresolvedCount: navState.engagementUnresolvedCount ?? 0 },
+      ).title;
+    }
+    return navState?.engagementAction ?? null;
+  }, [
+    navState?.engagementAction,
+    navState?.engagementActionCode,
+    navState?.engagementUnresolvedCount,
+    t,
+  ]);
   const [activePolicy, setActivePolicy] = useState<number | null>(null);
   const [valueHistory, setValueHistory] = useState<ValueHistoryPoint[]>([]);
   const [valueHistoryLoading, setValueHistoryLoading] = useState(true);

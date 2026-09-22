@@ -9,7 +9,8 @@ import {
 } from "../api";
 import { CUSTOMER_BASE, customerPath } from "../appRoutes";
 import { cohortSearchString } from "../cohortQuery";
-import { formatMoneyIls } from "../localeFormat";
+import { formatMoneyIls, formatNumber } from "../localeFormat";
+import { retentionRecommendedAction } from "../i18n/recommendedActions";
 import ChurnBadge from "../ChurnBadge";
 import { displayCustomerName } from "../pii";
 
@@ -71,11 +72,13 @@ export default function RetentionPlaybookPanel({
           <p className="muted small playbook-queue-meta">
             {t("assistant.retention.showing", {
               shown: data.items.length,
-              total: data.total.toLocaleString(),
+              total: formatNumber(data.total),
             })}
           </p>
           <ol className="playbook-queue">
-            {data.items.map((item: RetentionPlaybookItem, idx) => (
+            {data.items.map((item: RetentionPlaybookItem, idx) => {
+              const actionCopy = retentionRecommendedAction(t, item.recommended_action);
+              return (
               <li key={item.customer_id} className="playbook-queue-item">
                 <div className="playbook-queue-rank">{idx + 1}</div>
                 <div className="playbook-queue-body">
@@ -91,11 +94,12 @@ export default function RetentionPlaybookPanel({
                       })}
                     </span>
                   </div>
-                  <p className="playbook-action-title">{item.recommended_action.title}</p>
-                  <p className="muted small">{item.recommended_action.detail}</p>
+                  <p className="playbook-action-title">{actionCopy.title}</p>
+                  <p className="muted small">{actionCopy.detail}</p>
                 </div>
               </li>
-            ))}
+            );
+            })}
           </ol>
           <Link to={listHref} className="playbook-view-all">
             {t("assistant.retention.openList")}

@@ -15,6 +15,7 @@ import DomainFilterGrid from "../components/DomainFilterGrid";
 import { parseBusinessSegment, patchBusinessSegment } from "../cohortQuery";
 import { displayCustomerName, formatCity } from "../pii";
 import { formatMoneyIls, formatNumber } from "../localeFormat";
+import { engagementRecommendedAction } from "../i18n/recommendedActions";
 import { useMobileFocus } from "../mobileUxContext";
 
 function channelLabel(hint: string, t: (key: string) => string) {
@@ -160,7 +161,11 @@ export default function EngagementHubPage() {
         )}
 
         <ul className="engagement-opportunity-list">
-          {hub?.opportunities.map((row) => (
+          {hub?.opportunities.map((row) => {
+            const actionCopy = engagementRecommendedAction(t, row.recommended_action, {
+              unresolvedCount: row.touchpoints.unresolved_agent_questions,
+            });
+            return (
             <li key={row.customer_id} className="engagement-opportunity-card">
               <div className="engagement-opportunity-head">
                 <div>
@@ -170,7 +175,8 @@ export default function EngagementHubPage() {
                       businessReturn: `${ENGAGEMENT_BASE}${searchParams.toString() ? `?${searchParams}` : ""}`,
                       initialTab: "interactions" as const,
                       scrollToInsights: true,
-                      engagementAction: row.recommended_action.title,
+                      engagementActionCode: row.recommended_action.action_code,
+                      engagementUnresolvedCount: row.touchpoints.unresolved_agent_questions,
                     }}
                     className="engagement-opportunity-name"
                   >
@@ -227,8 +233,8 @@ export default function EngagementHubPage() {
               <div className="engagement-action-block">
                 <div>
                   <span className="label">{t("engagement.action.recommendedLabel")}</span>
-                  <strong>{row.recommended_action.title}</strong>
-                  <p className="muted small">{row.recommended_action.detail}</p>
+                  <strong>{actionCopy.title}</strong>
+                  <p className="muted small">{actionCopy.detail}</p>
                 </div>
                 <div className="engagement-action-buttons">
                   <Link
@@ -237,7 +243,8 @@ export default function EngagementHubPage() {
                       businessReturn: `${ENGAGEMENT_BASE}${searchParams.toString() ? `?${searchParams}` : ""}`,
                       initialTab: "interactions" as const,
                       scrollToInsights: true,
-                      engagementAction: row.recommended_action.title,
+                      engagementActionCode: row.recommended_action.action_code,
+                      engagementUnresolvedCount: row.touchpoints.unresolved_agent_questions,
                     }}
                     className="btn engagement-act-link"
                   >
@@ -258,7 +265,8 @@ export default function EngagementHubPage() {
                 </div>
               </div>
             </li>
-          ))}
+          );
+          })}
         </ul>
       </section>
     </>

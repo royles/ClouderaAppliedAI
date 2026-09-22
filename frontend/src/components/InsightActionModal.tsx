@@ -13,6 +13,7 @@ import { isLlmGeneratedSource, llmBrandName, resolveLlmProvider } from "../llmBr
 import { partialJsonStringField } from "../jsonStreamPreview";
 import {
   DraftChannel,
+  draftChannelLabel,
   draftPreviewTitle,
   inferDraftChannel,
   type DraftStreamMeta,
@@ -73,7 +74,9 @@ export default function InsightActionModal({
     let cancelled = false;
     const ch = inferDraftChannel(recommendation);
     setChannel(ch);
-    setPreviewLabel(draftPreviewTitle(ch, configuredBrand, t("customer.outreach.title")));
+    setPreviewLabel(
+      draftPreviewTitle(ch, configuredBrand, t("customer.outreach.title"), t),
+    );
     void fetchCustomer(customerId)
       .then((detail) => {
         if (cancelled) return;
@@ -152,7 +155,12 @@ export default function InsightActionModal({
       if (meta.preview_label) setPreviewLabel(meta.preview_label);
       else if (meta.channel) {
         setPreviewLabel(
-          draftPreviewTitle(meta.channel as DraftChannel, configuredBrand, t("customer.outreach.title")),
+          draftPreviewTitle(
+            meta.channel as DraftChannel,
+            configuredBrand,
+            t("customer.outreach.title"),
+            t,
+          ),
         );
       }
       if (meta.recipient_name) setRecipientName(meta.recipient_name);
@@ -283,7 +291,7 @@ export default function InsightActionModal({
               )}
               <div>
                 <span className="label">{t("customer.outreach.channel")}</span>
-                <div>{channel}</div>
+                <div>{draftChannelLabel(channel, t)}</div>
               </div>
             </div>
 

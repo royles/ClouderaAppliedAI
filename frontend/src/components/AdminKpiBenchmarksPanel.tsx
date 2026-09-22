@@ -5,14 +5,24 @@ import {
   KpiBenchmark,
   updateKpiBenchmarks,
 } from "../api";
+import {
+  kpiBenchmarkDescription,
+  kpiBenchmarkLabel,
+  kpiDirectionLabel,
+  kpiUnitKindLabel,
+} from "../i18n/kpiCatalog";
 import { formatMoneyIls, formatNumber } from "../localeFormat";
 
 type RowState = KpiBenchmark & { targetInput: string; amberInput: string };
 
-function formatTargetPreview(row: KpiBenchmark, raw: string): string {
+function formatTargetPreview(
+  row: KpiBenchmark,
+  raw: string,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   const parsed = parseFloat(raw);
   if (!raw.trim() || Number.isNaN(parsed) || parsed <= 0) {
-    return "Auto (from portfolio)";
+    return t("admin.kpiBenchmarks.previewAuto");
   }
   if (row.unit_kind === "money") return formatMoneyIls(parsed);
   if (row.unit_kind === "integer") return formatNumber(parsed);
@@ -30,13 +40,6 @@ function rowToState(row: KpiBenchmark): RowState {
   };
 }
 
-function amberHelp(direction: string): string {
-  if (direction === "lower") {
-    return "Amber up to this multiple of the objective (e.g. 1.2 = 20% over limit).";
-  }
-  return "Amber when at least this fraction of the objective (e.g. 0.85 = 85%).";
-}
-
 export default function AdminKpiBenchmarksPanel() {
   const { t } = useTranslation();
   const [rows, setRows] = useState<RowState[]>([]);
@@ -45,6 +48,11 @@ export default function AdminKpiBenchmarksPanel() {
   const [error, setError] = useState<string | null>(null);
   const [savedNote, setSavedNote] = useState<string | null>(null);
 
+  const amberHelp = (direction: string) =>
+    direction === "lower"
+      ? t("admin.kpiBenchmarks.amberHelpLower")
+      : t("admin.kpiBenchmarks.amberHelpHigher");
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -52,11 +60,13 @@ export default function AdminKpiBenchmarksPanel() {
       setRows(data.benchmarks.map(rowToState));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load KPI benchmarks");
+      setError(
+        e instanceof Error ? e.message : t("admin.kpiBenchmarks.loadError"),
+      );
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -89,7 +99,7 @@ export default function AdminKpiBenchmarksPanel() {
       setRows(updated.benchmarks.map(rowToState));
       setSavedNote(t("admin.kpiBenchmarks.saved"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("admin.kpiBenchmarks.saveError"));
     } finally {
       setSaving(false);
     }
@@ -111,7 +121,7 @@ export default function AdminKpiBenchmarksPanel() {
             <thead>
               <tr>
                 <th scope="col" className="visually-hidden">
-                  Enabled
+                  {t("admin.kpiBenchmarks.enabledColumn")}
                 </th>
                 <th>{t("admin.kpiBenchmarks.columns.kpi")}</th>
                 <th>{t("admin.kpiBenchmarks.columns.target")}</th>
@@ -120,21 +130,24 @@ export default function AdminKpiBenchmarksPanel() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {rows.map((row) => {
+                const label = kpiBenchmarkLabel(t, row.kpi_key, row.display_label);
+                const description = kpiBenchmarkDescription(t, row.kpi_key, row.description);
+                return (
                 <tr key={row.kpi_key}>
                   <td>
                     <input
                       type="checkbox"
                       checked={row.enabled}
                       onChange={(e) => patchRow(row.kpi_key, { enabled: e.target.checked })}
-                      aria-label={`Enable ${row.display_label}`}
+                      aria-label={t("admin.kpiBenchmarks.enabledA11y", { label })}
                     />
                   </td>
                   <td>
-                    <strong>{row.display_label}</strong>
+                    <strong>{label}</strong>
                     <span className="muted small admin-kpi-key">{row.kpi_key}</span>
-                    {row.description ? (
-                      <span className="muted small admin-kpi-desc">{row.description}</span>
+                    {description ? (
+                      <span className="muted small admin-kpi-desc">{description}</span>
                     ) : null}
                   </td>
                   <td>
@@ -146,7 +159,8 @@ export default function AdminKpiBenchmarksPanel() {
                       placeholder={t("admin.kpiBenchmarks.placeholderAuto")}
                     />
                     <span className="muted small">
-                      Preview: {formatTargetPreview(row, row.targetInput)}
+                      {t("admin.kpiBenchmarks.previewLabel")}{" "}
+                      {formatTargetPreview(row, row.targetInput, t)}
                     </span>
                   </td>
                   <td>
@@ -159,11 +173,12 @@ export default function AdminKpiBenchmarksPanel() {
                     <span className="muted small">{amberHelp(row.direction)}</span>
                   </td>
                   <td>
-                    <code>{row.direction}</code>
-                    <span className="muted small">{row.unit_kind}</span>
+                    <code>{kpiDirectionLabel(t, row.direction)}</code>
+                    <span className="muted small">{kpiUnitKindLabel(t, row.unit_kind)}</span>
                   </td>
                 </tr>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>
