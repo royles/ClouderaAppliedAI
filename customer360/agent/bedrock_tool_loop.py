@@ -17,7 +17,7 @@ from customer360.bedrock.client import (
     _normalize_model_id,
     resolve_inference_model_id,
 )
-from customer360.llm_provider import effective_bedrock_settings
+from customer360.bedrock.config import effective_bedrock_settings
 
 logger = logging.getLogger(__name__)
 

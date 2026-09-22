@@ -132,8 +132,19 @@ export default function AdminLlmProviderPanel() {
     }
   };
 
-  if (loading || !form) {
+  if (loading) {
     return <p className="muted small">{t("admin.llm.loading")}</p>;
+  }
+
+  if (!form) {
+    return (
+      <div className="admin-llm-form">
+        <p className="error">{error ?? t("admin.llm.loadError")}</p>
+        <button type="button" className="btn secondary" onClick={() => void load()}>
+          {t("admin.llm.retry")}
+        </button>
+      </div>
+    );
   }
 
   return (

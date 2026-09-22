@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from customer360.llm.router import is_llm_configured
-from customer360.llm_provider import effective_bedrock_settings, load_llm_config, provider_label
+from customer360.bedrock.config import effective_bedrock_settings
+from customer360.llm_provider import load_llm_config, provider_label
 
 TABLE_CATALOG: list[dict] = [
     {

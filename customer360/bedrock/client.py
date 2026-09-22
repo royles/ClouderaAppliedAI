@@ -6,8 +6,7 @@ import json
 import logging
 from typing import Any
 
-from customer360.bedrock.config import get_bedrock_settings
-from customer360.llm_provider import effective_bedrock_settings
+from customer360.bedrock.config import effective_bedrock_settings, get_bedrock_settings
 
 logger = logging.getLogger(__name__)
 

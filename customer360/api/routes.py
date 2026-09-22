@@ -76,10 +76,10 @@ from customer360.bedrock.config import get_bedrock_settings
 from customer360.bedrock.client import is_bedrock_configured
 from customer360.llm.router import is_llm_configured
 from customer360.llm.openai_compatible import test_openai_compatible
+from customer360.bedrock.config import effective_bedrock_settings
 from customer360.llm_provider import (
     LlmProviderConfig,
     config_for_api,
-    effective_bedrock_settings,
     load_llm_config,
     merge_llm_update,
     normalize_provider,

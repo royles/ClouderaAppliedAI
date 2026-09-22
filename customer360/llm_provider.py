@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import asdict, dataclass, replace
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any, Literal
 
 from customer360.admin_store import admin_connect, ensure_admin_schema
-from customer360.bedrock.config import BedrockSettings, get_bedrock_settings as _bedrock_from_env
 
 LlmProviderType = Literal["bedrock", "openai_compatible"]
 VALID_PROVIDERS: frozenset[str] = frozenset({"bedrock", "openai_compatible"})
@@ -184,26 +183,6 @@ def provider_label(provider: LlmProviderType) -> str:
 
 def get_active_provider() -> LlmProviderType:
     return load_llm_config().provider_type
-
-
-def effective_bedrock_settings() -> BedrockSettings:
-    """Env defaults with optional admin overrides when Bedrock is the active provider."""
-    base = _bedrock_from_env()
-    admin = load_llm_config()
-    if admin.provider_type != "bedrock":
-        return base
-    kwargs: dict[str, Any] = {}
-    if admin.bedrock_region and admin.bedrock_region.strip():
-        kwargs["bedrock_region"] = admin.bedrock_region.strip()
-    if admin.bedrock_model_id and admin.bedrock_model_id.strip():
-        kwargs["model_id"] = admin.bedrock_model_id.strip()
-    if admin.bedrock_max_tokens is not None and admin.bedrock_max_tokens > 0:
-        kwargs["max_tokens"] = int(admin.bedrock_max_tokens)
-    if admin.bedrock_temperature is not None:
-        kwargs["temperature"] = float(admin.bedrock_temperature)
-    if not kwargs:
-        return base
-    return replace(base, **kwargs)
 
 
 def is_openai_compatible_configured(config: LlmProviderConfig | None = None) -> bool:

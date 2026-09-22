@@ -631,6 +631,7 @@
       "lede": "Choose the backend for customer insights, outreach drafts, and the executive assistant. Bedrock remains the default; OpenAI-compatible servers use a stored API token (never shown after save).",
       "loading": "Loading LLM configuration…",
       "loadError": "Could not load LLM settings",
+      "retry": "Retry",
       "saveError": "Could not save LLM settings",
       "saved": "LLM configuration saved.",
       "save": "Save LLM settings",

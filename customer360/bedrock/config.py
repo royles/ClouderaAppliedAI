@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -65,3 +66,28 @@ def get_bedrock_settings() -> BedrockSettings:
         max_tokens=_env_int("CUSTOMER360_BEDROCK_MAX_TOKENS", 900),
         temperature=_env_float("CUSTOMER360_BEDROCK_TEMPERATURE", 0.35),
     )
+
+
+def effective_bedrock_settings() -> BedrockSettings:
+    """Environment defaults with optional admin overrides when Bedrock is active."""
+    base = get_bedrock_settings()
+    try:
+        from customer360.llm_provider import load_llm_config
+
+        admin = load_llm_config()
+    except Exception:
+        return base
+    if admin.provider_type != "bedrock":
+        return base
+    kwargs: dict[str, Any] = {}
+    if admin.bedrock_region and admin.bedrock_region.strip():
+        kwargs["bedrock_region"] = admin.bedrock_region.strip()
+    if admin.bedrock_model_id and admin.bedrock_model_id.strip():
+        kwargs["model_id"] = admin.bedrock_model_id.strip()
+    if admin.bedrock_max_tokens is not None and admin.bedrock_max_tokens > 0:
+        kwargs["max_tokens"] = int(admin.bedrock_max_tokens)
+    if admin.bedrock_temperature is not None:
+        kwargs["temperature"] = float(admin.bedrock_temperature)
+    if not kwargs:
+        return base
+    return replace(base, **kwargs)
