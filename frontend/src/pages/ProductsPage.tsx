@@ -10,11 +10,8 @@ import {
 import { CUSTOMER_BASE } from "../appRoutes";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { cohortSearchString } from "../cohortQuery";
-import {
-  parseProductsSearch,
-  patchProductsParams,
-  PRODUCT_COHORT_SEGMENTS,
-} from "../productsQuery";
+import { CUSTOMER_SEGMENTS } from "../customerSegments";
+import { parseProductsSearch, patchProductsParams } from "../productsQuery";
 import { cohortSegmentLabel } from "../i18n/segments";
 import { formatNumber } from "../localeFormat";
 import { useMobileFocus } from "../mobileUxContext";
@@ -52,7 +49,7 @@ function ProductCard({
     <Link
       to={href}
       className={`product-heatmap-card product-heat-${level}`}
-      title={t("products.customersCount", { count: product.customer_count.toLocaleString() })}
+      title={t("products.customersCount", { count: formatNumber(product.customer_count) })}
     >
       <span className="product-heatmap-count">{formatNumber(product.customer_count)}</span>
       <span className="product-heatmap-name">{product.policy_type_desc}</span>
@@ -182,7 +179,7 @@ export default function ProductsPage() {
                 )
               }
             >
-              {PRODUCT_COHORT_SEGMENTS.map((value) => (
+              {CUSTOMER_SEGMENTS.map((value) => (
                 <option key={value} value={value}>
                   {cohortSegmentLabel(t, value)}
                 </option>

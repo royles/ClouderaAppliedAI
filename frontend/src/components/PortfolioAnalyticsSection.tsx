@@ -11,7 +11,7 @@ import {
 import { CUSTOMER_BASE } from "../appRoutes";
 import { ChartValueMetric } from "../chartFilter";
 import { cohortSearchString } from "../cohortQuery";
-import { formatMoneyIls } from "../formatMoney";
+import { formatMoneyIls, formatNumber, formatRatePercent } from "../localeFormat";
 import BookValueChart from "./charts/BookValueChart";
 import ChurnHorizonChart from "./charts/ChurnHorizonChart";
 import EngagementObjectiveChart from "./charts/EngagementObjectiveChart";
@@ -22,7 +22,6 @@ import CohortVsBookBanner from "./CohortVsBookBanner";
 import { useAgentCopilot } from "../agentCopilotContext";
 import PortfolioKpiCard from "./PortfolioKpiCard";
 import { formatShareOfBook } from "../cohortBaseline";
-import { formatNumber } from "../localeFormat";
 import { portfolioChartScopeKey } from "../portfolioSegmentCache";
 
 type Props = {
@@ -36,11 +35,6 @@ type Props = {
   /** Phone / copilot focus: KPI cards only. */
   minimal?: boolean;
 };
-
-function formatPct(rate: number | null | undefined, digits = 1, emDash = "—") {
-  if (rate == null || Number.isNaN(rate)) return emDash;
-  return `${(rate * 100).toFixed(digits)}%`;
-}
 
 function retentionKpiSub(
   kpis: PortfolioKpis | undefined,
@@ -64,7 +58,7 @@ function retentionKpiSub(
 
 function formatTargetLabel(key: string, progress: KpiTargetProgress): string {
   if (key === "annual_retention_rate_forecast") {
-    return formatPct(progress.target);
+    return formatRatePercent(progress.target);
   }
   if (key === "book_growth_pct" || key === "high_risk_book_pct") {
     return `${progress.target}%`;
@@ -196,7 +190,7 @@ export default function PortfolioAnalyticsSection({
         />
         <PortfolioKpiCard
           label={t("business.portfolio.kpi.retentionForecast")}
-          value={formatPct(kpis?.annual_retention_rate_forecast, 2, emDash)}
+          value={formatRatePercent(kpis?.annual_retention_rate_forecast, 2, emDash)}
           sub={retentionKpiSub(kpis, t)}
           progress={progress("annual_retention_rate_forecast")}
           targetLabel={

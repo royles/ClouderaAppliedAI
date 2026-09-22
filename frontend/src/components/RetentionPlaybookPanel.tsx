@@ -9,7 +9,7 @@ import {
 } from "../api";
 import { CUSTOMER_BASE, customerPath } from "../appRoutes";
 import { cohortSearchString } from "../cohortQuery";
-import { formatMoneyIls } from "../formatMoney";
+import { formatMoneyIls } from "../localeFormat";
 import ChurnBadge from "../ChurnBadge";
 import { displayCustomerName } from "../pii";
 

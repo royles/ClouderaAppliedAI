@@ -1,14 +1,6 @@
 import { CustomerSegment, CustomerSortBy, SortOrder } from "./api";
 import { ChartValueMetric, parseChartMetric } from "./chartFilter";
-
-const VALID_SEGMENTS = new Set<string>([
-  "customers_all",
-  "with_policies",
-  "with_foreclosures",
-  "with_investments",
-  "with_insurance_status",
-  "with_market_products",
-]);
+import { parseCustomerSegment } from "./customerSegments";
 
 const VALID_SORT: CustomerSortBy[] = [
   "customer_value",
@@ -22,9 +14,6 @@ export const CUSTOMER_PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
 export type CustomerPageSize = (typeof CUSTOMER_PAGE_SIZE_OPTIONS)[number];
 export const DEFAULT_CUSTOMER_PAGE_SIZE: CustomerPageSize = 50;
 export const MAX_CUSTOMER_PAGE_SIZE = 100;
-
-/** @deprecated use DEFAULT_CUSTOMER_PAGE_SIZE or url state pageSize */
-export const CUSTOMER_PAGE_SIZE = DEFAULT_CUSTOMER_PAGE_SIZE;
 
 function parsePageSize(raw: string | null): CustomerPageSize {
   const n = Number.parseInt(raw ?? "", 10);
@@ -54,10 +43,7 @@ export type CohortQueryState = {
 const VALID_CHURN_TIERS = new Set<string>(["HIGH", "MEDIUM", "LOW"]);
 
 export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
-  const rawSegment = params.get("segment") ?? "customers_all";
-  const segment = VALID_SEGMENTS.has(rawSegment)
-    ? (rawSegment as CustomerSegment)
-    : "customers_all";
+  const segment = parseCustomerSegment(params.get("segment"));
 
   const rawSort = params.get("sort") ?? "churn_risk";
   const sortBy = VALID_SORT.includes(rawSort as CustomerSortBy)

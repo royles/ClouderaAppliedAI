@@ -1,4 +1,4 @@
-import { PortfolioAnalytics, ValueHistoryPoint } from "./api";
+import { ValueHistoryPoint } from "./api";
 import i18n from "./i18n";
 
 export function valuesByPeriod(
@@ -19,21 +19,4 @@ export function formatShareOfBook(cohort: number, book: number, digits = 1): str
   const pct = shareOfBook(cohort, book, digits);
   if (pct == null) return null;
   return i18n.t("business.cohort.shareOfBook", { pct: pct.toFixed(digits) });
-}
-
-export function formatDeltaVsBook(
-  cohort: number,
-  book: number,
-  digits = 1,
-): string | null {
-  const pct = shareOfBook(cohort, book, digits);
-  if (pct == null) return null;
-  const delta = pct - 100;
-  if (Math.abs(delta) < 0.05) return "Same as full book";
-  const sign = delta >= 0 ? "+" : "";
-  return `${sign}${delta.toFixed(digits)} pts vs book avg mix`;
-}
-
-export function latestBookKpis(data: PortfolioAnalytics | null | undefined) {
-  return data?.kpis ?? null;
 }

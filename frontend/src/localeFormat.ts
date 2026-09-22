@@ -17,8 +17,8 @@ export function formatNumber(n: number): string {
   return n.toLocaleString(intlLocale());
 }
 
-export function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
+export function formatDateTime(iso: string | null | undefined, empty = "—"): string {
+  if (!iso) return empty;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso.slice(0, 16).replace("T", " ");
   return d.toLocaleString(intlLocale(), {
@@ -34,4 +34,27 @@ export function formatMonthYear(yearMonth: string): string {
     month: "short",
     year: "numeric",
   });
+}
+
+export function formatBytes(n: number): string {
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)} GB`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} MB`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)} KB`;
+  return `${n} B`;
+}
+
+/** Format a unitless rate in 0–1 range as a percentage string. */
+export function formatRatePercent(
+  rate: number | null | undefined,
+  digits = 1,
+  empty = "—",
+): string {
+  if (rate == null || Number.isNaN(rate)) return empty;
+  return `${(rate * 100).toFixed(digits)}%`;
+}
+
+export function qualityStatusClass(status: string): string {
+  if (status === "critical") return "quality-badge quality-critical";
+  if (status === "warn") return "quality-badge quality-warn";
+  return "quality-badge quality-ok";
 }

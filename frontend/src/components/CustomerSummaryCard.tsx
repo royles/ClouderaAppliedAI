@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { CustomerSummary } from "../api";
 import ChurnBadge from "../ChurnBadge";
 import CustomerAvatar from "./CustomerAvatar";
-import { formatMoneyIls } from "../formatMoney";
+import { formatMoneyIls } from "../localeFormat";
 import {
   displayCustomerId,
   displayCustomerName,

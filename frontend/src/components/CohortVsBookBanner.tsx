@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { PortfolioAnalytics } from "../api";
-import { formatMoneyIls } from "../formatMoney";
+import { formatMoneyIls } from "../localeFormat";
 import { formatShareOfBook, shareOfBook } from "../cohortBaseline";
 import { formatNumber } from "../localeFormat";
 

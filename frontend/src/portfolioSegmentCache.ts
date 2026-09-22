@@ -1,14 +1,8 @@
 import { CustomerSegment, fetchPortfolioAnalytics, PortfolioAnalytics } from "./api";
+import { CUSTOMER_SEGMENTS } from "./customerSegments";
 
 /** Overview filter keys prefetched for instant business-dashboard switching. */
-export const PORTFOLIO_PREFETCH_SEGMENTS: CustomerSegment[] = [
-  "customers_all",
-  "with_policies",
-  "with_foreclosures",
-  "with_investments",
-  "with_insurance_status",
-  "with_market_products",
-];
+export const PORTFOLIO_PREFETCH_SEGMENTS = CUSTOMER_SEGMENTS;
 
 export type PortfolioSegmentCache = Map<CustomerSegment, PortfolioAnalytics>;
 

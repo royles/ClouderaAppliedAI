@@ -9,7 +9,10 @@ import {
 } from "../customerValueChurnForecast";
 import { LegendSwatch } from "./charts/AnalyticsLineChart";
 import {
+  formatAxisMoney,
   formatPeriodAxisLabel,
+  formatPeriodLabel,
+  formatTooltipMoney,
   historyLabelIndicesForPlot,
 } from "./charts/analyticsChartUtils";
 import ChartFloatingTooltip from "./charts/ChartFloatingTooltip";
@@ -18,8 +21,6 @@ import {
   ChartTooltipPosition,
   xForIndex,
 } from "./charts/chartPointer";
-import { intlLocale } from "../localeFormat";
-
 type Props = {
   title: string;
   subtitle?: string;
@@ -32,31 +33,6 @@ type Props = {
   /** Size SVG to the chart canvas (customer detail hero). */
   fillContainer?: boolean;
 };
-
-function formatPeriodLabel(period: string) {
-  if (period.length >= 7) {
-    const [y, m] = period.split("-");
-    const month = new Date(Number(y), Number(m) - 1, 1).toLocaleString(intlLocale(), {
-      month: "short",
-    });
-    return `${month} ${y?.slice(2)}`;
-  }
-  return period;
-}
-
-function formatAxisMoney(n: number) {
-  if (n >= 1_000_000) return `₪${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `₪${(n / 1_000).toFixed(0)}K`;
-  return `₪${n.toFixed(0)}`;
-}
-
-function formatTooltipMoney(n: number) {
-  return new Intl.NumberFormat(intlLocale(), {
-    style: "currency",
-    currency: "ILS",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
 
 function linePath(
   values: (number | null)[],

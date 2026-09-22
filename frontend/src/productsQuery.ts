@@ -1,13 +1,5 @@
 import { CustomerSegment } from "./api";
-
-const VALID_SEGMENTS = new Set<string>([
-  "customers_all",
-  "with_policies",
-  "with_foreclosures",
-  "with_investments",
-  "with_insurance_status",
-  "with_market_products",
-]);
+import { parseCustomerSegment } from "./customerSegments";
 
 export type ProductsQueryState = {
   segment: CustomerSegment;
@@ -15,10 +7,7 @@ export type ProductsQueryState = {
 };
 
 export function parseProductsSearch(params: URLSearchParams): ProductsQueryState {
-  const rawSegment = params.get("segment") ?? "customers_all";
-  const segment = VALID_SEGMENTS.has(rawSegment)
-    ? (rawSegment as CustomerSegment)
-    : "customers_all";
+  const segment = parseCustomerSegment(params.get("segment"));
   const cityRaw = params.get("city")?.trim();
   const city = cityRaw ? cityRaw : null;
   return { segment, city };
@@ -41,12 +30,3 @@ export function patchProductsParams(
   }
   return next;
 }
-
-export const PRODUCT_COHORT_SEGMENTS: CustomerSegment[] = [
-  "customers_all",
-  "with_policies",
-  "with_foreclosures",
-  "with_investments",
-  "with_insurance_status",
-  "with_market_products",
-];

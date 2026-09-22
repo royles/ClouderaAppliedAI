@@ -12,9 +12,9 @@ import { customerPath, ENGAGEMENT_BASE } from "../appRoutes";
 import Breadcrumbs from "../components/Breadcrumbs";
 import ChurnBadge from "../ChurnBadge";
 import DomainFilterGrid from "../components/DomainFilterGrid";
-import { parseBusinessSegment, patchBusinessSegment } from "../dashboardUrl";
+import { parseBusinessSegment, patchBusinessSegment } from "../cohortQuery";
 import { displayCustomerName, formatCity } from "../pii";
-import { formatMoneyIls } from "../formatMoney";
+import { formatMoneyIls, formatNumber } from "../localeFormat";
 import { useMobileFocus } from "../mobileUxContext";
 
 function channelLabel(hint: string, t: (key: string) => string) {
@@ -106,7 +106,7 @@ export default function EngagementHubPage() {
         <div className="engagement-summary-grid">
           <div className="engagement-summary-card">
             <span className="label">{t("engagement.summary.touchpoints90.label")}</span>
-            <strong>{loading ? "…" : (summary?.total_touchpoints_90d ?? 0).toLocaleString()}</strong>
+            <strong>{loading ? "…" : formatNumber(summary?.total_touchpoints_90d ?? 0)}</strong>
             <span className="muted small">
               {t("engagement.summary.touchpoints90.sub", {
                 count: summary?.customers_with_touchpoints_90d ?? 0,
@@ -115,17 +115,17 @@ export default function EngagementHubPage() {
           </div>
           <div className="engagement-summary-card">
             <span className="label">{t("engagement.summary.digital90.label")}</span>
-            <strong>{loading ? "…" : (summary?.digital_touchpoints_90d ?? 0).toLocaleString()}</strong>
+            <strong>{loading ? "…" : formatNumber(summary?.digital_touchpoints_90d ?? 0)}</strong>
             <span className="muted small">{t("engagement.summary.digital90.sub")}</span>
           </div>
           <div className="engagement-summary-card">
             <span className="label">{t("engagement.summary.reviews90.label")}</span>
-            <strong>{loading ? "…" : (summary?.review_events_90d ?? 0).toLocaleString()}</strong>
+            <strong>{loading ? "…" : formatNumber(summary?.review_events_90d ?? 0)}</strong>
             <span className="muted small">{t("engagement.summary.reviews90.sub")}</span>
           </div>
           <div className="engagement-summary-card engagement-summary-card-warn">
             <span className="label">{t("engagement.summary.openAgent.label")}</span>
-            <strong>{loading ? "…" : (summary?.unresolved_agent_questions ?? 0).toLocaleString()}</strong>
+            <strong>{loading ? "…" : formatNumber(summary?.unresolved_agent_questions ?? 0)}</strong>
             <span className="muted small">{t("engagement.summary.openAgent.sub")}</span>
           </div>
         </div>

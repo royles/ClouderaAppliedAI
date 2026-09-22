@@ -4,27 +4,13 @@ import AdminConfigurationTabs from "../components/AdminConfigurationTabs";
 import Breadcrumbs from "../components/Breadcrumbs";
 import WarehouseSchemaDiagram from "../components/WarehouseSchemaDiagram";
 import { fetchWarehouseAdmin, WarehouseAdmin } from "../api";
+import {
+  formatBytes,
+  formatDateTime,
+  formatNumber,
+  qualityStatusClass,
+} from "../localeFormat";
 import { useMobileFocus } from "../mobileUxContext";
-
-function formatBytes(n: number) {
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)} GB`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} MB`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)} KB`;
-  return `${n} B`;
-}
-
-function formatWhen(iso: string | null | undefined, emDash: string) {
-  if (!iso) return emDash;
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString();
-}
-
-function statusClass(status: string) {
-  if (status === "critical") return "quality-badge quality-critical";
-  if (status === "warn") return "quality-badge quality-warn";
-  return "quality-badge quality-ok";
-}
 
 export default function AdminPage() {
   const { t } = useTranslation();
@@ -117,7 +103,7 @@ export default function AdminPage() {
                   key={check.id}
                   className={`admin-health-card admin-health-${check.status}`}
                 >
-                  <span className={statusClass(check.status)}>{check.status}</span>
+                  <span className={qualityStatusClass(check.status)}>{check.status}</span>
                   <strong>{check.label}</strong>
                   <p className="muted small">{check.summary}</p>
                   {check.detail && (
@@ -142,7 +128,7 @@ export default function AdminPage() {
               </div>
               <div className="admin-kpi">
                 <span className="label">{t("admin.kpi.warehouseLoaded.label")}</span>
-                <strong>{formatWhen(data.warehouse_last_loaded_at, emDash)}</strong>
+                <strong>{formatDateTime(data.warehouse_last_loaded_at, emDash)}</strong>
               </div>
               <div className="admin-kpi">
                 <span className="label">{t("admin.kpi.cataloguedTables.label")}</span>
@@ -180,8 +166,8 @@ export default function AdminPage() {
                       </td>
                       <td>{row.layer}</td>
                       <td>{row.domain}</td>
-                      <td>{row.table_exists ? row.row_count.toLocaleString() : emDash}</td>
-                      <td>{formatWhen(row.last_loaded_at, emDash)}</td>
+                      <td>{row.table_exists ? formatNumber(row.row_count) : emDash}</td>
+                      <td>{formatDateTime(row.last_loaded_at, emDash)}</td>
                       <td className="admin-job-cell">{row.last_source_job ?? row.load_job}</td>
                     </tr>
                   ))}
@@ -235,7 +221,7 @@ export default function AdminPage() {
             <ul className="admin-quality-list">
               {data.quality_checks.map((check) => (
                 <li key={check.id} className="admin-quality-item">
-                  <span className={statusClass(check.status)}>{check.status}</span>
+                  <span className={qualityStatusClass(check.status)}>{check.status}</span>
                   <div>
                     <strong>{check.label}</strong>
                     <p className="muted small">{check.summary}</p>

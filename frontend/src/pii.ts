@@ -6,20 +6,10 @@ export function displayCustomerName(name: string | null | undefined): string {
   return name.trim();
 }
 
-/** @deprecated use displayCustomerName */
-export function maskName(name: string | null | undefined): string {
-  return displayCustomerName(name);
-}
-
 /** Customer ID (Teudat Zehut) is shown in full and used for all lookups. */
 export function displayCustomerId(id: number | string | null | undefined): string {
   if (id == null || id === "") return "—";
   return String(id);
-}
-
-/** @deprecated use displayCustomerId */
-export function maskCustomerId(id: number | string | null | undefined): string {
-  return displayCustomerId(id);
 }
 
 export function maskEmail(email: string | null | undefined): string {

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { CustomerSortBy, CustomerSummary, SortOrder } from "../api";
 import { customerPath } from "../appRoutes";
 import ChurnBadge from "../ChurnBadge";
-import { formatMoneyIls } from "../formatMoney";
+import { formatMoneyIls } from "../localeFormat";
 import {
   displayCustomerId,
   displayCustomerName,

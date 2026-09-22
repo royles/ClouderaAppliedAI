@@ -15,7 +15,7 @@ import CustomerSummaryCard, {
   CustomerCardProfileDetails,
 } from "../components/CustomerSummaryCard";
 import CustomerValueChart from "../components/CustomerValueChart";
-import { formatMoneyIls } from "../formatMoney";
+import { formatMoneyIls } from "../localeFormat";
 import {
   formatLastLogin,
   maskDate,

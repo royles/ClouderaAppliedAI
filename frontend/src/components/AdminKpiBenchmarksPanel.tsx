@@ -5,7 +5,7 @@ import {
   KpiBenchmark,
   updateKpiBenchmarks,
 } from "../api";
-import { formatMoneyIls } from "../formatMoney";
+import { formatMoneyIls, formatNumber } from "../localeFormat";
 
 type RowState = KpiBenchmark & { targetInput: string; amberInput: string };
 
@@ -15,7 +15,7 @@ function formatTargetPreview(row: KpiBenchmark, raw: string): string {
     return "Auto (from portfolio)";
   }
   if (row.unit_kind === "money") return formatMoneyIls(parsed);
-  if (row.unit_kind === "integer") return parsed.toLocaleString();
+  if (row.unit_kind === "integer") return formatNumber(parsed);
   if (row.unit_kind === "ratio") return `${(parsed * 100).toFixed(1)}%`;
   if (row.unit_kind === "percent") return `${parsed}%`;
   return String(parsed);

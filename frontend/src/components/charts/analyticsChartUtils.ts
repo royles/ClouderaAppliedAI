@@ -1,4 +1,4 @@
-import { intlLocale } from "../../localeFormat";
+import { formatMoneyIls, intlLocale } from "../../localeFormat";
 
 export function formatPeriodLabel(period: string) {
   if (period.length >= 7) {
@@ -70,11 +70,7 @@ export function formatAxisMoney(n: number) {
 }
 
 export function formatTooltipMoney(n: number) {
-  return new Intl.NumberFormat(intlLocale(), {
-    style: "currency",
-    currency: "ILS",
-    maximumFractionDigits: 0,
-  }).format(n);
+  return formatMoneyIls(n);
 }
 
 export function formatAxisPct(n: number) {
