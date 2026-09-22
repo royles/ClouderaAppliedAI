@@ -14,6 +14,7 @@ from customer360.business_kpi_targets import build_kpi_targets
 from customer360.api.portfolio_objectives import fetch_objective_trends
 from customer360.churn.effective_risk import BOOK_DEFAULT_CHURN_RATE, effective_churn_probability_sql
 from customer360.churn.scoring import churn_scores_populated, churn_table_exists
+from customer360.interactions.summary import interactions_table_exists
 
 METHODOLOGY_NOTE = (
     "Churn-aware metrics use ML scores when present; otherwise LOW/MEDIUM/HIGH tiers "
@@ -24,6 +25,30 @@ METHODOLOGY_NOTE = (
 )
 
 _CHURN_PROB_EXPR = effective_churn_probability_sql("ch")
+
+
+def _review_kpis_for_segment(conn: sqlite3.Connection, segment: str | None) -> dict:
+    if not interactions_table_exists(conn):
+        return {"avg_review_rating": None, "review_count": 0}
+    where_sql, params = segment_scope_sql(segment)
+    row = conn.execute(
+        f"""
+        SELECT
+            ROUND(AVG(e.RATING), 2) AS avg_review_rating,
+            COUNT(*) AS review_count
+        FROM APP_CUSTOMER_INTERACTION_EVENTS e
+        INNER JOIN DWH_DIM_CUSTOMERS_UNIQUE c ON c.CUSTOMER_ID = e.CUSTOMER_ID
+        WHERE {where_sql}
+          AND e.EVENT_TYPE = 'REVIEW'
+          AND e.RATING IS NOT NULL
+        """,
+        params,
+    ).fetchone()
+    avg = row["avg_review_rating"]
+    return {
+        "avg_review_rating": float(avg) if avg is not None else None,
+        "review_count": int(row["review_count"] or 0),
+    }
 
 
 def _finalize_churn_kpis(
@@ -159,6 +184,7 @@ def _fetch_kpis(conn: sqlite3.Connection, segment: str | None) -> dict:
         "medium_risk_customers": medium_risk_customers,
         "low_risk_customers": int(row["low_risk_customers"] or 0),
         "high_risk_book_pct": round(100.0 * high_risk_book / total_book, 1) if total_book > 0 else 0.0,
+        **_review_kpis_for_segment(conn, segment),
     }
 
 
