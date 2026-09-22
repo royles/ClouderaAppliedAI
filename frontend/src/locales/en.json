@@ -203,8 +203,10 @@
     },
     "premiumMomentum": {
       "title": "Active Policies and Premium",
-      "subtitle": "Premium base (left axis) and active policy count (right axis) — one customer may hold many policies.",
-      "empty": "No policy premium trend for the active book yet."
+      "subtitle": "Monthly premium as a line (left axis); active policy count as bars (right axis). One customer may hold many policies.",
+      "empty": "No policy premium trend for the active book yet.",
+      "legendPremium": "Monthly premium",
+      "legendPolicies": "active policies"
     },
     "savingsAum": {
       "title": "Long-Term Savings (AUM)",

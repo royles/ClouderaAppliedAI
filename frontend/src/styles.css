@@ -2310,6 +2310,14 @@ a.engagement-act-link {
   opacity: 1;
 }
 
+.analytics-bar-fill-behind {
+  opacity: 0.45;
+}
+
+.analytics-bar-fill-behind.analytics-bar-fill-active {
+  opacity: 0.65;
+}
+
 .legend-bar-swatch {
   display: inline-block;
   width: 14px;
