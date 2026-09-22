@@ -2,29 +2,32 @@
 
 ## Development workflow
 
-**Use `main` only.** New fixes and features are committed and pushed directly to
-`main` (no long-lived feature branches). Pull before you work; push when done.
+**`main` is intentionally empty** (stub README only). All Insurance Customer 360
+work happens on **`cursor/insurance-customer-360-dashboard-85b8`**.
+
+When you are on that branch (or any active feature branch), **every commit and push
+targets that branch** — do not commit application code to `main`.
 
 ```bash
-git checkout main
-git pull origin main
+git fetch origin
+git checkout cursor/insurance-customer-360-dashboard-85b8
+git pull origin cursor/insurance-customer-360-dashboard-85b8
 # … edit, test …
 git add -A && git commit -m "Describe the change"
-git push origin main
+git push origin cursor/insurance-customer-360-dashboard-85b8
 ```
 
 ### Get the latest code on another machine
 
 ```bash
 git fetch origin
-git checkout main
-git pull origin main
+git checkout cursor/insurance-customer-360-dashboard-85b8
+git pull origin cursor/insurance-customer-360-dashboard-85b8
 ```
 
-If `git pull` says **Already up to date** but the app looks old, run
-`git branch --show-current` — it must be **`main`**, not an old `cursor/*` branch.
-Then restart the API and hard-refresh the browser (`frontend/dist` is committed with
-the app).
+If the app looks old, run `git branch --show-current` — you should be on
+**`cursor/insurance-customer-360-dashboard-85b8`**, not `main`. Then restart the
+API and hard-refresh the browser (`frontend/dist` is committed with the app).
 
 ## Insurance Customer 360
 
