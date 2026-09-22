@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { fetchCustomers, fetchOverview, CustomerSummary, Overview } from "../api";
 import { CUSTOMER_BASE, customerPath } from "../appRoutes";
@@ -12,6 +13,7 @@ import { loadRecentCustomerIds } from "../recentCustomers";
 import { useMobileFocus } from "../mobileUxContext";
 
 export default function CustomerHubPage() {
+  const { t } = useTranslation();
   const mobileFocus = useMobileFocus();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -38,7 +40,7 @@ export default function CustomerHubPage() {
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load overview");
+          setError(e instanceof Error ? e.message : t("errors.overviewLoadFailed"));
         }
       } finally {
         if (!cancelled) setOverviewLoading(false);
@@ -85,7 +87,7 @@ export default function CustomerHubPage() {
   if (overviewLoading && !overview) {
     return (
       <>
-        <Breadcrumbs items={[{ label: "The customer" }]} />
+        <Breadcrumbs items={[{ label: t("nav.customer.title") }]} />
         <section className="panel">
           <div className="skeleton skeleton-title" />
           <div className="stat-grid">
@@ -104,14 +106,14 @@ export default function CustomerHubPage() {
 
   return (
     <>
-      {!mobileFocus && <Breadcrumbs items={[{ label: "The customer" }]} />}
+      {!mobileFocus && <Breadcrumbs items={[{ label: t("nav.customer.title") }]} />}
       {!mobileFocus && (
       <section className="panel">
         <DomainFilterGrid
           overview={overview}
           segment={segment}
           onSelect={setSegment}
-          helperText="Click a card to filter the customer list. Click again to clear."
+          helperText={t("business.domainFilter.helperCustomerList")}
           updatedAt={overviewUpdatedAt}
         />
       </section>
@@ -127,7 +129,7 @@ export default function CustomerHubPage() {
 
       {!mobileFocus && recentDetails.length > 0 && (
         <section className="panel">
-          <h2>Recently viewed</h2>
+          <h2>{t("customer.recent.title")}</h2>
           <ul className="customer-hub-list">
             {recentDetails.map((c) => (
               <li key={c.customer_id}>

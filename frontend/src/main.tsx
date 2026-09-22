@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import ErrorBoundary from "./ErrorBoundary";
+import "./i18n";
 import "./styles.css";
 
 const basename =

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import AdminConfigurationTabs from "../components/AdminConfigurationTabs";
 import Breadcrumbs from "../components/Breadcrumbs";
 import WarehouseSchemaDiagram from "../components/WarehouseSchemaDiagram";
@@ -12,8 +13,8 @@ function formatBytes(n: number) {
   return `${n} B`;
 }
 
-function formatWhen(iso: string | null | undefined) {
-  if (!iso) return "—";
+function formatWhen(iso: string | null | undefined, emDash: string) {
+  if (!iso) return emDash;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
   return d.toLocaleString();
@@ -26,6 +27,8 @@ function statusClass(status: string) {
 }
 
 export default function AdminPage() {
+  const { t } = useTranslation();
+  const emDash = t("common.emDash");
   const mobileFocus = useMobileFocus();
   const [data, setData] = useState<WarehouseAdmin | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +46,7 @@ export default function AdminPage() {
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load admin data");
+          setError(e instanceof Error ? e.message : t("errors.adminLoadFailed"));
           setData(null);
         }
       } finally {
@@ -63,8 +66,8 @@ export default function AdminPage() {
   if (mobileFocus) {
     return (
       <section className="panel">
-        <h2 className="subsection-title">Warehouse snapshot</h2>
-        {loading && <p className="muted small">Loading…</p>}
+        <h2 className="subsection-title">{t("admin.mobile.snapshotTitle")}</h2>
+        {loading && <p className="muted small">{t("common.loading")}</p>}
         {error && <p className="error">{error}</p>}
         {data && (
           <>
@@ -72,10 +75,10 @@ export default function AdminPage() {
               {data.database_path} · {formatBytes(data.database_size_bytes)}
             </p>
             <p>
-              Quality flags: <strong>{qualityIssues}</strong> · Health flags:{" "}
-              <strong>{healthIssues}</strong>
+              {t("admin.mobile.flags")} <strong>{qualityIssues}</strong> ·{" "}
+              {t("admin.mobile.healthFlags")} <strong>{healthIssues}</strong>
             </p>
-            <p className="muted small">Open desktop view for schema map and KPI benchmarks.</p>
+            <p className="muted small">{t("admin.mobile.desktopHint")}</p>
           </>
         )}
       </section>
@@ -84,18 +87,15 @@ export default function AdminPage() {
 
   return (
     <>
-      <Breadcrumbs items={[{ label: "Data & admin" }]} />
+      <Breadcrumbs items={[{ label: t("nav.admin.title") }]} />
       <section className="panel">
-        <h1>Warehouse &amp; data admin</h1>
-        <p className="muted small">
-          Table inventory, load timestamps, DDS relationships, and completeness checks for
-          the Customer 360 SQLite warehouse.
-        </p>
+        <h1>{t("admin.title")}</h1>
+        <p className="muted small">{t("admin.lede")}</p>
       </section>
 
       {loading && (
         <section className="panel">
-          <p className="muted">Loading admin metadata…</p>
+          <p className="muted">{t("admin.loading")}</p>
         </section>
       )}
       {error && (
@@ -109,10 +109,8 @@ export default function AdminPage() {
       {data && (
         <>
           <section className="panel">
-            <h2>System health</h2>
-            <p className="muted small">
-              Runtime checks for API, warehouse database, Bedrock, and churn scoring.
-            </p>
+            <h2>{t("admin.health.title")}</h2>
+            <p className="muted small">{t("admin.health.lede")}</p>
             <ul className="admin-health-grid">
               {data.health_checks.map((check) => (
                 <li
@@ -130,8 +128,7 @@ export default function AdminPage() {
             </ul>
             {healthIssues > 0 && (
               <p className="muted small admin-health-note">
-                {healthIssues} check{healthIssues === 1 ? "" : "s"} need attention (warn or
-                critical).
+                {t("admin.health.attentionNote", { count: healthIssues })}
               </p>
             )}
           </section>
@@ -139,56 +136,53 @@ export default function AdminPage() {
           <section className="panel">
             <div className="admin-kpi-grid">
               <div className="admin-kpi">
-                <span className="label">Database file</span>
+                <span className="label">{t("admin.kpi.databaseFile.label")}</span>
                 <strong className="admin-kpi-mono">{formatBytes(data.database_size_bytes)}</strong>
                 <span className="muted small admin-kpi-path">{data.database_path}</span>
               </div>
               <div className="admin-kpi">
-                <span className="label">Warehouse last loaded</span>
-                <strong>{formatWhen(data.warehouse_last_loaded_at)}</strong>
+                <span className="label">{t("admin.kpi.warehouseLoaded.label")}</span>
+                <strong>{formatWhen(data.warehouse_last_loaded_at, emDash)}</strong>
               </div>
               <div className="admin-kpi">
-                <span className="label">Catalogued tables</span>
+                <span className="label">{t("admin.kpi.cataloguedTables.label")}</span>
                 <strong>{data.tables.length}</strong>
               </div>
               <div className="admin-kpi">
-                <span className="label">Quality flags</span>
-                <strong>{qualityIssues === 0 ? "None" : qualityIssues}</strong>
-                <span className="muted small">Non-OK completeness checks</span>
+                <span className="label">{t("admin.kpi.qualityFlags.label")}</span>
+                <strong>{qualityIssues === 0 ? t("common.none") : qualityIssues}</strong>
+                <span className="muted small">{t("admin.kpi.qualityFlags.sub")}</span>
               </div>
             </div>
           </section>
 
           <section className="panel">
-            <h2>Table overview</h2>
-            <p className="muted small">
-              Row counts are live; last loaded reflects the most recent seed or cache refresh
-              job that touched each table.
-            </p>
+            <h2>{t("admin.tables.title")}</h2>
+            <p className="muted small">{t("admin.tables.lede")}</p>
             <div className="table-wrap">
               <table className="data-table admin-table">
                 <thead>
                   <tr>
-                    <th>Table</th>
-                    <th>Layer</th>
-                    <th>Domain</th>
-                    <th>Rows</th>
-                    <th>Last loaded</th>
-                    <th>Source job</th>
+                    <th>{t("admin.tables.columns.table")}</th>
+                    <th>{t("admin.tables.columns.layer")}</th>
+                    <th>{t("admin.tables.columns.domain")}</th>
+                    <th>{t("admin.tables.columns.rows")}</th>
+                    <th>{t("admin.tables.columns.lastLoaded")}</th>
+                    <th>{t("admin.tables.columns.sourceJob")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {data.tables.map((t) => (
-                    <tr key={t.table_name}>
+                  {data.tables.map((row) => (
+                    <tr key={row.table_name}>
                       <td>
-                        <code className="admin-table-name">{t.table_name}</code>
-                        <span className="muted small admin-table-desc">{t.description}</span>
+                        <code className="admin-table-name">{row.table_name}</code>
+                        <span className="muted small admin-table-desc">{row.description}</span>
                       </td>
-                      <td>{t.layer}</td>
-                      <td>{t.domain}</td>
-                      <td>{t.table_exists ? t.row_count.toLocaleString() : "—"}</td>
-                      <td>{formatWhen(t.last_loaded_at)}</td>
-                      <td className="admin-job-cell">{t.last_source_job ?? t.load_job}</td>
+                      <td>{row.layer}</td>
+                      <td>{row.domain}</td>
+                      <td>{row.table_exists ? row.row_count.toLocaleString() : emDash}</td>
+                      <td>{formatWhen(row.last_loaded_at, emDash)}</td>
+                      <td className="admin-job-cell">{row.last_source_job ?? row.load_job}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -197,10 +191,8 @@ export default function AdminPage() {
           </section>
 
           <section className="panel">
-            <h2>Schema map</h2>
-            <p className="muted small">
-              Each card lists live SQLite columns; lines show logical joins used by the API.
-            </p>
+            <h2>{t("admin.schema.title")}</h2>
+            <p className="muted small">{t("admin.schema.lede")}</p>
             <div className="warehouse-schema-scroll">
               <WarehouseSchemaDiagram
                 tables={data.tables}
@@ -208,15 +200,15 @@ export default function AdminPage() {
               />
             </div>
             <details className="admin-er-details">
-              <summary>Join reference (table)</summary>
+              <summary>{t("admin.schema.joinReference")}</summary>
               <div className="table-wrap">
                 <table className="data-table admin-table-compact">
                   <thead>
                     <tr>
-                      <th>From</th>
-                      <th>To</th>
-                      <th>Join</th>
-                      <th>Cardinality</th>
+                      <th>{t("admin.schema.joinColumns.from")}</th>
+                      <th>{t("admin.schema.joinColumns.to")}</th>
+                      <th>{t("admin.schema.joinColumns.join")}</th>
+                      <th>{t("admin.schema.joinColumns.cardinality")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -239,7 +231,7 @@ export default function AdminPage() {
           </section>
 
           <section className="panel">
-            <h2>Completeness &amp; quality</h2>
+            <h2>{t("admin.quality.title")}</h2>
             <ul className="admin-quality-list">
               {data.quality_checks.map((check) => (
                 <li key={check.id} className="admin-quality-item">

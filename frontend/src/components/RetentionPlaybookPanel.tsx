@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -23,6 +24,7 @@ export default function RetentionPlaybookPanel({
   cohortLabel,
   compact = false,
 }: Props) {
+  const { t } = useTranslation();
   const [data, setData] = useState<RetentionPlaybook | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -57,17 +59,20 @@ export default function RetentionPlaybookPanel({
       {!compact && (
         <p className="muted small">
           {cohortLabel ? `${cohortLabel} · ` : ""}
-          Prioritized by value at churn risk (next best action per customer).
+          {t("copilot.retention.lede")}
         </p>
       )}
-      {loading && <p className="muted small">Loading queue…</p>}
+      {loading && <p className="muted small">{t("copilot.retention.loadingQueue")}</p>}
       {!loading && data && data.items.length === 0 && (
-        <p className="muted small">No scored at-risk customers in this cohort yet.</p>
+        <p className="muted small">{t("copilot.retention.emptyCohort")}</p>
       )}
       {!loading && data && data.items.length > 0 && (
         <>
           <p className="muted small playbook-queue-meta">
-            Showing {data.items.length} of {data.total.toLocaleString()} at-risk customers
+            {t("copilot.retention.showing", {
+              shown: data.items.length,
+              total: data.total.toLocaleString(),
+            })}
           </p>
           <ol className="playbook-queue">
             {data.items.map((item: RetentionPlaybookItem, idx) => (
@@ -80,8 +85,10 @@ export default function RetentionPlaybookPanel({
                   <div className="playbook-queue-meta-row">
                     <ChurnBadge tier={item.churn_risk_tier} probability={item.churn_probability} />
                     <span className="muted small">
-                      At risk {formatMoneyIls(item.value_at_risk)} · Book{" "}
-                      {formatMoneyIls(item.customer_value)}
+                      {t("copilot.retention.atRiskBook", {
+                        atRisk: formatMoneyIls(item.value_at_risk),
+                        book: formatMoneyIls(item.customer_value),
+                      })}
                     </span>
                   </div>
                   <p className="playbook-action-title">{item.recommended_action.title}</p>
@@ -91,7 +98,7 @@ export default function RetentionPlaybookPanel({
             ))}
           </ol>
           <Link to={listHref} className="playbook-view-all">
-            Open full at-risk customer list →
+            {t("copilot.retention.openList")}
           </Link>
         </>
       )}

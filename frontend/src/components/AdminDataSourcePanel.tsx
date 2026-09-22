@@ -1,4 +1,5 @@
 import { FormEvent, ReactNode, useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   DataSourceConfig,
   fetchDataSourceConfig,
@@ -90,6 +91,7 @@ type Props = {
 };
 
 export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -131,7 +133,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
       const updated = await updateDataSourceConfig(buildUpdatePayload(form));
       setMeta(updated);
       setForm(configToForm(updated));
-      setSavedNote("Settings saved.");
+      setSavedNote(t("admin.datasource.saved"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -157,8 +159,8 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
   };
 
   const accordionMeta = loading
-    ? "Loading…"
-    : meta?.backend_label ?? form?.backend_type ?? "Not configured";
+    ? t("common.loading")
+    : meta?.backend_label ?? form?.backend_type ?? t("common.none");
 
   const wrap = (body: ReactNode) => {
     if (layout === "embedded") {
@@ -167,9 +169,9 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
     return (
       <AdminAccordionSection
         id="admin-warehouse-backend"
-        title="Warehouse backend"
+        title={t("admin.datasource.title")}
         meta={accordionMeta}
-        description="Choose where Customer 360 reads warehouse data. Admin settings are always stored in the local control database; API routes use SQLite until CDW or Iceberg routing is enabled."
+        description={t("admin.datasource.modeLegend")}
       >
         {body}
       </AdminAccordionSection>
@@ -177,7 +179,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
   };
 
   if (loading || !form) {
-    return wrap(<p className="muted small">Loading backend configuration…</p>);
+    return wrap(<p className="muted small">{t("admin.datasource.loadingConfig")}</p>);
   }
 
   return wrap(
@@ -191,7 +193,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
 
       <form className="admin-datasource-form" onSubmit={onSubmit}>
         <fieldset>
-          <legend>Backend type</legend>
+          <legend>{t("admin.datasource.backendTypeLegend")}</legend>
           <label className="admin-datasource-radio">
             <input
               type="radio"
@@ -199,7 +201,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
               checked={form.backend_type === "sqlite"}
               onChange={() => patch({ backend_type: "sqlite" })}
             />
-            SQLite (default)
+            {t("admin.datasource.sqliteDefault")}
           </label>
           <label className="admin-datasource-radio">
             <input
@@ -208,7 +210,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
               checked={form.backend_type === "cdw_jdbc"}
               onChange={() => patch({ backend_type: "cdw_jdbc" })}
             />
-            Cloudera Data Warehouse (JDBC)
+            {t("admin.datasource.cdwJdbc")}
           </label>
           <label className="admin-datasource-radio">
             <input
@@ -217,13 +219,13 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
               checked={form.backend_type === "iceberg"}
               onChange={() => patch({ backend_type: "iceberg" })}
             />
-            Lakehouse (Iceberg)
+            {t("admin.datasource.lakehouseIceberg")}
           </label>
         </fieldset>
 
         {form.backend_type === "sqlite" && (
           <label className="admin-datasource-field">
-            <span>SQLite file path</span>
+            <span>{t("admin.datasource.sqliteFilePath")}</span>
             <input
               type="text"
               value={form.sqlite_path}
@@ -236,7 +238,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
         {(form.backend_type === "cdw_jdbc" || form.backend_type === "iceberg") && (
           <>
             <label className="admin-datasource-field">
-              <span>JDBC URL</span>
+              <span>{t("admin.datasource.jdbcUrl")}</span>
               <input
                 type="text"
                 value={form.jdbc_url}
@@ -246,7 +248,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
             </label>
             <div className="admin-datasource-row">
               <label className="admin-datasource-field">
-                <span>CDW host (optional if JDBC URL set)</span>
+                <span>{t("admin.datasource.cdwHostOptional")}</span>
                 <input
                   type="text"
                   value={form.trino_host}
@@ -254,7 +256,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
                 />
               </label>
               <label className="admin-datasource-field admin-datasource-field-narrow">
-                <span>Port</span>
+                <span>{t("admin.datasource.port")}</span>
                 <input
                   type="text"
                   value={form.trino_port}
@@ -264,7 +266,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
             </div>
             <div className="admin-datasource-row">
               <label className="admin-datasource-field">
-                <span>Catalog</span>
+                <span>{t("admin.datasource.catalog")}</span>
                 <input
                   type="text"
                   value={form.trino_catalog}
@@ -273,7 +275,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
                 />
               </label>
               <label className="admin-datasource-field">
-                <span>Schema</span>
+                <span>{t("admin.datasource.schema")}</span>
                 <input
                   type="text"
                   value={form.trino_schema}
@@ -284,7 +286,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
             </div>
             <div className="admin-datasource-row">
               <label className="admin-datasource-field">
-                <span>User</span>
+                <span>{t("admin.datasource.user")}</span>
                 <input
                   type="text"
                   value={form.trino_user || form.jdbc_user}
@@ -292,14 +294,16 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
                 />
               </label>
               <label className="admin-datasource-field">
-                <span>Password</span>
+                <span>{t("admin.datasource.password")}</span>
                 <input
                   type="password"
                   value={form.trino_password || form.jdbc_password}
                   onChange={(e) =>
                     patch({ trino_password: e.target.value, jdbc_password: e.target.value })
                   }
-                  placeholder={meta?.jdbc_password_set ? "•••••• (unchanged if empty)" : ""}
+                  placeholder={
+                    meta?.jdbc_password_set ? t("admin.datasource.passwordPlaceholder") : ""
+                  }
                   autoComplete="new-password"
                 />
               </label>
@@ -310,7 +314,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
                 checked={form.trino_use_ssl}
                 onChange={(e) => patch({ trino_use_ssl: e.target.checked })}
               />
-              Use TLS for Trino HTTP test
+              {t("admin.datasource.useTlsTrino")}
             </label>
           </>
         )}
@@ -318,7 +322,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
         {form.backend_type === "iceberg" && (
           <>
             <label className="admin-datasource-field">
-              <span>Iceberg REST catalog URI</span>
+              <span>{t("admin.datasource.icebergRestUri")}</span>
               <input
                 type="text"
                 value={form.iceberg_rest_uri}
@@ -328,7 +332,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
             </label>
             <div className="admin-datasource-row">
               <label className="admin-datasource-field">
-                <span>Catalog name</span>
+                <span>{t("admin.datasource.catalogName")}</span>
                 <input
                   type="text"
                   value={form.iceberg_catalog}
@@ -336,7 +340,7 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
                 />
               </label>
               <label className="admin-datasource-field">
-                <span>Namespace</span>
+                <span>{t("admin.datasource.namespace")}</span>
                 <input
                   type="text"
                   value={form.iceberg_namespace}
@@ -349,14 +353,18 @@ export default function AdminDataSourcePanel({ layout = "accordion" }: Props) {
 
         <div className="admin-datasource-actions">
           <button type="button" className="btn secondary" disabled={testing} onClick={() => void onTest()}>
-            {testing ? "Testing…" : "Test connection"}
+            {testing ? t("admin.datasource.saving") : t("admin.datasource.testConnection")}
           </button>
           <button type="submit" className="btn primary" disabled={saving}>
-            {saving ? "Saving…" : "Save backend settings"}
+            {saving ? t("admin.datasource.saving") : t("admin.datasource.save")}
           </button>
         </div>
         {meta?.updated_at && (
-          <p className="muted small">Last updated {new Date(meta.updated_at).toLocaleString()}</p>
+          <p className="muted small">
+            {t("admin.datasource.lastUpdated", {
+              date: new Date(meta.updated_at).toLocaleString(),
+            })}
+          </p>
         )}
       </form>
       </div>,

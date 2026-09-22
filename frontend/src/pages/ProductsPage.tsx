@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   CustomerSegment,
@@ -12,8 +13,10 @@ import { cohortSearchString } from "../cohortQuery";
 import {
   parseProductsSearch,
   patchProductsParams,
-  PRODUCT_COHORT_OPTIONS,
+  PRODUCT_COHORT_SEGMENTS,
 } from "../productsQuery";
+import { cohortSegmentLabel } from "../i18n/segments";
+import { formatNumber } from "../localeFormat";
 import { useMobileFocus } from "../mobileUxContext";
 
 function heatLevel(count: number, max: number): "low" | "med" | "high" | "peak" {
@@ -36,6 +39,7 @@ function ProductCard({
   segment: CustomerSegment;
   city: string | null;
 }) {
+  const { t } = useTranslation();
   const level = heatLevel(product.customer_count, maxCustomers);
   const href = `${CUSTOMER_BASE}${cohortSearchString({
     segment,
@@ -48,18 +52,21 @@ function ProductCard({
     <Link
       to={href}
       className={`product-heatmap-card product-heat-${level}`}
-      title={`${product.customer_count.toLocaleString()} customers`}
+      title={t("products.customersCount", { count: product.customer_count.toLocaleString() })}
     >
-      <span className="product-heatmap-count">{product.customer_count.toLocaleString()}</span>
+      <span className="product-heatmap-count">{formatNumber(product.customer_count)}</span>
       <span className="product-heatmap-name">{product.policy_type_desc}</span>
       <span className="muted small product-heatmap-sub">
-        {product.active_policy_count.toLocaleString()} active policies
+        {t("products.activePoliciesCount", {
+          count: formatNumber(product.active_policy_count),
+        })}
       </span>
     </Link>
   );
 }
 
 export default function ProductsPage() {
+  const { t } = useTranslation();
   const mobileFocus = useMobileFocus();
   const [searchParams, setSearchParams] = useSearchParams();
   const { segment, city } = useMemo(
@@ -83,7 +90,7 @@ export default function ProductsPage() {
       })
       .catch((e) => {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load products");
+          setError(e instanceof Error ? e.message : t("errors.productsLoadFailed"));
         }
       })
       .finally(() => {
@@ -97,18 +104,17 @@ export default function ProductsPage() {
   const maxCustomers = catalog?.max_customer_count ?? 0;
   const cityOptions = catalog?.city_options ?? [];
 
-  const cohortLabel =
-    PRODUCT_COHORT_OPTIONS.find((o) => o.value === segment)?.label ?? segment;
+  const cohortLabel = cohortSegmentLabel(t, segment);
   const filtersActive = segment !== "customers_all" || Boolean(city);
 
   const legend = useMemo(
     () => [
-      { level: "peak", label: "Highest uptake" },
-      { level: "high", label: "Strong" },
-      { level: "med", label: "Moderate" },
-      { level: "low", label: "Lighter" },
+      { level: "peak", label: t("products.legend.highest") },
+      { level: "high", label: t("products.legend.strong") },
+      { level: "med", label: t("products.legend.moderate") },
+      { level: "low", label: t("products.legend.lighter") },
     ],
-    [],
+    [t],
   );
 
   const clearFilters = () => {
@@ -124,32 +130,30 @@ export default function ProductsPage() {
 
   return (
     <>
-      {!mobileFocus && <Breadcrumbs items={[{ label: "Products" }]} />}
+      {!mobileFocus && <Breadcrumbs items={[{ label: t("nav.products.title") }]} />}
       <section className="panel">
         <div className="panel-head">
           <div>
-            <h1 className="section-title">{mobileFocus ? "Top products" : "Products"}</h1>
+            <h1 className="section-title">
+              {mobileFocus ? t("products.mobile.title") : t("nav.products.title")}
+            </h1>
             {!mobileFocus && (
-            <p className="muted small">
-              Policy products grouped by class. Counts reflect the customer filters below — click a
-              card to open the matching customer list.
-            </p>
+            <p className="muted small">{t("products.lede")}</p>
             )}
             {filtersActive && (
               <p className="filter-banner">
-                Showing{" "}
-                <strong>
-                  {cohortLabel}
-                  {city ? ` · ${city}` : ""}
-                </strong>
+                {t("products.filter.banner", {
+                  segment: cohortLabel,
+                  city: city ? ` · ${city}` : "",
+                })}{" "}
                 <button type="button" className="link-btn" onClick={clearFilters}>
-                  Clear filters
+                  {t("products.filter.clear")}
                 </button>
               </p>
             )}
           </div>
           {!mobileFocus && (
-          <ul className="product-heatmap-legend" aria-label="Customer count intensity">
+          <ul className="product-heatmap-legend" aria-label={t("products.a11y.legend")}>
             {legend.map((item) => (
               <li key={item.level}>
                 <span className={`product-heat-swatch product-heat-${item.level}`} />
@@ -163,7 +167,7 @@ export default function ProductsPage() {
         {!mobileFocus && (
         <div className="toolbar product-filter-toolbar">
           <div className="toolbar-item">
-            <label htmlFor="product-cohort">Customer cohort</label>
+            <label htmlFor="product-cohort">{t("products.filters.cohort")}</label>
             <select
               id="product-cohort"
               className="control"
@@ -178,15 +182,15 @@ export default function ProductsPage() {
                 )
               }
             >
-              {PRODUCT_COHORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
+              {PRODUCT_COHORT_SEGMENTS.map((value) => (
+                <option key={value} value={value}>
+                  {cohortSegmentLabel(t, value)}
                 </option>
               ))}
             </select>
           </div>
           <div className="toolbar-item">
-            <label htmlFor="product-city">City</label>
+            <label htmlFor="product-city">{t("products.filters.city")}</label>
             <select
               id="product-city"
               className="control"
@@ -201,7 +205,7 @@ export default function ProductsPage() {
                 )
               }
             >
-              <option value="">All cities</option>
+              <option value="">{t("products.filters.allCities")}</option>
               {cityOptions.map((name) => (
                 <option key={name} value={name}>
                   {name}
@@ -212,7 +216,7 @@ export default function ProductsPage() {
         </div>
         )}
 
-        {loading && <p className="muted small">Loading product catalog…</p>}
+        {loading && <p className="muted small">{t("products.loading")}</p>}
         {error && <p className="error">{error}</p>}
         {mobileFocus && catalog && (
           <ul className="mobile-product-list">
@@ -229,7 +233,7 @@ export default function ProductsPage() {
                 >
                   <span className="mobile-product-name">{product.policy_type_desc}</span>
                   <span className="muted small">{product.class_label}</span>
-                  <strong>{product.customer_count.toLocaleString()} customers</strong>
+                  <strong>{t("products.customersCount", { count: formatNumber(product.customer_count) })}</strong>
                 </Link>
               </li>
             ))}
@@ -241,8 +245,10 @@ export default function ProductsPage() {
               <div className="product-class-head">
                 <h2 className="subsection-title">{group.class_label}</h2>
                 <span className="muted small">
-                  {group.customer_count.toLocaleString()} customers ·{" "}
-                  {group.policy_count.toLocaleString()} policies
+                  {t("products.classStats", {
+                    customers: formatNumber(group.customer_count),
+                    policies: formatNumber(group.policy_count),
+                  })}
                 </span>
               </div>
               <div className="product-heatmap-grid">
@@ -259,7 +265,7 @@ export default function ProductsPage() {
             </div>
           ))}
         {!loading && !error && catalog?.classes.length === 0 && (
-          <p className="muted small">No policy products in the warehouse.</p>
+          <p className="muted small">{t("products.empty")}</p>
         )}
       </section>
     </>

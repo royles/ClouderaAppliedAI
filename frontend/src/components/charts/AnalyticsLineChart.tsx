@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import {
   ChartSeries,
@@ -113,10 +114,12 @@ export default function AnalyticsLineChart({
   loading,
   valueFormat = "money",
   forecastDividerIndex = -1,
-  emptyMessage = "No data for this cohort.",
+  emptyMessage,
   interactive = false,
   onPeriodSelect,
 }: Props) {
+  const { t } = useTranslation();
+  const resolvedEmpty = emptyMessage ?? t("charts.common.empty");
   const width = 640;
   const height = 182;
   const padX = 44;
@@ -188,7 +191,7 @@ export default function AnalyticsLineChart({
     return (
       <div className="analytics-chart-panel">
         <h3 className="analytics-chart-title">{title}</h3>
-        <p className="muted small">Loading…</p>
+        <p className="muted small">{t("charts.common.loading")}</p>
       </div>
     );
   }
@@ -197,7 +200,7 @@ export default function AnalyticsLineChart({
     return (
       <div className="analytics-chart-panel">
         <h3 className="analytics-chart-title">{title}</h3>
-        <p className="muted small">{emptyMessage}</p>
+        <p className="muted small">{resolvedEmpty}</p>
       </div>
     );
   }
@@ -238,8 +241,7 @@ export default function AnalyticsLineChart({
       {subtitle && <p className="muted small analytics-chart-sub">{subtitle}</p>}
       {interactive && onPeriodSelect && (
         <p className="muted small chart-interactive-hint">
-          Move along the chart to preview a date, then click to filter customers on the
-          customer page.
+          {t("charts.common.interactiveHint")}
         </p>
       )}
       <div ref={canvasRef} className="value-chart-canvas">
@@ -384,7 +386,7 @@ export default function AnalyticsLineChart({
         <ChartFloatingTooltip position={tooltipPos}>
           <strong>
             {formatPeriodLabel(active.period)}
-            {active.kind === "forecast" ? " (forecast)" : ""}
+            {active.kind === "forecast" ? ` ${t("charts.common.forecast")}` : ""}
           </strong>
           {active.tooltipLines.map((line) => (
             <span key={line}>{line}</span>
@@ -395,9 +397,9 @@ export default function AnalyticsLineChart({
         {visibleSeries.map((s) => {
           const axisHint =
             usesDualAxis && (s.axis ?? "primary") === "secondary"
-              ? " · right axis"
+              ? t("charts.common.axisRight")
               : usesDualAxis
-                ? " · left axis"
+                ? t("charts.common.axisLeft")
                 : "";
           return (
             <li key={s.id}>

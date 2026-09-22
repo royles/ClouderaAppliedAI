@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   fetchKpiBenchmarks,
   KpiBenchmark,
@@ -37,6 +38,7 @@ function amberHelp(direction: string): string {
 }
 
 export default function AdminKpiBenchmarksPanel() {
+  const { t } = useTranslation();
   const [rows, setRows] = useState<RowState[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,7 +87,7 @@ export default function AdminKpiBenchmarksPanel() {
       });
       const updated = await updateKpiBenchmarks(payload);
       setRows(updated.benchmarks.map(rowToState));
-      setSavedNote("KPI benchmarks saved.");
+      setSavedNote(t("admin.kpiBenchmarks.saved"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Save failed");
     } finally {
@@ -94,15 +96,12 @@ export default function AdminKpiBenchmarksPanel() {
   };
 
   if (loading) {
-    return <p className="muted small">Loading KPI benchmark lookup…</p>;
+    return <p className="muted small">{t("admin.loading")}</p>;
   }
 
   return (
     <div className="admin-kpi-benchmarks">
-      <p className="muted small">
-        Objectives and amber thresholds for thermometers on <strong>The business</strong>. Leave
-        objective blank to auto-compute from the current portfolio when analytics load.
-      </p>
+      <p className="muted small">{t("admin.kpiBenchmarks.lede")}</p>
       {savedNote && <p className="admin-datasource-success">{savedNote}</p>}
       {error && <p className="error">{error}</p>}
 
@@ -111,11 +110,13 @@ export default function AdminKpiBenchmarksPanel() {
           <table className="data-table admin-kpi-table">
             <thead>
               <tr>
-                <th>Enabled</th>
-                <th>KPI</th>
-                <th>Objective</th>
-                <th>Amber threshold</th>
-                <th>Direction</th>
+                <th scope="col" className="visually-hidden">
+                  Enabled
+                </th>
+                <th>{t("admin.kpiBenchmarks.columns.kpi")}</th>
+                <th>{t("admin.kpiBenchmarks.columns.target")}</th>
+                <th>{t("admin.kpiBenchmarks.columns.unit")}</th>
+                <th>{t("admin.kpiBenchmarks.columns.direction")}</th>
               </tr>
             </thead>
             <tbody>
@@ -142,7 +143,7 @@ export default function AdminKpiBenchmarksPanel() {
                       className="admin-kpi-input"
                       value={row.targetInput}
                       onChange={(e) => patchRow(row.kpi_key, { targetInput: e.target.value })}
-                      placeholder="Auto"
+                      placeholder={t("admin.kpiBenchmarks.placeholderAuto")}
                     />
                     <span className="muted small">
                       Preview: {formatTargetPreview(row, row.targetInput)}
@@ -168,7 +169,7 @@ export default function AdminKpiBenchmarksPanel() {
         </div>
         <div className="admin-datasource-actions">
           <button type="submit" className="btn primary" disabled={saving}>
-            {saving ? "Saving…" : "Save KPI benchmarks"}
+            {saving ? t("admin.kpiBenchmarks.saving") : t("admin.kpiBenchmarks.save")}
           </button>
         </div>
       </form>

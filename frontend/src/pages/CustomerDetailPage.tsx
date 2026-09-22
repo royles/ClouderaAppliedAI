@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { CUSTOMER_BASE, ENGAGEMENT_BASE } from "../appRoutes";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -12,6 +13,7 @@ import {
 import CustomerInsightsPanel from "../components/CustomerInsightsPanel";
 import CustomerSummaryCard from "../components/CustomerSummaryCard";
 import CustomerValueChart from "../components/CustomerValueChart";
+import { formatMoneyIls } from "../formatMoney";
 import {
   formatCity,
   formatLastLogin,
@@ -21,22 +23,13 @@ import {
 } from "../pii";
 import { useMobileFocus } from "../mobileUxContext";
 
-function formatMoney(n?: number | null) {
-  if (n == null) return "—";
-  return new Intl.NumberFormat("en-IL", {
-    style: "currency",
-    currency: "ILS",
-    maximumFractionDigits: 0,
-  }).format(n);
-}
-
 type Tab = "policies" | "foreclosures" | "investments" | "interactions";
 
-function formatEventType(t: string) {
-  if (t === "REVIEW") return "Review";
-  if (t === "AGENT_QUESTION") return "Agent question";
-  if (t === "WEB_SEARCH") return "Web search";
-  return t;
+function formatEventType(t: (key: string) => string, type: string) {
+  if (type === "REVIEW") return t("customer.interactions.eventType.review");
+  if (type === "AGENT_QUESTION") return t("customer.interactions.eventType.agentQuestion");
+  if (type === "WEB_SEARCH") return t("customer.interactions.eventType.webSearch");
+  return type;
 }
 
 function interactionIcon(type: string) {
@@ -47,6 +40,8 @@ function interactionIcon(type: string) {
 }
 
 export default function CustomerDetailPage() {
+  const { t } = useTranslation();
+  const emDash = t("common.emDash");
   const mobileFocus = useMobileFocus();
   const { customerId } = useParams();
   const location = useLocation();
@@ -58,20 +53,20 @@ export default function CustomerDetailPage() {
   const backFromCustomerList =
     listBack.startsWith(CUSTOMER_BASE) || listBack.startsWith(ENGAGEMENT_BASE);
   const hubBackLabel = listBack.startsWith(ENGAGEMENT_BASE)
-    ? "Engagement"
+    ? t("nav.engagement.short")
     : backFromCustomerList
-      ? "The customer"
-      : "The business";
+      ? t("nav.customer.title")
+      : t("nav.business.title");
   const hubBackLinkText = listBack.startsWith(ENGAGEMENT_BASE)
-    ? "← Back to engagement"
+    ? t("customer.back.engagement")
     : backFromCustomerList
-      ? "← Back to customers"
-      : "← Back to the business";
+      ? t("customer.back.list")
+      : t("customer.back.business");
   const secondaryHubLinkText = listBack.startsWith(ENGAGEMENT_BASE)
-    ? "Back to engagement hub"
+    ? t("customer.link.engagementHub")
     : backFromCustomerList
-      ? "Back to customer list"
-      : "Portfolio in the business";
+      ? t("customer.link.list")
+      : t("customer.link.businessPortfolio");
   const [detail, setDetail] = useState<CustomerDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const navState = location.state as {
@@ -102,7 +97,7 @@ export default function CustomerDetailPage() {
 
   useEffect(() => {
     if (!Number.isFinite(id)) {
-      setError("Invalid customer ID");
+      setError(t("errors.invalidCustomerId"));
       return;
     }
     let cancelled = false;
@@ -116,7 +111,7 @@ export default function CustomerDetailPage() {
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Customer not found");
+          setError(e instanceof Error ? e.message : t("errors.customerNotFound"));
         }
       }
     })();
@@ -189,7 +184,7 @@ export default function CustomerDetailPage() {
         <Breadcrumbs
           items={[
             { label: hubBackLabel, to: listBack },
-            { label: "Loading…" },
+            { label: t("common.loading") },
           ]}
         />
         <section className="panel">
@@ -229,7 +224,7 @@ export default function CustomerDetailPage() {
         {!backFromCustomerList && (
           <>
             {" · "}
-            <Link to={CUSTOMER_BASE}>Customer home</Link>
+            <Link to={CUSTOMER_BASE}>{t("customer.homeLink")}</Link>
           </>
         )}
       </p>
@@ -243,8 +238,8 @@ export default function CustomerDetailPage() {
           <CustomerValueChart
             className="customer-detail-value-chart"
             fillContainer
-            title="Customer value"
-            subtitle="Solid lines are warehouse snapshots. Dashed projection: HIGH risk lapses to ₪0 within 3 months; MEDIUM extends recent history; LOW extends full history."
+            title={t("charts.customerValue.title")}
+            subtitle={t("charts.customerValue.subtitle")}
             points={valueHistory}
             loading={valueHistoryLoading}
             churn={
@@ -260,53 +255,58 @@ export default function CustomerDetailPage() {
         </div>
         {mobileFocus && (
           <p className="muted small">
-            {formatCity(profile.city_name)} · {policies.length} policies ·{" "}
-            {formatMoney(customerCard?.customer_value)}
+            {t("customer.mobile.summaryLine", {
+              city: formatCity(profile.city_name),
+              policies: policies.length,
+              value: formatMoneyIls(customerCard?.customer_value),
+            })}
           </p>
         )}
         {!mobileFocus && detail.churn?.scored_at && (
           <p className="muted small customer-detail-churn-meta">
-            Churn scored {formatLastLogin(detail.churn.scored_at)}
+            {t("customer.churn.scoredAt", {
+              date: formatLastLogin(detail.churn.scored_at),
+            })}
             {detail.churn.model_version ? ` · ${detail.churn.model_version}` : ""}
           </p>
         )}
         {!mobileFocus && (
         <p className="muted small customer-detail-privacy">
-          City and last login are shown in full; other sensitive fields remain masked.
+          {t("customer.privacyNotice")}
         </p>
         )}
         {!mobileFocus && (
         <div className="detail-grid customer-detail-profile-grid">
           <div>
-            <span className="label">Type</span>
-            <div>{profile.customer_type_dsc ?? "—"}</div>
+            <span className="label">{t("customer.profile.type")}</span>
+            <div>{profile.customer_type_dsc ?? emDash}</div>
           </div>
           <div>
-            <span className="label">Birth date</span>
+            <span className="label">{t("customer.profile.birthDate")}</span>
             <div>{maskDate(profile.birth_date)}</div>
           </div>
           <div>
-            <span className="label">Marital status</span>
-            <div>{profile.marital_status_dsc ?? "—"}</div>
+            <span className="label">{t("customer.profile.maritalStatus")}</span>
+            <div>{profile.marital_status_dsc ?? emDash}</div>
           </div>
           <div>
-            <span className="label">Address</span>
+            <span className="label">{t("customer.profile.address")}</span>
             <div>
               {[maskStreet(profile.street_name), formatCity(profile.city_name)]
-                .filter((x) => x !== "—")
-                .join(", ") || "—"}
+                .filter((x) => x !== emDash)
+                .join(", ") || emDash}
             </div>
           </div>
           <div>
-            <span className="label">Communication</span>
-            <div>{profile.communication_dsc ?? "—"}</div>
+            <span className="label">{t("customer.profile.communication")}</span>
+            <div>{profile.communication_dsc ?? emDash}</div>
           </div>
           <div>
-            <span className="label">Last interaction</span>
+            <span className="label">{t("customer.profile.lastInteraction")}</span>
             <div>
               {interaction_summary?.last_event_ts
                 ? formatLastLogin(interaction_summary.last_event_ts)
-                : "—"}
+                : emDash}
             </div>
           </div>
         </div>
@@ -315,7 +315,7 @@ export default function CustomerDetailPage() {
 
       {!mobileFocus && engagementActionHint && (
         <p className="engagement-action-banner muted small">
-          Suggested from Engagement hub: <strong>{engagementActionHint}</strong>
+          {t("customer.engagementHint.prefix")} <strong>{engagementActionHint}</strong>
         </p>
       )}
       {!mobileFocus && (
@@ -335,44 +335,44 @@ export default function CustomerDetailPage() {
           className={tab === "policies" ? "tab active" : "tab"}
           onClick={() => setTab("policies")}
         >
-          Policies ({policies.length})
+          {t("customer.tabs.policies")} ({policies.length})
         </button>
         <button
           type="button"
           className={tab === "foreclosures" ? "tab active" : "tab"}
           onClick={() => setTab("foreclosures")}
         >
-          Foreclosures ({foreclosures.length})
+          {t("customer.tabs.foreclosures")} ({foreclosures.length})
         </button>
         <button
           type="button"
           className={tab === "investments" ? "tab active" : "tab"}
           onClick={() => setTab("investments")}
         >
-          Investments ({investments.length})
+          {t("customer.tabs.investments")} ({investments.length})
         </button>
         <button
           type="button"
           className={tab === "interactions" ? "tab active" : "tab"}
           onClick={() => setTab("interactions")}
         >
-          Interactions ({interaction_summary?.total_events ?? interactions.length})
+          {t("customer.tabs.interactions")} ({interaction_summary?.total_events ?? interactions.length})
         </button>
       </div>
 
       {tab === "policies" && (
         <section className="panel">
-          <h2>Policies</h2>
-          <p className="muted small">Click a policy to filter investment snapshots.</p>
+          <h2>{t("customer.policies.title")}</h2>
+          <p className="muted small">{t("customer.policies.hint")}</p>
           <div className="table-wrap">
             <table className="table table-interactive">
               <thead>
                 <tr>
-                  <th>Number</th>
-                  <th>Type</th>
-                  <th>Status</th>
-                  <th>Active</th>
-                  <th>Monthly premium</th>
+                  <th>{t("customer.policies.columns.number")}</th>
+                  <th>{t("customer.policies.columns.type")}</th>
+                  <th>{t("customer.policies.columns.status")}</th>
+                  <th>{t("customer.policies.columns.active")}</th>
+                  <th>{t("customer.policies.columns.monthlyPremium")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -391,10 +391,10 @@ export default function CustomerDetailPage() {
                     }
                   >
                     <td>{p.policy_num}</td>
-                    <td>{p.policy_type_desc ?? "—"}</td>
-                    <td>{p.policy_status_desc ?? "—"}</td>
-                    <td>{p.is_active ? "Yes" : "No"}</td>
-                    <td>{formatMoney(p.bruto_monthly_premium)}</td>
+                    <td>{p.policy_type_desc ?? emDash}</td>
+                    <td>{p.policy_status_desc ?? emDash}</td>
+                    <td>{p.is_active ? t("common.yes") : t("common.no")}</td>
+                    <td>{formatMoneyIls(p.bruto_monthly_premium)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -405,27 +405,27 @@ export default function CustomerDetailPage() {
 
       {tab === "foreclosures" && (
         <section className="panel">
-          <h2>Foreclosures & encumbrances</h2>
+          <h2>{t("customer.foreclosures.title")}</h2>
           {foreclosures.length === 0 ? (
-            <p className="muted">No foreclosure records.</p>
+            <p className="muted">{t("customer.foreclosures.empty")}</p>
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Proceeding #</th>
-                    <th>Amount</th>
-                    <th>Date</th>
-                    <th>Portfolio</th>
+                    <th>{t("customer.foreclosures.columns.proceeding")}</th>
+                    <th>{t("customer.foreclosures.columns.amount")}</th>
+                    <th>{t("customer.foreclosures.columns.date")}</th>
+                    <th>{t("customer.foreclosures.columns.portfolio")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {foreclosures.map((f) => (
                     <tr key={f.foreclosures_number}>
                       <td>{f.foreclosures_number}</td>
-                      <td>{formatMoney(f.foreclosures_amount)}</td>
+                      <td>{formatMoneyIls(f.foreclosures_amount)}</td>
                       <td>{maskDate(f.foreclosures_date)}</td>
-                      <td>{f.portfolio_number ?? "—"}</td>
+                      <td>{f.portfolio_number ?? emDash}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -437,44 +437,46 @@ export default function CustomerDetailPage() {
 
       {tab === "interactions" && (
         <section className="panel">
-          <h2>Interaction timeline</h2>
-          <p className="muted small">
-            Synthetic omnichannel events — reviews, agent questions, and product or help
-            searches — used by churn scoring and AI recommendations.
-          </p>
+          <h2>{t("customer.interactions.title")}</h2>
+          <p className="muted small">{t("customer.interactions.lede")}</p>
           {interaction_summary && (
             <div className="interaction-stats">
               <span>
-                Last 90 days: <strong>{interaction_summary.events_last_90d}</strong> events
+                {t("customer.interactions.stats.last90d", {
+                  count: interaction_summary.events_last_90d,
+                })}
               </span>
               {interaction_summary.avg_review_rating != null && (
                 <span>
-                  Avg review: <strong>{interaction_summary.avg_review_rating}/5</strong>
+                  {t("customer.interactions.stats.avgReview", {
+                    avg: interaction_summary.avg_review_rating,
+                  })}
                 </span>
               )}
               {interaction_summary.unresolved_agent_questions > 0 && (
                 <span className="warn-stat">
-                  Open agent items:{" "}
-                  <strong>{interaction_summary.unresolved_agent_questions}</strong>
+                  {t("customer.interactions.stats.openAgent", {
+                    count: interaction_summary.unresolved_agent_questions,
+                  })}
                 </span>
               )}
             </div>
           )}
           {interactions.length === 0 ? (
-            <p className="muted">No interaction events recorded.</p>
+            <p className="muted">{t("customer.interactions.empty")}</p>
           ) : (
             <ol className="interaction-timeline">
               {interactions.map((ev) => {
                 const signal =
                   ev.event_type === "REVIEW" && ev.rating != null
-                    ? `${ev.rating}/5 stars`
+                    ? t("customer.interactions.signal.stars", { rating: ev.rating })
                     : ev.event_type === "AGENT_QUESTION"
                       ? ev.resolved
-                        ? "Resolved"
-                        : "Open"
+                        ? t("customer.interactions.signal.resolved")
+                        : t("customer.interactions.signal.open")
                       : ev.topic === "help_center"
-                        ? "Help search"
-                        : "Product search";
+                        ? t("customer.interactions.signal.helpSearch")
+                        : t("customer.interactions.signal.productSearch");
                 return (
                   <li
                     key={ev.event_id}
@@ -489,10 +491,10 @@ export default function CustomerDetailPage() {
                     </div>
                     <div className="timeline-body">
                       <div className="timeline-head">
-                        <strong>{formatEventType(ev.event_type)}</strong>
+                        <strong>{formatEventType(t, ev.event_type)}</strong>
                         <span className="muted small">{maskDate(ev.event_ts)}</span>
                       </div>
-                      <p className="timeline-title">{ev.query_or_title ?? "—"}</p>
+                      <p className="timeline-title">{ev.query_or_title ?? emDash}</p>
                       <p className="muted small timeline-meta">
                         {[ev.channel, signal].filter(Boolean).join(" · ")}
                       </p>
@@ -507,41 +509,41 @@ export default function CustomerDetailPage() {
 
       {tab === "investments" && (
         <section className="panel">
-          <h2>Latest investment snapshots</h2>
+          <h2>{t("customer.investments.title")}</h2>
           {activePolicy != null && (
             <p className="filter-banner">
-              Policy filter: <strong>{activePolicy}</strong>
+              {t("customer.investments.policyFilter")} <strong>{activePolicy}</strong>
               <button
                 type="button"
                 className="link-btn"
                 onClick={() => setActivePolicy(null)}
               >
-                Show all
+                {t("common.showAll")}
               </button>
             </p>
           )}
           {filteredInvestments.length === 0 ? (
-            <p className="muted">No investment snapshots for this selection.</p>
+            <p className="muted">{t("customer.investments.empty")}</p>
           ) : (
             <div className="table-wrap">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Policy</th>
-                    <th>Fund</th>
-                    <th>Snapshot</th>
-                    <th>Accumulation</th>
-                    <th>YTD P/L</th>
+                    <th>{t("customer.investments.columns.policy")}</th>
+                    <th>{t("customer.investments.columns.fund")}</th>
+                    <th>{t("customer.investments.columns.snapshot")}</th>
+                    <th>{t("customer.investments.columns.accumulation")}</th>
+                    <th>{t("customer.investments.columns.ytdPl")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredInvestments.map((inv, idx) => (
                     <tr key={`${inv.policy_num}-${inv.fund_id}-${idx}`}>
                       <td>{inv.policy_num}</td>
-                      <td>{inv.fund_id ?? "—"}</td>
+                      <td>{inv.fund_id ?? emDash}</td>
                       <td>{maskDate(inv.snapshot_date)}</td>
-                      <td>{formatMoney(inv.accumulation_total)}</td>
-                      <td>{formatMoney(inv.yearly_profit_loss_total)}</td>
+                      <td>{formatMoneyIls(inv.accumulation_total)}</td>
+                      <td>{formatMoneyIls(inv.yearly_profit_loss_total)}</td>
                     </tr>
                   ))}
                 </tbody>

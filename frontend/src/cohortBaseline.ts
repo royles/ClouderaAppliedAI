@@ -1,4 +1,5 @@
 import { PortfolioAnalytics, ValueHistoryPoint } from "./api";
+import i18n from "./i18n";
 
 export function valuesByPeriod(
   rows: ValueHistoryPoint[],
@@ -17,7 +18,7 @@ export function shareOfBook(cohort: number, book: number, digits = 1): number | 
 export function formatShareOfBook(cohort: number, book: number, digits = 1): string | null {
   const pct = shareOfBook(cohort, book, digits);
   if (pct == null) return null;
-  return `${pct.toFixed(digits)}% of full book`;
+  return i18n.t("business.cohort.shareOfBook", { pct: pct.toFixed(digits) });
 }
 
 export function formatDeltaVsBook(

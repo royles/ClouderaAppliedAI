@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { PremiumMomentumPoint } from "../../api";
 import AnalyticsLineChart, { moneyTooltip } from "./AnalyticsLineChart";
 import { formatTooltipCount } from "./analyticsChartUtils";
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export default function PremiumMomentumChart({ series, loading }: Props) {
+  const { t } = useTranslation();
   const points = series.map((p) => ({
     period: p.period,
     kind: "actual" as const,
@@ -19,8 +21,8 @@ export default function PremiumMomentumChart({ series, loading }: Props) {
 
   return (
     <AnalyticsLineChart
-      title="Active policies & premium"
-      subtitle="Premium base (left axis) and active policy count (right axis) — one customer may hold many policies."
+      title={t("charts.premiumMomentum.title")}
+      subtitle={t("charts.premiumMomentum.subtitle")}
       points={points}
       loading={loading}
       interactive={false}
@@ -42,7 +44,7 @@ export default function PremiumMomentumChart({ series, loading }: Props) {
           valueFormat: "count",
         },
       ]}
-      emptyMessage="No policy premium trend for the active book yet."
+      emptyMessage={t("charts.premiumMomentum.empty")}
     />
   );
 }

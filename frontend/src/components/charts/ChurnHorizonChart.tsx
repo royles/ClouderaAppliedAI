@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useMemo } from "react";
 import { ChurnForecastPoint } from "../../api";
 import { ChartPeriodSelection } from "../../chartFilter";
@@ -18,6 +19,7 @@ export default function ChurnHorizonChart({
   interactive,
   onPeriodSelect,
 }: Props) {
+  const { t } = useTranslation();
   const forecastStart = useMemo(
     () => series.findIndex((p) => p.kind === "forecast"),
     [series],
@@ -109,17 +111,13 @@ export default function ChurnHorizonChart({
 
   return (
     <AnalyticsLineChart
-      title="Churn horizon"
-      subtitle={
-        baselineBookActual
-          ? "Cohort retained/risk vs full-book reference (dashed gray) and survival forecast."
-          : "Retained vs at-risk value; dashed blue = survival forecast of total book."
-      }
+      title={t("charts.churnHorizon.title")}
+      subtitle={t("charts.churnHorizon.subtitle")}
       points={points}
       loading={loading}
       forecastDividerIndex={forecastStart}
       series={chartSeries}
-      emptyMessage="No churn horizon data for this cohort."
+      emptyMessage={t("charts.churnHorizon.empty")}
       interactive={interactive}
       onPeriodSelect={onPeriodSelect}
     />

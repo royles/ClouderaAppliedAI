@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { EngagementTrendPoint } from "../../api";
 import AnalyticsLineChart from "./AnalyticsLineChart";
 import { formatTooltipCount } from "./analyticsChartUtils";
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export default function EngagementObjectiveChart({ series, loading }: Props) {
+  const { t } = useTranslation();
   const points = series.map((p) => ({
     period: p.period,
     kind: "actual" as const,
@@ -19,8 +21,8 @@ export default function EngagementObjectiveChart({ series, loading }: Props) {
 
   return (
     <AnalyticsLineChart
-      title="Customer engagement"
-      subtitle="Digital & service touchpoints — customer at the center pillar."
+      title={t("charts.engagementObjective.title")}
+      subtitle={t("charts.engagementObjective.subtitle")}
       points={points}
       loading={loading}
       interactive={false}
@@ -39,7 +41,7 @@ export default function EngagementObjectiveChart({ series, loading }: Props) {
           values: series.map((p) => p.digital_touchpoints),
         },
       ]}
-      emptyMessage="No interaction history for the active book yet."
+      emptyMessage={t("charts.engagementObjective.empty")}
     />
   );
 }

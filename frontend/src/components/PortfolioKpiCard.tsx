@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { KpiTargetProgress } from "../api";
 import KpiThermometer from "./KpiThermometer";
 
@@ -22,6 +23,7 @@ export default function PortfolioKpiCard({
   onClick,
   actionHint,
 }: Props) {
+  const { t } = useTranslation();
   const interactive = Boolean(onClick) && !loading;
   return (
     <div
@@ -51,7 +53,9 @@ export default function PortfolioKpiCard({
       {progress && !loading ? (
         <div className="portfolio-kpi-progress-row">
           {targetLabel ? (
-            <span className="muted small kpi-target-line">Objective: {targetLabel}</span>
+            <span className="muted small kpi-target-line">
+              {t("business.kpi.objective", { target: targetLabel })}
+            </span>
           ) : (
             <span className="kpi-target-line kpi-target-spacer" aria-hidden />
           )}

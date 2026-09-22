@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { CustomerSummary } from "../api";
 import ChurnBadge from "../ChurnBadge";
 import { formatMoneyIls } from "../formatMoney";
@@ -46,6 +47,7 @@ type StaticProps = BaseProps & {
 type Props = LinkProps | StaticProps;
 
 export default function CustomerSummaryCard(props: Props) {
+  const { t } = useTranslation();
   const { customer, showRank, rank, className = "" } = props;
   const cardClass = `customer-card${props.variant === "static" ? " customer-card-static" : ""}${className ? ` ${className}` : ""}`;
 
@@ -54,7 +56,7 @@ export default function CustomerSummaryCard(props: Props) {
       <div className="customer-card-top">
         <div className="customer-card-identity">
           {showRank && rank != null && (
-            <span className="customer-card-rank" aria-label={`Rank ${rank}`}>
+            <span className="customer-card-rank" aria-label={t("customer.card.rankA11y", { rank })}>
               #{rank}
             </span>
           )}
@@ -66,7 +68,7 @@ export default function CustomerSummaryCard(props: Props) {
               : ""}
           </p>
           <p className="customer-card-value">
-            <span className="label">Customer value</span>
+            <span className="label">{t("customer.card.value")}</span>
             <strong>{formatMoneyIls(customer.customer_value)}</strong>
           </p>
         </div>
@@ -78,15 +80,15 @@ export default function CustomerSummaryCard(props: Props) {
 
       <dl className="customer-card-stats">
         <div>
-          <dt>Policies</dt>
+          <dt>{t("customer.card.policies")}</dt>
           <dd>{customer.policy_count ?? 0}</dd>
         </div>
         <div>
-          <dt>Investments</dt>
+          <dt>{t("customer.card.investments")}</dt>
           <dd>{customer.investment_count ?? 0}</dd>
         </div>
         <div>
-          <dt>Last login</dt>
+          <dt>{t("customer.card.lastLogin")}</dt>
           <dd>{formatLastLogin(customer.last_login)}</dd>
         </div>
       </dl>
@@ -103,7 +105,7 @@ export default function CustomerSummaryCard(props: Props) {
 
   if (props.variant === "static") {
     return (
-      <article className={cardClass} aria-label="Customer summary">
+      <article className={cardClass} aria-label={t("customer.card.a11ySummary")}>
         {body}
       </article>
     );

@@ -1,5 +1,8 @@
+import { useTranslation } from "react-i18next";
 import { DomainCount, Overview } from "../api";
 import { CustomerSegment } from "../api";
+import { appIntlLocale } from "../i18n";
+import { formatNumber } from "../localeFormat";
 
 type Props = {
   overview: Overview | null;
@@ -16,6 +19,7 @@ export default function DomainFilterGrid({
   helperText,
   updatedAt,
 }: Props) {
+  const { t } = useTranslation();
   const onCardClick = (domain: DomainCount) => {
     const key = domain.filter_key as CustomerSegment;
     onSelect(segment === key ? "customers_all" : key);
@@ -28,7 +32,9 @@ export default function DomainFilterGrid({
           {helperText && <p className="muted small">{helperText}</p>}
           {updatedAt && (
             <p className="muted small data-freshness">
-              Counts refreshed {updatedAt.toLocaleTimeString()}
+              {t("business.domainFilter.refreshedAt", {
+                time: updatedAt.toLocaleTimeString(appIntlLocale()),
+              })}
             </p>
           )}
         </div>
@@ -58,26 +64,30 @@ export default function DomainFilterGrid({
                 {isPolicyBookCard ? (
                   <>
                     <div className="stat-value">
-                      {policyTotal.toLocaleString()}
+                      {formatNumber(policyTotal)}
                     </div>
                     <div className="stat-label">{d.domain}</div>
                     <div className="stat-policy-foot">
-                      {policyActive.toLocaleString()} active · avg{" "}
-                      {avgPoliciesPerCustomer.toFixed(1)} / customer
+                      {t("business.domainFilter.policyFoot", {
+                        active: formatNumber(policyActive),
+                        avg: avgPoliciesPerCustomer.toFixed(1),
+                      })}
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="stat-value">
-                      {(d.row_count ?? 0).toLocaleString()}
+                      {formatNumber(d.row_count ?? 0)}
                     </div>
                     <div className="stat-label">{d.domain}</div>
                     {filterKey === "customers_all" &&
                       policyTotal > 0 &&
                       d.policy_total != null && (
                         <div className="stat-policy-foot">
-                          {policyTotal.toLocaleString()} policies ·{" "}
-                          {policyActive.toLocaleString()} active
+                          {t("business.domainFilter.allBookFoot", {
+                            policies: formatNumber(policyTotal),
+                            active: formatNumber(policyActive),
+                          })}
                         </div>
                       )}
                   </>

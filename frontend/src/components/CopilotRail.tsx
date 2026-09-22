@@ -1,9 +1,11 @@
+import { useTranslation } from "react-i18next";
 import { useAgentCopilot } from "../agentCopilotContext";
 import { useMobileUx } from "../mobileUxContext";
 import AgentCopilotSidebar from "./AgentCopilotSidebar";
 import CopilotPanelIcon from "./CopilotPanelIcon";
 
 export default function CopilotRail() {
+  const { t } = useTranslation();
   const { enabled, open, toggleOpen } = useAgentCopilot();
   const { isPhone, mobilePane } = useMobileUx();
   if (!enabled) return null;
@@ -24,8 +26,10 @@ export default function CopilotRail() {
           className={`header-copilot-btn copilot-toggle${open ? " copilot-toggle-docked" : ""}`}
           onClick={toggleOpen}
           aria-pressed={open}
-          aria-label={open ? "Close executive copilot" : "Open executive copilot"}
-          title={open ? "Close copilot" : "Open copilot"}
+          aria-label={
+            open ? t("copilot.a11y.toggleClose") : t("copilot.a11y.toggleOpen")
+          }
+          title={open ? t("copilot.toggleTitle.close") : t("copilot.toggleTitle.open")}
         >
           <CopilotPanelIcon />
         </button>

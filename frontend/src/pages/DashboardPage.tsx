@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation, useSearchParams } from "react-router-dom";
 import {
   CustomerSegment,
@@ -37,6 +38,7 @@ const COMPARE_OPTIONS: CustomerSegment[] = [
 ];
 
 export default function DashboardPage() {
+  const { t } = useTranslation();
   const mobileFocus = useMobileFocus();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -86,7 +88,7 @@ export default function DashboardPage() {
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load overview");
+          setError(e instanceof Error ? e.message : t("errors.overviewLoadFailed"));
         }
       } finally {
         if (!cancelled) setOverviewLoading(false);
@@ -234,7 +236,7 @@ export default function DashboardPage() {
   if (overviewLoading && !overview) {
     return (
       <>
-        <Breadcrumbs items={[{ label: "The business" }]} />
+        <Breadcrumbs items={[{ label: t("nav.business.title") }]} />
         <section className="panel">
           <div className="skeleton skeleton-title" />
           <div className="stat-grid">
@@ -255,20 +257,20 @@ export default function DashboardPage() {
 
   return (
     <>
-      {!mobileFocus && <Breadcrumbs items={[{ label: "The business" }]} />}
+      {!mobileFocus && <Breadcrumbs items={[{ label: t("nav.business.title") }]} />}
       <section className="panel">
         {!mobileFocus && (
         <DomainFilterGrid
           overview={overview}
           segment={segment}
           onSelect={setSegment}
-          helperText="Click a card to filter analytics. Click again to clear."
+          helperText={t("business.domainFilter.helperAnalytics")}
         />
         )}
         {!mobileFocus && (
         <div className="cohort-compare-toolbar">
           <label className="cohort-compare-label" htmlFor="cohort-compare-select">
-            Compare to
+            {t("business.compare.label")}
           </label>
           <select
             id="cohort-compare-select"
@@ -276,7 +278,7 @@ export default function DashboardPage() {
             value={compareSegment ?? ""}
             onChange={(e) => setCompare(e.target.value as CustomerSegment | "")}
           >
-            <option value="">No comparison</option>
+            <option value="">{t("business.compare.none")}</option>
             {COMPARE_OPTIONS.filter((s) => s !== segment).map((s) => (
               <option key={s} value={s}>
                 {compareDomainLabel(overview, s)}
@@ -300,7 +302,7 @@ export default function DashboardPage() {
             />
           )}
         {!mobileFocus && compareLoading && compareSegment && (
-          <p className="muted small cohort-compare-loading">Loading comparison cohort…</p>
+          <p className="muted small cohort-compare-loading">{t("business.compare.loading")}</p>
         )}
         <PortfolioAnalyticsSection
           data={portfolioAnalytics}

@@ -23,6 +23,8 @@ import DashboardPage from "./pages/DashboardPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import CustomerHubPage from "./pages/CustomerHubPage";
 import EngagementHubPage from "./pages/EngagementHubPage";
+import LanguageSwitcher from "./components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 function LegacyRootRedirect() {
   const location = useLocation();
@@ -40,6 +42,7 @@ function LegacyCustomerRedirect() {
 }
 
 function AppSideNav() {
+  const { t } = useTranslation();
   const location = useLocation();
   const businessActive = isBusinessArea(location.pathname);
   const customerActive = isCustomerArea(location.pathname);
@@ -48,18 +51,18 @@ function AppSideNav() {
   const adminActive = isAdminArea(location.pathname);
 
   return (
-    <aside className="app-side-nav" aria-label="Application areas">
+    <aside className="app-side-nav" aria-label={t("app.a11y.applicationAreas")}>
       <div className="app-side-nav-body">
-        <p className="app-side-nav-heading">Workspace</p>
-        <nav className="app-side-tabs" aria-label="Workspace">
+        <p className="app-side-nav-heading">{t("nav.workspace")}</p>
+        <nav className="app-side-tabs" aria-label={t("nav.workspace")}>
           <Link
             to={BUSINESS_BASE}
             className={`app-side-tab${businessActive ? " is-active" : ""}`}
             aria-current={businessActive ? "page" : undefined}
           >
-            <span className="app-side-tab-title">The business</span>
+            <span className="app-side-tab-title">{t("nav.business.title")}</span>
             <span className="app-side-tab-desc muted small">
-              Book, cohorts, and portfolio KPIs
+              {t("nav.business.desc")}
             </span>
           </Link>
           <Link
@@ -67,9 +70,9 @@ function AppSideNav() {
             className={`app-side-tab${customerActive ? " is-active" : ""}`}
             aria-current={customerActive ? "page" : undefined}
           >
-            <span className="app-side-tab-title">The customer</span>
+            <span className="app-side-tab-title">{t("nav.customer.title")}</span>
             <span className="app-side-tab-desc muted small">
-              360 profile, insights, and outreach
+              {t("nav.customer.desc")}
             </span>
           </Link>
           <Link
@@ -77,9 +80,9 @@ function AppSideNav() {
             className={`app-side-tab${engagementActive ? " is-active" : ""}`}
             aria-current={engagementActive ? "page" : undefined}
           >
-            <span className="app-side-tab-title">Engagement</span>
+            <span className="app-side-tab-title">{t("nav.engagement.title")}</span>
             <span className="app-side-tab-desc muted small">
-              Touchpoints, influence, and next best action
+              {t("nav.engagement.desc")}
             </span>
           </Link>
           <Link
@@ -87,24 +90,24 @@ function AppSideNav() {
             className={`app-side-tab${productsActive ? " is-active" : ""}`}
             aria-current={productsActive ? "page" : undefined}
           >
-            <span className="app-side-tab-title">Products</span>
+            <span className="app-side-tab-title">{t("nav.products.title")}</span>
             <span className="app-side-tab-desc muted small">
-              Product heatmap and customer drill-down
+              {t("nav.products.desc")}
             </span>
           </Link>
         </nav>
       </div>
       <div className="app-side-nav-footer">
-        <p className="app-side-nav-heading">Administration</p>
-        <nav className="app-side-tabs" aria-label="Administration">
+        <p className="app-side-nav-heading">{t("nav.admin.section")}</p>
+        <nav className="app-side-tabs" aria-label={t("app.a11y.administrationNav")}>
           <Link
             to={ADMIN_BASE}
             className={`app-side-tab app-side-tab-admin${adminActive ? " is-active" : ""}`}
             aria-current={adminActive ? "page" : undefined}
           >
-            <span className="app-side-tab-title">Data &amp; admin</span>
+            <span className="app-side-tab-title">{t("nav.admin.title")}</span>
             <span className="app-side-tab-desc muted small">
-              Health, warehouse, data source
+              {t("nav.admin.desc")}
             </span>
           </Link>
         </nav>
@@ -114,6 +117,7 @@ function AppSideNav() {
 }
 
 function AppLayout() {
+  const { t } = useTranslation();
   const { enabled, open } = useAgentCopilot();
   const { isPhone, mobilePane, mobileFocus } = useMobileUx();
   const showMain = !isPhone || mobilePane === "content";
@@ -132,11 +136,12 @@ function AppLayout() {
           }`}
         >
           <Link to={BUSINESS_BASE} className="brand">
-            Insurance Customer 360
+            {t("app.brand.title")}
           </Link>
           {!isPhone && (
-            <span className="tag">Cloudera AI · Business &amp; customer views</span>
+            <span className="tag">{t("app.brand.tagline")}</span>
           )}
+          <LanguageSwitcher />
         </header>
       )}
       <div

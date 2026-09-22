@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { ValueHistoryPoint } from "../api";
 import {
@@ -17,6 +18,7 @@ import {
   ChartTooltipPosition,
   xForIndex,
 } from "./charts/chartPointer";
+import { intlLocale } from "../localeFormat";
 
 type Props = {
   title: string;
@@ -34,7 +36,7 @@ type Props = {
 function formatPeriodLabel(period: string) {
   if (period.length >= 7) {
     const [y, m] = period.split("-");
-    const month = new Date(Number(y), Number(m) - 1, 1).toLocaleString("en-GB", {
+    const month = new Date(Number(y), Number(m) - 1, 1).toLocaleString(intlLocale(), {
       month: "short",
     });
     return `${month} ${y?.slice(2)}`;
@@ -49,7 +51,7 @@ function formatAxisMoney(n: number) {
 }
 
 function formatTooltipMoney(n: number) {
-  return new Intl.NumberFormat("en-IL", {
+  return new Intl.NumberFormat(intlLocale(), {
     style: "currency",
     currency: "ILS",
     maximumFractionDigits: 0,
@@ -115,6 +117,7 @@ export default function CustomerValueChart({
   churn,
   fillContainer = false,
 }: Props) {
+  const { t } = useTranslation();
   const wrapClass = [
     "value-chart-wrap",
     "in-panel",
@@ -233,7 +236,7 @@ export default function CustomerValueChart({
     return (
       <div className={wrapClass}>
         <h2 className="subsection-title">{title}</h2>
-        <p className="muted small">Loading value history…</p>
+        <p className="muted small">{t("charts.customerValue.loading")}</p>
       </div>
     );
   }
@@ -242,7 +245,7 @@ export default function CustomerValueChart({
     return (
       <div className={wrapClass}>
         <h2 className="subsection-title">{title}</h2>
-        <p className="muted small">No historical value snapshots for this selection.</p>
+        <p className="muted small">{t("charts.customerValue.empty")}</p>
       </div>
     );
   }
@@ -305,7 +308,7 @@ export default function CustomerValueChart({
   return (
     <div className={wrapClass}>
       {refreshing && (
-        <p className="value-chart-refresh-label muted small">Updating chart…</p>
+        <p className="value-chart-refresh-label muted small">{t("charts.customerValue.refreshing")}</p>
       )}
       <div className="panel-head value-chart-head">
         <div>
@@ -314,12 +317,12 @@ export default function CustomerValueChart({
         </div>
         <div className="value-chart-kpi value-chart-kpi-stack">
           <div>
-            <span className="label">Latest total</span>
+            <span className="label">{t("charts.customerValue.latestTotal")}</span>
             <strong>{formatAxisMoney(last)}</strong>
             <span className={`small ${delta >= 0 ? "delta-up" : "delta-down"}`}>
               {delta >= 0 ? "+" : ""}
               {formatAxisMoney(delta)} ({deltaPct >= 0 ? "+" : ""}
-              {deltaPct.toFixed(1)}%) vs start
+              {deltaPct.toFixed(1)}%) {t("charts.customerValue.vsStart")}
             </span>
           </div>
           {showChurnForecast && (
@@ -331,7 +334,7 @@ export default function CustomerValueChart({
               <strong>
                 {scenario === "high_lapse"
                   ? "Lapse within 3 months"
-                  : `Projected ${forecastHorizonMonths} months`}
+                  : t("charts.customerValue.projected", { months: forecastHorizonMonths })}
               </strong>
               <span className="muted small">
                 At-risk {formatTooltipMoney(valueAtRisk)}
@@ -511,24 +514,36 @@ export default function CustomerValueChart({
         <ChartFloatingTooltip position={tooltipPos}>
           <strong>
             {formatPeriodLabel(active.period)}
-            {active.kind === "forecast" ? " (projected)" : ""}
+            {active.kind === "forecast" ? t("customer.valueChart.projectedSuffix") : ""}
           </strong>
-          <span>Total {formatTooltipMoney(active.total_value)}</span>
+          <span>
+            {t("customer.valueChart.tooltipTotal", {
+              amount: formatTooltipMoney(active.total_value),
+            })}
+          </span>
           {active.kind === "actual" && (
             <>
-              <span>Investments {formatTooltipMoney(active.investment_value)}</span>
-              <span>Coverage {formatTooltipMoney(active.coverage_value)}</span>
+              <span>
+                {t("customer.valueChart.tooltipInvestments", {
+                  amount: formatTooltipMoney(active.investment_value),
+                })}
+              </span>
+              <span>
+                {t("customer.valueChart.tooltipCoverage", {
+                  amount: formatTooltipMoney(active.coverage_value),
+                })}
+              </span>
             </>
           )}
           {active.is_predicted_lapse && (
-            <span className="warn-stat">Predicted lapse — value at ₪0</span>
+            <span className="warn-stat">{t("customer.valueChart.predictedLapse")}</span>
           )}
         </ChartFloatingTooltip>
       )}
 
       <ul className="chart-legend chart-legend-compact">
         <li>
-          <LegendSwatch visualKey="book-total" /> Total customer value (actual)
+          <LegendSwatch visualKey="book-total" /> {t("customer.valueChart.legendActualFull")}
         </li>
         {showChurnForecast && forecastLegendLabel && (
           <li>
@@ -536,10 +551,12 @@ export default function CustomerValueChart({
           </li>
         )}
         <li>
-          <LegendSwatch visualKey="book-investment" /> Investment accumulation
+          <LegendSwatch visualKey="book-investment" />{" "}
+          {t("charts.customerValue.legendInvestmentAcc")}
         </li>
         <li>
-          <LegendSwatch visualKey="book-coverage" /> Coverage &amp; savings (policy status)
+          <LegendSwatch visualKey="book-coverage" />{" "}
+          {t("charts.customerValue.legendCoverageSavings")}
         </li>
       </ul>
     </div>

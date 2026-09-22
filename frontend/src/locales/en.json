@@ -1,0 +1,739 @@
+{
+  "app": {
+    "language": "Language",
+    "languageEn": "EN",
+    "languageHe": "עב",
+    "brand": {
+      "title": "Insurance Customer 360",
+      "tagline": "Cloudera AI · Business & customer views"
+    },
+    "a11y": {
+      "applicationAreas": "Application areas",
+      "administrationNav": "Administration"
+    },
+    "dataFreshness": {
+      "label": "Data freshness",
+      "warehouse": "Warehouse",
+      "metricsCache": "Metrics cache",
+      "portfolioCache": "Portfolio cache",
+      "churnScores": "Churn scores",
+      "churnScored": "{{date}} ({{count}} customers)"
+    }
+  },
+  "nav": {
+    "workspace": "Workspace",
+    "business": {
+      "title": "The business",
+      "desc": "Book, cohorts, and portfolio KPIs"
+    },
+    "customer": {
+      "title": "The customer",
+      "desc": "360 profile, insights, and outreach"
+    },
+    "engagement": {
+      "title": "Engagement",
+      "desc": "Touchpoints, influence, and next best action",
+      "short": "Engagement"
+    },
+    "products": {
+      "title": "Products",
+      "desc": "Product heatmap and customer drill-down"
+    },
+    "admin": {
+      "section": "Administration",
+      "title": "Data & admin",
+      "desc": "Health, warehouse, data source"
+    }
+  },
+  "common": {
+    "loading": "Loading…",
+    "yes": "Yes",
+    "no": "No",
+    "none": "None",
+    "showAll": "Show all",
+    "emDash": "—",
+    "a11y": {
+      "breadcrumb": "Breadcrumb"
+    }
+  },
+  "errors": {
+    "overviewLoadFailed": "Failed to load overview",
+    "productsLoadFailed": "Failed to load products",
+    "engagementLoadFailed": "Failed to load engagement hub",
+    "adminLoadFailed": "Failed to load admin data",
+    "customersLoadFailed": "Failed to load customers",
+    "invalidCustomerId": "Invalid customer ID",
+    "customerNotFound": "Customer not found",
+    "copilotUnreachable": "Could not reach the copilot. Check that the API is running.",
+    "boundary": {
+      "title": "Something went wrong",
+      "hint": "Try a hard refresh. If this persists, restart the application and confirm frontend/dist matches the running API version.",
+      "reload": "Reload page"
+    }
+  },
+  "cohort": {
+    "fullBook": "Full book",
+    "filteredCohort": "Filtered cohort",
+    "filteredBy": "Filtered by “{{label}}”",
+    "fullActiveBook": "Full active customer book",
+    "segments": {
+      "customers_all": "All customers",
+      "with_policies": "With policies",
+      "with_foreclosures": "With foreclosures",
+      "with_investments": "With investments",
+      "with_insurance_status": "With insurance status",
+      "with_market_products": "With market products"
+    }
+  },
+  "business": {
+    "domainFilter": {
+      "helperAnalytics": "Click a card to filter analytics. Click again to clear.",
+      "helperCustomerList": "Click a card to filter the customer list. Click again to clear.",
+      "refreshedAt": "Counts refreshed {{time}}",
+      "policyFoot": "{{active}} active · avg {{avg}} / customer",
+      "allBookFoot": "{{policies}} policies · {{active}} active"
+    },
+    "compare": {
+      "label": "Compare to",
+      "none": "No comparison",
+      "loading": "Loading comparison cohort…",
+      "panelTitle": "Cohort comparison",
+      "panelLede": "Side-by-side KPIs for the selected card vs a second cohort (charts above stay on the primary selection).",
+      "metric": "Metric",
+      "delta": "Delta",
+      "deltaVsCompare": "{{sign}}{{pct}}% vs compare",
+      "deltaPts": "{{pts}} pts"
+    },
+    "cohort": {
+      "filteredBadge": "Filtered cohort",
+      "vsBookLead": "This slice is {{share}} of total customer value in the full book (reference below).",
+      "shareOfBook": "{{pct}}% of book"
+    },
+    "portfolio": {
+      "sectionGrowth": "Book growth & churn outlook",
+      "ledeFiltered": "{{caption}} — KPIs and charts reload when you change the overview cards above.",
+      "ledeFull": "Portfolio KPIs with industry-aligned churn forecast on total customer value.",
+      "bookHistory": "Book history: {{range}}.",
+      "mobileLead": "{{caption}} · benchmark status on each card",
+      "objectivesTitle": "Strategic objective trends",
+      "objectivesDefaultNote": "Trends mapped to long-term savings growth, insurance premium momentum, and customer engagement.",
+      "updating": "Updating analytics…",
+      "retentionRunScoring": "Run churn scoring to estimate portfolio lapse rate.",
+      "retentionSub": "Book-weighted 12m lapse {{pct}}% · HIGH {{high}} · MED {{med}} · LOW {{low}}",
+      "valueAtRiskSub": "Σ customer value × lapse probability (tier-weighted when ML score missing)",
+      "policyRecordsSub": "{{active}} active · avg {{avg}} / customer",
+      "highRiskShareSub": "{{count}} high-risk customers",
+      "retentionQueueHint": "Open retention queue in copilot →",
+      "kpi": {
+        "totalBookValue": "Total book value",
+        "retentionForecast": "12m retention (forecast)",
+        "valueAtChurnRisk": "Value at churn risk",
+        "activeCustomers": "Active customers",
+        "policyRecords": "Policy records",
+        "avgCustomerValue": "Avg customer value",
+        "highRiskBookShare": "High-risk book share",
+        "bookGrowthHistory": "Book growth (history)"
+      }
+    },
+    "kpi": {
+      "objective": "Objective: {{target}}",
+      "thermo": {
+        "atOrBelow": "At or below objective",
+        "ofLimit": "{{pct}}% of limit",
+        "ofObjective": "{{pct}}% of objective",
+        "a11y": "{{status}} — {{detail}}"
+      }
+    },
+    "compareRows": {
+      "activeCustomers": "Active customers",
+      "totalBookValue": "Total book value",
+      "valueAtChurnRisk": "Value at churn risk",
+      "retentionForecast": "12m retention (forecast)"
+    },
+    "vsBookStats": {
+      "customers": "Customers",
+      "totalBookValue": "Total book value",
+      "policyRecords": "Policy records",
+      "avgCustomerValue": "Avg customer value"
+    },
+    "historyMonths": "{{first}} – {{last}} ({{count}} months)"
+  },
+  "mobile": {
+    "backToCopilot": "← Copilot",
+    "focusTitle": {
+      "business": "Business KPIs",
+      "customers": "Customers",
+      "customerProfile": "Customer profile",
+      "products": "Products",
+      "engagement": "Engagement",
+      "admin": "Admin",
+      "details": "Details"
+    }
+  },
+  "copilot": {
+    "title": "Executive copilot",
+    "shortTitle": "Copilot",
+    "lede": {
+      "phone": "Ask about the book, then open a link to focus that page on your phone.",
+      "desktop": "Ask about the book; links change the main view or open the retention queue."
+    },
+    "poweredBy": {
+      "bedrock": "Powered by Amazon Bedrock with tool use when configured.",
+      "rules": "Using rule-based routing until Bedrock is configured."
+    },
+    "tabs": {
+      "conversation": "Conversation",
+      "retention": "Retention queue"
+    },
+    "empty": {
+      "hint": "Try: “Show the product heatmap” or “Who is at highest churn risk?”"
+    },
+    "turn": {
+      "user": "You",
+      "assistant": "Copilot"
+    },
+    "source": {
+      "bedrockTools": "· Bedrock + tools",
+      "bedrock": "· Bedrock",
+      "rules": "· Rules"
+    },
+    "input": {
+      "label": "Ask Customer 360",
+      "placeholder": "Ask about KPIs, customers, products… (Enter to send)"
+    },
+    "send": {
+      "thinking": "Thinking…",
+      "submit": "Ask"
+    },
+    "a11y": {
+      "toggleClose": "Close executive copilot",
+      "toggleOpen": "Open executive copilot"
+    },
+    "toggleTitle": {
+      "close": "Close copilot",
+      "open": "Open copilot"
+    },
+    "retention": {
+      "showing": "Showing {{shown}} of {{total}} at-risk customers",
+      "atRiskBook": "At risk {{atRisk}} · Book {{book}}",
+      "openList": "Open full list in customer hub →",
+      "loadingQueue": "Loading queue…",
+      "emptyCohort": "No scored at-risk customers in this cohort yet.",
+      "lede": "Prioritized by value at churn risk (next best action per customer)."
+    }
+  },
+  "charts": {
+    "common": {
+      "loading": "Loading…",
+      "empty": "No data for this cohort yet.",
+      "interactiveHint": "Click a point to drill into customers for that month.",
+      "forecast": "(forecast)",
+      "axisLeft": "· left",
+      "axisRight": "· right"
+    },
+    "bookValue": {
+      "title": "Book value",
+      "subtitle": "Total customer value split by investments vs coverage & savings.",
+      "subtitleCohort": "Solid lines = filtered cohort; dashed gray = full active customer book.",
+      "empty": "No book history for this cohort.",
+      "totalBook": "Total book",
+      "cohortTotalBook": "Cohort total book",
+      "investments": "Investments",
+      "coverageSavings": "Coverage & savings",
+      "fullBookRef": "Full book (reference)"
+    },
+    "churnHorizon": {
+      "title": "Churn horizon",
+      "subtitle": "Projected value at risk by month (tier-weighted lapse).",
+      "empty": "No churn horizon data for this cohort."
+    },
+    "investmentReturns": {
+      "title": "Investment returns",
+      "subtitle": "Average YTD return across investment snapshots.",
+      "empty": "No investment history for this cohort."
+    },
+    "premiumMomentum": {
+      "title": "Active policies & premium",
+      "subtitle": "Premium base (left axis) and active policy count (right axis) — one customer may hold many policies.",
+      "empty": "No policy premium trend for the active book yet."
+    },
+    "savingsAum": {
+      "title": "Long-term savings (AUM)",
+      "subtitle": "AUM (left) and savings policy count (right) — multiple policies per saver are normal.",
+      "empty": "No savings snapshot history for the active book yet."
+    },
+    "engagementObjective": {
+      "title": "Customer engagement",
+      "subtitle": "Digital & service touchpoints — customer at the center pillar.",
+      "empty": "No interaction history for the active book yet."
+    },
+    "customerValue": {
+      "title": "Customer value",
+      "subtitle": "Solid lines are warehouse snapshots. Dashed projection: HIGH risk lapses to ₪0 within 3 months; MEDIUM extends recent history; LOW extends full history.",
+      "loading": "Loading customer value…",
+      "empty": "No value history for this customer.",
+      "refreshing": "Refreshing chart…",
+      "latestTotal": "Latest total",
+      "vsStart": "vs start",
+      "projected": "Projected {{months}} months",
+      "lapseHigh": "HIGH tier lapse projection",
+      "legendActual": "Actual total value",
+      "legendProjected": "Projected (tier rules)",
+      "legendInvestmentAcc": "Investment accumulation",
+      "legendCoverageSavings": "Coverage & savings (policy status)"
+    }
+  },
+  "customer": {
+    "recent": {
+      "title": "Recently viewed"
+    },
+    "homeLink": "Customer home",
+    "back": {
+      "engagement": "← Back to engagement",
+      "list": "← Back to customers",
+      "business": "← Back to the business"
+    },
+    "link": {
+      "engagementHub": "Back to engagement hub",
+      "list": "Back to customer list",
+      "businessPortfolio": "Portfolio in the business"
+    },
+    "mobile": {
+      "summaryLine": "{{city}} · {{policies}} policies · {{value}}"
+    },
+    "churn": {
+      "scoredAt": "Churn scored {{date}}",
+      "notScored": "Not scored",
+      "likelihoodTitle": "Churn likelihood {{pct}}"
+    },
+    "privacyNotice": "City and last login are shown in full; other PII fields are masked in this demo.",
+    "profile": {
+      "type": "Type",
+      "birthDate": "Birth date",
+      "maritalStatus": "Marital status",
+      "address": "Address",
+      "communication": "Communication",
+      "lastInteraction": "Last interaction"
+    },
+    "engagementHint": {
+      "prefix": "Suggested from Engagement hub:"
+    },
+    "tabs": {
+      "policies": "Policies",
+      "foreclosures": "Foreclosures",
+      "investments": "Investments",
+      "interactions": "Interactions"
+    },
+    "policies": {
+      "title": "Policies",
+      "hint": "Click a policy to filter investment snapshots.",
+      "columns": {
+        "number": "Number",
+        "type": "Type",
+        "status": "Status",
+        "active": "Active",
+        "monthlyPremium": "Monthly premium"
+      }
+    },
+    "foreclosures": {
+      "title": "Foreclosures & encumbrances",
+      "empty": "No foreclosure records.",
+      "columns": {
+        "proceeding": "Proceeding #",
+        "amount": "Amount",
+        "date": "Date",
+        "portfolio": "Portfolio"
+      }
+    },
+    "interactions": {
+      "title": "Interaction timeline",
+      "lede": "Synthetic omnichannel events from the warehouse engagement layer.",
+      "stats": {
+        "last90d": "Last 90 days: {{count}} events",
+        "avgReview": "Avg review: {{avg}}/5",
+        "openAgent": "Open agent items: {{count}}"
+      },
+      "empty": "No interaction events recorded.",
+      "eventType": {
+        "review": "Review",
+        "agentQuestion": "Agent question",
+        "webSearch": "Web search"
+      },
+      "signal": {
+        "stars": "{{rating}}/5 stars",
+        "resolved": "Resolved",
+        "open": "Open",
+        "helpSearch": "Help search",
+        "productSearch": "Product search"
+      }
+    },
+    "investments": {
+      "title": "Latest investment snapshots",
+      "policyFilter": "Policy filter:",
+      "empty": "No investment snapshots for this selection.",
+      "columns": {
+        "policy": "Policy",
+        "fund": "Fund",
+        "snapshot": "Snapshot",
+        "accumulation": "Accumulation",
+        "ytdPl": "YTD P/L"
+      }
+    },
+    "directory": {
+      "title": "Customers",
+      "titleCompact": "Matching customers",
+      "chartFilter": {
+        "prefix": "Chart snapshot:",
+        "clear": "Clear date filter",
+        "metrics": {
+          "total": "total book value",
+          "investment": "investment balance",
+          "coverage": "coverage & savings",
+          "at_risk": "value at churn risk (book × churn probability at snapshot)"
+        }
+      },
+      "cityFilter": {
+        "prefix": "City:",
+        "clear": "Clear city filter"
+      },
+      "productFilter": {
+        "prefix": "Product filter: type {{code}}",
+        "clear": "Clear product filter"
+      },
+      "cohortFilter": {
+        "prefix": "Filter:",
+        "clear": "Clear filter"
+      },
+      "allCohort": "Showing all current customers in this cohort",
+      "sort": {
+        "label": "Rank by",
+        "options": {
+          "churn_risk": "Churn, then value",
+          "customer_value": "Value, then churn",
+          "name": "Name (A–Z)",
+          "policy_count": "Policy count",
+          "investment_count": "Investment tracks"
+        },
+        "order": {
+          "valueDesc": "Highest value first ↓",
+          "valueAsc": "Lowest value first ↑",
+          "riskDesc": "High risk first ↓",
+          "riskAsc": "Low risk first ↑",
+          "defaultDesc": "Highest first ↓",
+          "defaultAsc": "Lowest first ↑"
+        }
+      },
+      "search": {
+        "label": "Search",
+        "placeholder": "Name or customer ID"
+      },
+      "view": {
+        "label": "Layout",
+        "grid": "Cards",
+        "table": "Table"
+      },
+      "updating": "Updating cards/table…",
+      "empty": "No matching customers",
+      "pagination": {
+        "summaryAll": "Showing all {{total}} customers",
+        "summaryRange": "Showing {{from}}–{{to}} of {{total}}",
+        "perPage": "Per page",
+        "previous": "Previous",
+        "next": "Next",
+        "pageOf": "Page {{page}} of {{pages}}"
+      }
+    },
+    "table": {
+      "empty": "No customers match this filter.",
+      "columns": {
+        "name": "Name",
+        "city": "City",
+        "value": "Value",
+        "churn": "Churn",
+        "policies": "Policies",
+        "investments": "Investments",
+        "lastLogin": "Last login",
+        "id": "ID",
+        "email": "Email",
+        "mobile": "Mobile"
+      }
+    },
+    "card": {
+      "rankA11y": "Rank {{rank}}",
+      "value": "Customer value",
+      "policies": "Policies",
+      "investments": "Investments",
+      "lastLogin": "Last login",
+      "a11ySummary": "Customer summary"
+    },
+    "insights": {
+      "title": "AI insights & next best action",
+      "refresh": "Refresh insights",
+      "loadingBedrock": "Calling Amazon Bedrock with this customer's warehouse and interaction data…",
+      "loadingLocal": "Generating guidance with the built-in local advisor (Bedrock is not configured).",
+      "idleHint": "Actionable recommendations can open a draft from account data; send is simulated in this demo.",
+      "bedrockGenerated": "These insights were generated by Amazon Bedrock{{model}} from this customer's profile, policies, interactions, and churn score.",
+      "fallbackReason": "Bedrock is configured but this response used the local advisor. Reason: {{reason}}",
+      "fallbackGeneric": "Showing the local advisor for this response — Bedrock did not return a usable answer. Try Refresh insights.",
+      "localOnly": "Showing the built-in local advisor. Configure AWS credentials and CUSTOMER360_BEDROCK_* variables to use Amazon Bedrock.",
+      "loadError": "Could not load insights",
+      "focusChurn": "Churn focus",
+      "focusUpsell": "Growth / upsell focus",
+      "bedrockModelTitle": "Bedrock model ID",
+      "poweredBedrock": "Powered by Amazon Bedrock",
+      "localAdvisor": "Local advisor",
+      "churnTier": "Churn tier: {{tier}}",
+      "modelId": "Model: {{id}}",
+      "modelIdTitle": "Bedrock model ID",
+      "cachedCopy": "Cached copy",
+      "generatedAt": "Generated: {{at}}",
+      "recommendedActions": "Recommended actions",
+      "bestNextTouch": "Best next touch",
+      "bedrockError": "Bedrock error: {{reason}}",
+      "envHint": "To enable Bedrock-generated text, set AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and optional CUSTOMER360_BEDROCK_MODEL_ID (see .env.example).",
+      "regionHint": "If this persists after Refresh, confirm model access in Bedrock and set CUSTOMER360_BEDROCK_REGION to your AWS region (e.g. us-east-1).",
+      "focusRetention": "Retention focus"
+    },
+    "outreach": {
+      "title": "Draft outreach",
+      "disclaimer": "Send is simulated — no message leaves this browser.",
+      "to": "To",
+      "email": "Email",
+      "phone": "Phone",
+      "channel": "Channel",
+      "subject": "Subject",
+      "body": "Body",
+      "cancel": "Cancel",
+      "send": "Send (simulated)",
+      "sent": "Simulated send recorded.",
+      "loadingDraft": "Generating draft with Amazon Bedrock from account data…",
+      "draftError": "Could not build draft",
+      "sendFailed": "Simulated send failed",
+      "copyFailed": "Could not copy to clipboard",
+      "notActionable": "Not actionable.",
+      "triggeredBy": "Triggered by:",
+      "draftedBedrock": "Drafted by Amazon Bedrock",
+      "copy": "Copy body",
+      "copied": "Copied"
+    },
+    "valueChart": {
+      "tooltipTotal": "Total {{amount}}",
+      "tooltipInvestments": "Investments {{amount}}",
+      "tooltipCoverage": "Coverage {{amount}}",
+      "predictedLapse": "Predicted lapse — value at ₪0",
+      "projectedSuffix": " (projected)",
+      "legendActualFull": "Total customer value (actual)"
+    }
+  },
+  "engagement": {
+    "title": "Engagement & touchpoints",
+    "lede": "Prioritize customers with the highest propensity to influence outcomes — ranked for outreach.",
+    "domainFilter": {
+      "helper": "Optional cohort filter (same cards as The business)."
+    },
+    "summary": {
+      "touchpoints90": {
+        "label": "Touchpoints (90d)",
+        "sub": "{{count}} customers active"
+      },
+      "digital90": {
+        "label": "Digital & agent",
+        "sub": "Web searches & agent questions"
+      },
+      "reviews90": {
+        "label": "Reviews (90d)",
+        "sub": "Voice-of-customer events"
+      },
+      "openAgent": {
+        "label": "Open agent questions",
+        "sub": "Needs resolution in 90d window"
+      }
+    },
+    "list": {
+      "title": "Influence priority list",
+      "titleMobile": "Top outreach",
+      "lede": "Ranked by influence score (propensity × value). Showing {{shown}} of {{total}}.",
+      "empty": "No engagement opportunities match this filter.",
+      "bookSuffix": "{{value}} book"
+    },
+    "loading": "Loading engagement opportunities…",
+    "influence": {
+      "label": "Influence"
+    },
+    "a11y": {
+      "influenceTitle": "Propensity to influence"
+    },
+    "touchpoints": {
+      "count90": "{{count}} touchpoints (90d)",
+      "webSearches": "{{count}} web searches",
+      "reviews": "{{count}} reviews",
+      "openQuestions": "{{count}} open questions",
+      "daysSince": "{{days}}d since last touch"
+    },
+    "action": {
+      "recommendedLabel": "Recommended next step",
+      "actChannel": "Act — {{channel}}",
+      "viewTouchpoints": "View touchpoints"
+    },
+    "channel": {
+      "email": "Email",
+      "phone": "Phone",
+      "sms": "SMS"
+    }
+  },
+  "products": {
+    "lede": "Policy products grouped by class — cell intensity reflects customer count in the selected cohort.",
+    "mobile": {
+      "title": "Top products"
+    },
+    "filter": {
+      "banner": "Showing {{segment}}{{city}}",
+      "clear": "Clear filters"
+    },
+    "legend": {
+      "highest": "Highest uptake",
+      "strong": "Strong",
+      "moderate": "Moderate",
+      "lighter": "Lighter"
+    },
+    "a11y": {
+      "legend": "Customer count intensity"
+    },
+    "filters": {
+      "cohort": "Customer cohort",
+      "city": "City",
+      "allCities": "All cities"
+    },
+    "loading": "Loading product catalog…",
+    "customersCount": "{{count}} customers",
+    "activePoliciesCount": "{{count}} active policies",
+    "classStats": "{{customers}} customers · {{policies}} policies",
+    "empty": "No policy products in the warehouse."
+  },
+  "admin": {
+    "mobile": {
+      "snapshotTitle": "Warehouse snapshot",
+      "flags": "Quality flags:",
+      "healthFlags": "Health flags:",
+      "desktopHint": "Open desktop view for schema map and KPI benchmarks."
+    },
+    "title": "Warehouse & data admin",
+    "lede": "Table inventory, load timestamps, completeness checks, and configuration for KPI objectives.",
+    "loading": "Loading admin metadata…",
+    "health": {
+      "title": "System health",
+      "lede": "Runtime checks for API, warehouse connectivity, caches, and churn scoring freshness.",
+      "attentionNote": "{{count}} check(s) need attention (warn or critical)."
+    },
+    "kpi": {
+      "databaseFile": {
+        "label": "Database file"
+      },
+      "warehouseLoaded": {
+        "label": "Warehouse last loaded"
+      },
+      "cataloguedTables": {
+        "label": "Catalogued tables"
+      },
+      "qualityFlags": {
+        "label": "Quality flags",
+        "sub": "Non-OK completeness checks"
+      }
+    },
+    "tables": {
+      "title": "Table overview",
+      "lede": "Row counts are live from the configured warehouse backend.",
+      "columns": {
+        "table": "Table",
+        "layer": "Layer",
+        "domain": "Domain",
+        "rows": "Rows",
+        "lastLoaded": "Last loaded",
+        "sourceJob": "Source job"
+      }
+    },
+    "schema": {
+      "title": "Schema map",
+      "lede": "Each card lists live SQLite columns for demo tables; join reference shows relationships.",
+      "joinReference": "Join reference",
+      "joinColumns": {
+        "from": "From",
+        "to": "To",
+        "join": "Join",
+        "cardinality": "Cardinality"
+      }
+    },
+    "quality": {
+      "title": "Completeness & quality"
+    },
+    "config": {
+      "title": "Configuration",
+      "lede": "Warehouse connectivity and business KPI objectives used on The business page.",
+      "a11y": "Admin configuration",
+      "tabs": {
+        "warehouse": "Warehouse backend",
+        "kpiBenchmarks": "Business KPI benchmarks"
+      }
+    },
+    "datasource": {
+      "title": "Warehouse backend",
+      "modeLegend": "Backend mode",
+      "sqlite": "SQLite file (demo)",
+      "trino": "Trino / Iceberg",
+      "sqlitePath": "SQLite path",
+      "trinoHost": "Trino JDBC URL",
+      "catalog": "Catalog",
+      "schema": "Schema",
+      "icebergRest": "Iceberg REST catalog URL",
+      "save": "Save configuration",
+      "testConnection": "Test connection",
+      "saving": "Saving…",
+      "saved": "Configuration saved.",
+      "error": "Could not save configuration",
+      "lastUpdated": "Last updated {{date}}",
+      "loadingConfig": "Loading backend configuration…",
+      "backendTypeLegend": "Backend type",
+      "sqliteDefault": "SQLite (default)",
+      "cdwJdbc": "Cloudera Data Warehouse (JDBC)",
+      "lakehouseIceberg": "Lakehouse (Iceberg)",
+      "sqliteFilePath": "SQLite file path",
+      "jdbcUrl": "JDBC URL",
+      "cdwHostOptional": "CDW host (optional if JDBC URL set)",
+      "port": "Port",
+      "user": "User",
+      "password": "Password",
+      "passwordPlaceholder": "•••••• (unchanged if empty)",
+      "useTlsTrino": "Use TLS for Trino HTTP test",
+      "icebergRestUri": "Iceberg REST catalog URI",
+      "catalogName": "Catalog name",
+      "namespace": "Namespace"
+    },
+    "kpiBenchmarks": {
+      "title": "Business KPI benchmarks",
+      "lede": "Targets shown on portfolio KPI cards (thermometer and objective line).",
+      "columns": {
+        "kpi": "KPI",
+        "target": "Target",
+        "unit": "Unit",
+        "direction": "Direction",
+        "preview": "Preview"
+      },
+      "help": "Values are stored in admin metadata and applied on next portfolio load.",
+      "preview": "Preview",
+      "save": "Save benchmarks",
+      "saving": "Saving…",
+      "saved": "Benchmarks saved.",
+      "placeholderAuto": "Auto"
+    },
+    "schemaDiagram": {
+      "cachesTitle": "Caches, config & reference",
+      "cachesLede": "Precomputed API tables and admin settings (logical joins are mostly via customer or book-wide keys).",
+      "legendPk": "Primary key",
+      "legendFk": "Join / FK column",
+      "legendArrows": "Arrows follow API relationship metadata; hover a line for the join label.",
+      "rowsSuffix": "rows",
+      "notCreated": "not created",
+      "noColumns": "No columns (table missing in DB)"
+    }
+  }
+}

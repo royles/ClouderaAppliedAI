@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { InvestmentReturnPoint } from "../../api";
 import { valuesByPeriod } from "../../cohortBaseline";
 import { ChartPeriodSelection } from "../../chartFilter";
@@ -18,6 +19,7 @@ export default function InvestmentReturnsChart({
   interactive,
   onPeriodSelect,
 }: Props) {
+  const { t } = useTranslation();
   const periods = series.map((p) => p.period);
   const hasReturns = series.some((p) => p.period_return_pct != null);
   const comparing = Boolean(baselineSeries?.length);
@@ -115,19 +117,13 @@ export default function InvestmentReturnsChart({
 
   return (
     <AnalyticsLineChart
-      title="Investment returns"
-      subtitle={
-        hasReturns
-          ? comparing
-            ? "Balance on the left; return % on the right. Dashed gray = full book balance."
-            : "Investment balance (left) and month-on-month / cumulative return % (right)."
-          : "Investment track balances over time."
-      }
+      title={t("charts.investmentReturns.title")}
+      subtitle={t("charts.investmentReturns.subtitle")}
       points={points}
       loading={loading}
       valueFormat="money"
       series={chartSeries}
-      emptyMessage="No investment history for this cohort."
+      emptyMessage={t("charts.investmentReturns.empty")}
       interactive={interactive}
       onPeriodSelect={onPeriodSelect}
     />

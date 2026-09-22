@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -16,14 +17,15 @@ import { displayCustomerName, formatCity } from "../pii";
 import { formatMoneyIls } from "../formatMoney";
 import { useMobileFocus } from "../mobileUxContext";
 
-function channelLabel(hint: string) {
-  if (hint === "email") return "Email";
-  if (hint === "phone") return "Phone";
-  if (hint === "sms") return "SMS";
+function channelLabel(hint: string, t: (key: string) => string) {
+  if (hint === "email") return t("engagement.channel.email");
+  if (hint === "phone") return t("engagement.channel.phone");
+  if (hint === "sms") return t("engagement.channel.sms");
   return hint;
 }
 
 export default function EngagementHubPage() {
+  const { t } = useTranslation();
   const mobileFocus = useMobileFocus();
   const [searchParams, setSearchParams] = useSearchParams();
   const segment = useMemo(() => parseBusinessSegment(searchParams), [searchParams]);
@@ -60,7 +62,7 @@ export default function EngagementHubPage() {
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Failed to load engagement hub");
+          setError(e instanceof Error ? e.message : t("errors.engagementLoadFailed"));
           setHub(null);
         }
       } finally {
@@ -70,7 +72,7 @@ export default function EngagementHubPage() {
     return () => {
       cancelled = true;
     };
-  }, [segment]);
+  }, [segment, t]);
 
   const setSegment = (next: CustomerSegment) => {
     setSearchParams((prev) => patchBusinessSegment(prev, next), { replace: true });
@@ -80,14 +82,11 @@ export default function EngagementHubPage() {
 
   return (
     <>
-      {!mobileFocus && <Breadcrumbs items={[{ label: "Engagement & touchpoints" }]} />}
+      {!mobileFocus && <Breadcrumbs items={[{ label: t("engagement.title") }]} />}
       {!mobileFocus && (
       <section className="panel engagement-hub-intro">
-        <h1 className="page-title">Engagement & touchpoints</h1>
-        <p className="muted engagement-hub-lede">
-          Prioritize customers with the highest propensity to influence — recent digital
-          signals, open questions, and relationship value — then act with a clear next step.
-        </p>
+        <h1 className="page-title">{t("engagement.title")}</h1>
+        <p className="muted engagement-hub-lede">{t("engagement.lede")}</p>
       </section>
       )}
 
@@ -97,7 +96,7 @@ export default function EngagementHubPage() {
             overview={overview}
             segment={segment}
             onSelect={setSegment}
-            helperText="Optional cohort filter (same cards as The business)."
+            helperText={t("engagement.domainFilter.helper")}
           />
         </section>
       )}
@@ -106,26 +105,28 @@ export default function EngagementHubPage() {
       <section className="panel">
         <div className="engagement-summary-grid">
           <div className="engagement-summary-card">
-            <span className="label">Touchpoints (90d)</span>
+            <span className="label">{t("engagement.summary.touchpoints90.label")}</span>
             <strong>{loading ? "…" : (summary?.total_touchpoints_90d ?? 0).toLocaleString()}</strong>
             <span className="muted small">
-              {summary?.customers_with_touchpoints_90d ?? 0} customers active
+              {t("engagement.summary.touchpoints90.sub", {
+                count: summary?.customers_with_touchpoints_90d ?? 0,
+              })}
             </span>
           </div>
           <div className="engagement-summary-card">
-            <span className="label">Digital & agent</span>
+            <span className="label">{t("engagement.summary.digital90.label")}</span>
             <strong>{loading ? "…" : (summary?.digital_touchpoints_90d ?? 0).toLocaleString()}</strong>
-            <span className="muted small">Web searches & agent questions</span>
+            <span className="muted small">{t("engagement.summary.digital90.sub")}</span>
           </div>
           <div className="engagement-summary-card">
-            <span className="label">Reviews (90d)</span>
+            <span className="label">{t("engagement.summary.reviews90.label")}</span>
             <strong>{loading ? "…" : (summary?.review_events_90d ?? 0).toLocaleString()}</strong>
-            <span className="muted small">Voice-of-customer events</span>
+            <span className="muted small">{t("engagement.summary.reviews90.sub")}</span>
           </div>
           <div className="engagement-summary-card engagement-summary-card-warn">
-            <span className="label">Open agent questions</span>
+            <span className="label">{t("engagement.summary.openAgent.label")}</span>
             <strong>{loading ? "…" : (summary?.unresolved_agent_questions ?? 0).toLocaleString()}</strong>
-            <span className="muted small">Needs resolution in 90d window</span>
+            <span className="muted small">{t("engagement.summary.openAgent.sub")}</span>
           </div>
         </div>
       </section>
@@ -135,12 +136,14 @@ export default function EngagementHubPage() {
         <div className="panel-head">
           <div>
             <h2 className="subsection-title">
-              {mobileFocus ? "Top outreach" : "Influence priority list"}
+              {mobileFocus ? t("engagement.list.titleMobile") : t("engagement.list.title")}
             </h2>
-            {!mobileFocus && (
+            {!mobileFocus && hub != null && !loading && (
             <p className="muted small">
-              Ranked by influence score (value, recency, open items, and churn context).
-              {hub != null && !loading ? ` Showing ${hub.opportunities.length} of ${hub.total}.` : ""}
+              {t("engagement.list.lede", {
+                shown: hub.opportunities.length,
+                total: hub.total,
+              })}
             </p>
             )}
           </div>
@@ -149,11 +152,11 @@ export default function EngagementHubPage() {
         {error && <p className="error">{error}</p>}
 
         {loading && !hub && (
-          <p className="muted small">Loading engagement opportunities…</p>
+          <p className="muted small">{t("engagement.loading")}</p>
         )}
 
         {!loading && hub && hub.opportunities.length === 0 && (
-          <p className="muted small">No engagement opportunities match this filter.</p>
+          <p className="muted small">{t("engagement.list.empty")}</p>
         )}
 
         <ul className="engagement-opportunity-list">
@@ -174,7 +177,10 @@ export default function EngagementHubPage() {
                     {displayCustomerName(row.customer_name)}
                   </Link>
                   <p className="muted small">
-                    {formatCity(row.city_name)} · {formatMoneyIls(row.customer_value)} book
+                    {formatCity(row.city_name)} ·{" "}
+                    {t("engagement.list.bookSuffix", {
+                      value: formatMoneyIls(row.customer_value),
+                    })}
                     {row.churn_risk_tier && (
                       <>
                         {" · "}
@@ -186,8 +192,8 @@ export default function EngagementHubPage() {
                     )}
                   </p>
                 </div>
-                <div className="engagement-influence-score" title="Propensity to influence">
-                  <span className="label">Influence</span>
+                <div className="engagement-influence-score" title={t("engagement.a11y.influenceTitle")}>
+                  <span className="label">{t("engagement.influence.label")}</span>
                   <strong>{row.influence_score.toFixed(0)}</strong>
                 </div>
               </div>
@@ -195,28 +201,32 @@ export default function EngagementHubPage() {
               {!mobileFocus && (
               <div className="engagement-touchpoint-strip">
                 <span className="touchpoint-chip">
-                  {row.touchpoints.events_last_90d} touchpoints (90d)
+                  {t("engagement.touchpoints.count90", { count: row.touchpoints.events_last_90d })}
                 </span>
                 <span className="touchpoint-chip">
-                  {row.touchpoints.web_searches_90d} web searches
+                  {t("engagement.touchpoints.webSearches", { count: row.touchpoints.web_searches_90d })}
                 </span>
                 <span className="touchpoint-chip">
-                  {row.touchpoints.reviews_90d} reviews
+                  {t("engagement.touchpoints.reviews", { count: row.touchpoints.reviews_90d })}
                 </span>
                 {row.touchpoints.unresolved_agent_questions > 0 && (
                   <span className="touchpoint-chip touchpoint-chip-warn">
-                    {row.touchpoints.unresolved_agent_questions} open questions
+                    {t("engagement.touchpoints.openQuestions", {
+                      count: row.touchpoints.unresolved_agent_questions,
+                    })}
                   </span>
                 )}
                 <span className="touchpoint-chip">
-                  {Math.round(row.touchpoints.days_since_last_touch)}d since last touch
+                  {t("engagement.touchpoints.daysSince", {
+                    days: Math.round(row.touchpoints.days_since_last_touch),
+                  })}
                 </span>
               </div>
               )}
 
               <div className="engagement-action-block">
                 <div>
-                  <span className="label">Recommended next step</span>
+                  <span className="label">{t("engagement.action.recommendedLabel")}</span>
                   <strong>{row.recommended_action.title}</strong>
                   <p className="muted small">{row.recommended_action.detail}</p>
                 </div>
@@ -231,7 +241,9 @@ export default function EngagementHubPage() {
                     }}
                     className="btn engagement-act-link"
                   >
-                    Act — {channelLabel(row.recommended_action.channel_hint)}
+                    {t("engagement.action.actChannel", {
+                      channel: channelLabel(row.recommended_action.channel_hint, t),
+                    })}
                   </Link>
                   <Link
                     to={customerPath(row.customer_id)}
@@ -241,7 +253,7 @@ export default function EngagementHubPage() {
                     }}
                     className="btn secondary engagement-act-link"
                   >
-                    View touchpoints
+                    {t("engagement.action.viewTouchpoints")}
                   </Link>
                 </div>
               </div>

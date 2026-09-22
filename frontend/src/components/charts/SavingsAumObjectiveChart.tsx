@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { SavingsAumTrendPoint } from "../../api";
 import AnalyticsLineChart, { moneyTooltip } from "./AnalyticsLineChart";
 import { formatTooltipCount } from "./analyticsChartUtils";
@@ -8,6 +9,7 @@ type Props = {
 };
 
 export default function SavingsAumObjectiveChart({ series, loading }: Props) {
+  const { t } = useTranslation();
   const points = series.map((p) => ({
     period: p.period,
     kind: "actual" as const,
@@ -19,8 +21,8 @@ export default function SavingsAumObjectiveChart({ series, loading }: Props) {
 
   return (
     <AnalyticsLineChart
-      title="Long-term savings (AUM)"
-      subtitle="AUM (left) and savings policy count (right) — multiple policies per saver are normal."
+      title={t("charts.savingsAum.title")}
+      subtitle={t("charts.savingsAum.subtitle")}
       points={points}
       loading={loading}
       interactive={false}
@@ -42,7 +44,7 @@ export default function SavingsAumObjectiveChart({ series, loading }: Props) {
           valueFormat: "count",
         },
       ]}
-      emptyMessage="No savings snapshot history for the active book yet."
+      emptyMessage={t("charts.savingsAum.empty")}
     />
   );
 }

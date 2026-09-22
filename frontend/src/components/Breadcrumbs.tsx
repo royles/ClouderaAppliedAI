@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 export type Crumb = {
   label: string;
@@ -10,9 +11,10 @@ type Props = {
 };
 
 export default function Breadcrumbs({ items }: Props) {
+  const { t } = useTranslation();
   if (items.length === 0) return null;
   return (
-    <nav className="breadcrumbs" aria-label="Breadcrumb">
+    <nav className="breadcrumbs" aria-label={t("common.a11y.breadcrumb")}>
       <ol>
         {items.map((item, index) => {
           const last = index === items.length - 1;

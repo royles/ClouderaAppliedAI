@@ -220,6 +220,36 @@ body,
   color: #fff;
 }
 
+.header .lang-switcher {
+  margin-inline-start: auto;
+}
+
+.lang-switcher {
+  display: inline-flex;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.lang-switcher-btn {
+  padding: 0.25rem 0.55rem;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lang-switcher-btn.is-active {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.lang-switcher-btn:not(.is-active):hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .header-with-copilot-toggle {
   padding-right: max(3rem, calc(clamp(1rem, 2vw, 2rem) + 2.25rem));
 }
@@ -3259,4 +3289,32 @@ a.engagement-act-link {
   .agent-copilot-form {
     padding-bottom: env(safe-area-inset-bottom, 0);
   }
+}
+
+/* RTL (Hebrew) layout mirrors */
+[dir="rtl"] .app-side-nav {
+  border-right: none;
+  border-left: 1px solid #d0dbe6;
+  padding: 1.25rem 1.25rem 1.25rem 0.85rem;
+}
+
+[dir="rtl"] .header-with-copilot-toggle {
+  padding-right: clamp(1rem, 2vw, 2rem);
+  padding-left: max(3rem, calc(clamp(1rem, 2vw, 2rem) + 2.25rem));
+}
+
+[dir="rtl"] .copilot-rail-toggle {
+  left: auto;
+  right: 0;
+  border-radius: 8px 0 0 8px;
+}
+
+[dir="rtl"] .breadcrumbs li + li::before {
+  transform: scaleX(-1);
+}
+
+[dir="rtl"] .cohort-comparison-delta,
+[dir="rtl"] .engagement-influence-score {
+  direction: ltr;
+  unicode-bidi: embed;
 }

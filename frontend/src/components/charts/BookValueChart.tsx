@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ValueHistoryPoint } from "../../api";
 import { valuesByPeriod } from "../../cohortBaseline";
 import { ChartPeriodSelection } from "../../chartFilter";
@@ -18,6 +19,7 @@ export default function BookValueChart({
   interactive,
   onPeriodSelect,
 }: Props) {
+  const { t } = useTranslation();
   const periods = history.map((p) => p.period);
   const baselineTotals =
     baselineHistory && baselineHistory.length > 0
@@ -27,17 +29,22 @@ export default function BookValueChart({
     ? new Map(baselineHistory.map((p) => [p.period, p.total_value]))
     : null;
 
-  const totalLabel = baselineTotals ? "Cohort total book" : "Total book";
+  const totalLabel = baselineTotals
+    ? t("charts.bookValue.cohortTotalBook")
+    : t("charts.bookValue.totalBook");
+  const investmentsLabel = t("charts.bookValue.investments");
+  const coverageLabel = t("charts.bookValue.coverageSavings");
+  const fullBookRefLabel = t("charts.bookValue.fullBookRef");
 
   const points = history.map((p) => {
     const lines = [
       moneyTooltip(totalLabel, p.total_value),
-      moneyTooltip("Investments", p.investment_value),
-      moneyTooltip("Coverage & savings", p.coverage_value),
+      moneyTooltip(investmentsLabel, p.investment_value),
+      moneyTooltip(coverageLabel, p.coverage_value),
     ];
     const fullBook = baselineByPeriod?.get(p.period);
     if (fullBook != null) {
-      lines.push(moneyTooltip("Full book (reference)", fullBook));
+      lines.push(moneyTooltip(fullBookRefLabel, fullBook));
     }
     return {
       period: p.period,
@@ -52,7 +59,7 @@ export default function BookValueChart({
           {
             id: "baseline-total",
             visualKey: "book-baseline-total" as const,
-            label: "Full book (reference)",
+            label: fullBookRefLabel,
             values: baselineTotals,
           },
         ]
@@ -60,35 +67,35 @@ export default function BookValueChart({
     {
       id: "total",
       visualKey: "book-total" as const,
-      label: baselineTotals ? "Cohort total book" : "Total book",
+      label: totalLabel,
       values: history.map((p) => p.total_value),
     },
     {
       id: "investment",
       visualKey: "book-investment" as const,
-      label: "Investments",
+      label: investmentsLabel,
       values: history.map((p) => p.investment_value),
     },
     {
       id: "coverage",
       visualKey: "book-coverage" as const,
-      label: "Coverage & savings",
+      label: coverageLabel,
       values: history.map((p) => p.coverage_value),
     },
   ];
 
   return (
     <AnalyticsLineChart
-      title="Book value"
+      title={t("charts.bookValue.title")}
       subtitle={
         baselineTotals
-          ? "Solid lines = filtered cohort; dashed gray = full active customer book."
-          : "Customer book value (sum of each customer's policies) — investments plus coverage & savings."
+          ? t("charts.bookValue.subtitleCohort")
+          : t("charts.bookValue.subtitle")
       }
       points={points}
       loading={loading}
       series={series}
-      emptyMessage="No book history for this cohort."
+      emptyMessage={t("charts.bookValue.empty")}
       interactive={interactive}
       onPeriodSelect={onPeriodSelect}
     />

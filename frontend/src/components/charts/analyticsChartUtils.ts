@@ -1,7 +1,9 @@
+import { intlLocale } from "../../localeFormat";
+
 export function formatPeriodLabel(period: string) {
   if (period.length >= 7) {
     const [y, m] = period.split("-");
-    const month = new Date(Number(y), Number(m) - 1, 1).toLocaleString("en-GB", {
+    const month = new Date(Number(y), Number(m) - 1, 1).toLocaleString(intlLocale(), {
       month: "short",
     });
     return `${month} ${y?.slice(2)}`;
@@ -42,7 +44,7 @@ export function historyLabelIndicesForPlot(
 export function formatPeriodAxisLabel(period: string) {
   if (period.length >= 7) {
     const [y, m] = period.split("-");
-    const month = new Date(Number(y), Number(m) - 1, 1).toLocaleString("en-GB", {
+    const month = new Date(Number(y), Number(m) - 1, 1).toLocaleString(intlLocale(), {
       month: "short",
     });
     return `${month} '${y?.slice(2) ?? ""}`;
@@ -68,7 +70,7 @@ export function formatAxisMoney(n: number) {
 }
 
 export function formatTooltipMoney(n: number) {
-  return new Intl.NumberFormat("en-IL", {
+  return new Intl.NumberFormat(intlLocale(), {
     style: "currency",
     currency: "ILS",
     maximumFractionDigits: 0,
@@ -86,7 +88,7 @@ export function formatAxisCount(n: number) {
 }
 
 export function formatTooltipCount(n: number) {
-  return n.toLocaleString();
+  return n.toLocaleString(intlLocale());
 }
 
 /** Shared stroke styles — legend swatches use the same tokens as chart paths. */

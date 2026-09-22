@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import {
@@ -37,6 +38,7 @@ export default function CustomerDirectoryPanel({
   onClearFilter,
   compact = false,
 }: Props) {
+  const { t } = useTranslation();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const urlState: CohortQueryState = useMemo(
@@ -125,7 +127,7 @@ export default function CustomerDirectoryPanel({
         setError(null);
       } catch (e) {
         if (cancelled || requestId !== customersRequestRef.current) return;
-        setError(e instanceof Error ? e.message : "Failed to load customers");
+        setError(e instanceof Error ? e.message : t("errors.customersLoadFailed"));
       } finally {
         if (requestId === customersRequestRef.current) {
           setTableLoading(false);
@@ -224,18 +226,18 @@ export default function CustomerDirectoryPanel({
     <section className={`panel${compact ? " panel-compact" : ""}`}>
       <div className="panel-head">
         <div>
-          <h2>{compact ? "Matching customers" : "Customers"}</h2>
+          <h2>{compact ? t("customer.directory.titleCompact") : t("customer.directory.title")}</h2>
           {asOf ? (
             <p className="filter-banner chart-date-filter-banner">
-              Chart snapshot: <strong>{formatPeriodLabel(asOf)}</strong> (
-              {chartMetricLabel(metric ?? "total")})
+              {t("customer.directory.chartFilter.prefix")}{" "}
+              <strong>{formatPeriodLabel(asOf)}</strong> ({chartMetricLabel(metric ?? "total")})
               <button type="button" className="link-btn" onClick={clearChartFilter}>
-                Clear date filter
+                {t("customer.directory.chartFilter.clear")}
               </button>
             </p>
           ) : city ? (
             <p className="filter-banner">
-              City: <strong>{city}</strong>
+              {t("customer.directory.cityFilter.prefix")} <strong>{city}</strong>
               <button
                 type="button"
                 className="link-btn"
@@ -245,12 +247,12 @@ export default function CustomerDirectoryPanel({
                   })
                 }
               >
-                Clear city filter
+                {t("customer.directory.cityFilter.clear")}
               </button>
             </p>
           ) : policyTypeCode != null ? (
             <p className="filter-banner">
-              Product filter: <strong>type {policyTypeCode}</strong>
+              {t("customer.directory.productFilter.prefix", { code: policyTypeCode })}
               <button
                 type="button"
                 className="link-btn"
@@ -261,37 +263,38 @@ export default function CustomerDirectoryPanel({
                   )
                 }
               >
-                Clear product filter
+                {t("customer.directory.productFilter.clear")}
               </button>
             </p>
           ) : activeDomain ? (
             <p className="filter-banner">
-              Filter: <strong>{activeDomain.domain}</strong>
+              {t("customer.directory.cohortFilter.prefix")}{" "}
+              <strong>{activeDomain.domain}</strong>
               {onClearFilter && (
                 <button type="button" className="link-btn" onClick={onClearFilter}>
-                  Clear filter
+                  {t("customer.directory.cohortFilter.clear")}
                 </button>
               )}
             </p>
           ) : (
-            <p className="muted small">Showing all current customers in this cohort</p>
+            <p className="muted small">{t("customer.directory.allCohort")}</p>
           )}
         </div>
         <div className={`toolbar${compact ? " toolbar-compact" : ""}`}>
           {!compact && (
           <div className="toolbar-item">
-            <label htmlFor="customer-sort-by">Rank by</label>
+            <label htmlFor="customer-sort-by">{t("customer.directory.sort.label")}</label>
             <select
               id="customer-sort-by"
               className="control"
               value={sortBy}
               onChange={(e) => setRankBy(e.target.value as CustomerSortBy)}
             >
-              <option value="churn_risk">Churn, then value</option>
-              <option value="customer_value">Value, then churn</option>
-              <option value="name">Name (A–Z)</option>
-              <option value="policy_count">Policy count</option>
-              <option value="investment_count">Investment tracks</option>
+              <option value="churn_risk">{t("customer.directory.sort.options.churn_risk")}</option>
+              <option value="customer_value">{t("customer.directory.sort.options.customer_value")}</option>
+              <option value="name">{t("customer.directory.sort.options.name")}</option>
+              <option value="policy_count">{t("customer.directory.sort.options.policy_count")}</option>
+              <option value="investment_count">{t("customer.directory.sort.options.investment_count")}</option>
             </select>
           </div>
           )}
@@ -299,23 +302,23 @@ export default function CustomerDirectoryPanel({
           <button type="button" className="control control-btn" onClick={toggleSortOrder}>
             {sortBy === "customer_value"
               ? sortOrder === "desc"
-                ? "Highest value first ↓"
-                : "Lowest value first ↑"
+                ? t("customer.directory.sort.order.valueDesc")
+                : t("customer.directory.sort.order.valueAsc")
               : sortBy === "churn_risk"
                 ? sortOrder === "desc"
-                  ? "High risk first ↓"
-                  : "Low risk first ↑"
+                  ? t("customer.directory.sort.order.riskDesc")
+                  : t("customer.directory.sort.order.riskAsc")
                 : sortOrder === "desc"
-                  ? "Highest first ↓"
-                  : "Lowest first ↑"}
+                  ? t("customer.directory.sort.order.defaultDesc")
+                  : t("customer.directory.sort.order.defaultAsc")}
           </button>
           )}
           <div className="toolbar-item toolbar-item-grow">
-            <label htmlFor="customer-search">Search</label>
+            <label htmlFor="customer-search">{t("customer.directory.search.label")}</label>
             <input
               id="customer-search"
               className="control control-search"
-              placeholder="Name or customer ID"
+              placeholder={t("customer.directory.search.placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -323,7 +326,7 @@ export default function CustomerDirectoryPanel({
           {!compact && (
           <div className="toolbar-item">
             <span className="toolbar-label-static" id="customer-view-label">
-              Layout
+              {t("customer.directory.view.label")}
             </span>
             <div
               className="view-toggle"
@@ -336,7 +339,7 @@ export default function CustomerDirectoryPanel({
                 aria-pressed={view === "grid"}
                 onClick={() => setListView("grid")}
               >
-                Cards
+                {t("customer.directory.view.grid")}
               </button>
               <button
                 type="button"
@@ -344,7 +347,7 @@ export default function CustomerDirectoryPanel({
                 aria-pressed={view === "table"}
                 onClick={() => setListView("table")}
               >
-                Table
+                {t("customer.directory.view.table")}
               </button>
             </div>
           </div>
@@ -359,7 +362,7 @@ export default function CustomerDirectoryPanel({
       >
         {tableLoading && (
           <p className="table-loading-label muted">
-            Updating {view === "grid" ? "cards" : "table"}…
+            {t("customer.directory.updating")}
           </p>
         )}
         {!compact && view === "grid" ? (
@@ -386,14 +389,17 @@ export default function CustomerDirectoryPanel({
       <div className="table-footer">
         <p className="muted small">
           {listTotal === 0
-            ? "No matching customers"
-            : `Showing ${showingFrom.toLocaleString()}–${showingTo.toLocaleString()} of ${listTotal.toLocaleString()}`}
-          {listTotal > 0 && ` · up to ${pageSize} per page`}
+            ? t("customer.directory.empty")
+            : t("customer.directory.pagination.summaryRange", {
+                from: showingFrom.toLocaleString(),
+                to: showingTo.toLocaleString(),
+                total: listTotal.toLocaleString(),
+              })}
         </p>
         {listTotal > 0 && (
           <div className="pagination">
             <div className="toolbar-item pagination-page-size">
-              <label htmlFor="customer-page-size">Per page</label>
+              <label htmlFor="customer-page-size">{t("customer.directory.pagination.perPage")}</label>
               <select
                 id="customer-page-size"
                 className="control"
@@ -421,10 +427,10 @@ export default function CustomerDirectoryPanel({
                     )
                   }
                 >
-                  Previous
+                  {t("customer.directory.pagination.previous")}
                 </button>
                 <span className="muted small">
-                  Page {page} of {pageCount}
+                  {t("customer.directory.pagination.pageOf", { page, pages: pageCount })}
                 </span>
                 <button
                   type="button"
@@ -437,7 +443,7 @@ export default function CustomerDirectoryPanel({
                     )
                   }
                 >
-                  Next
+                  {t("customer.directory.pagination.next")}
                 </button>
               </>
             )}

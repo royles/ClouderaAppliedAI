@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import { WarehouseRelationship, WarehouseTableAdmin } from "../api";
 
 const CELL_W = 252;
@@ -59,6 +60,7 @@ function SchemaCard({
   placed?: boolean;
   cardRef: (el: HTMLDivElement | null) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <article
       ref={cardRef}
@@ -76,11 +78,13 @@ function SchemaCard({
       </header>
       <p className="muted small warehouse-schema-card-meta">
         {table.domain} · {table.role}
-        {table.table_exists ? ` · ${table.row_count.toLocaleString()} rows` : " · not created"}
+        {table.table_exists
+          ? ` · ${table.row_count.toLocaleString()} ${t("admin.schemaDiagram.rowsSuffix")}`
+          : ` · ${t("admin.schemaDiagram.notCreated")}`}
       </p>
       <ul className="warehouse-schema-columns">
         {table.columns.length === 0 && (
-          <li className="muted small">No columns (table missing in DB)</li>
+          <li className="muted small">{t("admin.schemaDiagram.noColumns")}</li>
         )}
         {(table.columns ?? []).map((col) => {
           const isFk = fkColumns.has(col.name);
@@ -143,6 +147,7 @@ type Props = {
 };
 
 export default function WarehouseSchemaDiagram({ tables, relationships }: Props) {
+  const { t } = useTranslation();
   const canvasRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [edges, setEdges] = useState<EdgeSegment[]>([]);
@@ -285,11 +290,8 @@ export default function WarehouseSchemaDiagram({ tables, relationships }: Props)
 
       {otherTables.length > 0 && (
         <div className="warehouse-schema-other">
-          <h3 className="subsection-title">Caches, config &amp; reference</h3>
-          <p className="muted small">
-            Precomputed API tables and admin settings (logical joins are mostly via customer or
-            book-wide keys).
-          </p>
+          <h3 className="subsection-title">{t("admin.schemaDiagram.cachesTitle")}</h3>
+          <p className="muted small">{t("admin.schemaDiagram.cachesLede")}</p>
           <div className="warehouse-schema-other-grid">
             {otherTables.map((table) => (
               <SchemaCard
@@ -305,9 +307,9 @@ export default function WarehouseSchemaDiagram({ tables, relationships }: Props)
       )}
 
       <p className="muted small warehouse-schema-legend">
-        <span className="warehouse-schema-legend-pk">Primary key</span>
-        <span className="warehouse-schema-legend-fk">Join / FK column</span>
-        Arrows follow API relationship metadata; hover a line for the join label.
+        <span className="warehouse-schema-legend-pk">{t("admin.schemaDiagram.legendPk")}</span>
+        <span className="warehouse-schema-legend-fk">{t("admin.schemaDiagram.legendFk")}</span>
+        {t("admin.schemaDiagram.legendArrows")}
       </p>
     </div>
   );

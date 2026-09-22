@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { CustomerSummary } from "../api";
 import { customerPath } from "../appRoutes";
 import CustomerSummaryCard from "./CustomerSummaryCard";
@@ -15,8 +16,9 @@ export default function CustomerCardGrid({
   rankStart,
   dashboardReturn,
 }: Props) {
+  const { t } = useTranslation();
   if (customers.length === 0) {
-    return <p className="muted customer-grid-empty">No customers match this filter.</p>;
+    return <p className="muted customer-grid-empty">{t("customer.table.empty")}</p>;
   }
 
   return (

@@ -1,4 +1,5 @@
 import { useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { formatPeriodLabel } from "./charts/analyticsChartUtils";
 import { useNavigate } from "react-router-dom";
 import {
@@ -21,6 +22,7 @@ import CohortVsBookBanner from "./CohortVsBookBanner";
 import { useAgentCopilot } from "../agentCopilotContext";
 import PortfolioKpiCard from "./PortfolioKpiCard";
 import { formatShareOfBook } from "../cohortBaseline";
+import { formatNumber } from "../localeFormat";
 
 type Props = {
   data: PortfolioAnalytics | null;
@@ -34,21 +36,29 @@ type Props = {
   minimal?: boolean;
 };
 
-function formatPct(rate: number | null | undefined, digits = 1) {
-  if (rate == null || Number.isNaN(rate)) return "—";
+function formatPct(rate: number | null | undefined, digits = 1, emDash = "—") {
+  if (rate == null || Number.isNaN(rate)) return emDash;
   return `${(rate * 100).toFixed(digits)}%`;
 }
 
-function retentionKpiSub(kpis: PortfolioKpis | undefined): string | undefined {
+function retentionKpiSub(
+  kpis: PortfolioKpis | undefined,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string | undefined {
   if (!kpis) return undefined;
   const w = kpis.weighted_churn_probability;
   if (w == null || Number.isNaN(w)) {
-    return "Run churn scoring to estimate portfolio lapse rate.";
+    return t("business.portfolio.retentionRunScoring");
   }
   const high = kpis.high_risk_customers ?? 0;
   const med = kpis.medium_risk_customers ?? 0;
   const low = kpis.low_risk_customers ?? 0;
-  return `Book-weighted 12m lapse ${(w * 100).toFixed(2)}% · HIGH ${high} · MED ${med} · LOW ${low}`;
+  return t("business.portfolio.retentionSub", {
+    pct: (w * 100).toFixed(2),
+    high,
+    med,
+    low,
+  });
 }
 
 function formatTargetLabel(key: string, progress: KpiTargetProgress): string {
@@ -59,7 +69,7 @@ function formatTargetLabel(key: string, progress: KpiTargetProgress): string {
     return `${progress.target}%`;
   }
   if (key === "active_customers") {
-    return progress.target.toLocaleString();
+    return formatNumber(progress.target);
   }
   if (
     key === "total_book_value" ||
@@ -81,6 +91,8 @@ export default function PortfolioAnalyticsSection({
   chartInteractive = true,
   minimal = false,
 }: Props) {
+  const { t } = useTranslation();
+  const emDash = t("common.emDash");
   const navigate = useNavigate();
   const { openRetentionPlaybook } = useAgentCopilot();
   const kpis = data?.kpis;
@@ -107,18 +119,18 @@ export default function PortfolioAnalyticsSection({
   const progress = (key: string) => targets[key] ?? null;
   const cohortScoped = segment !== "customers_all";
   const cohortCaption = cohortLabel
-    ? `Filtered by “${cohortLabel}”`
+    ? t("cohort.filteredBy", { label: cohortLabel })
     : cohortScoped
-      ? "Filtered cohort"
-      : "Full active customer book";
+      ? t("cohort.filteredCohort")
+      : t("cohort.fullActiveBook");
 
   const historyPeriodRange = useMemo(() => {
     const pts = data?.value_points ?? [];
     if (pts.length === 0) return null;
     const first = formatPeriodLabel(pts[0].period);
     const last = formatPeriodLabel(pts[pts.length - 1].period);
-    return `${first} – ${last} (${pts.length} months)`;
-  }, [data?.value_points]);
+    return t("business.historyMonths", { first, last, count: pts.length });
+  }, [data?.value_points, t]);
 
   const chartScopeKey = `${segment}:${data?.segment ?? "none"}:${data?.value_points?.length ?? 0}:${data?.value_points?.[0]?.period ?? ""}`;
   const showBookCompare = cohortScoped && bookBaseline != null && data != null;
@@ -133,7 +145,7 @@ export default function PortfolioAnalyticsSection({
     >
       {showBookCompare && !minimal && (
         <CohortVsBookBanner
-          cohortLabel={cohortLabel ?? "Filtered cohort"}
+          cohortLabel={cohortLabel ?? t("business.cohort.filteredBadge")}
           cohort={data}
           book={bookBaseline}
         />
@@ -141,15 +153,15 @@ export default function PortfolioAnalyticsSection({
       {!minimal && (
         <div className="panel-head value-chart-head">
           <div>
-            <h2 className="subsection-title">Book growth &amp; churn outlook</h2>
+            <h2 className="subsection-title">{t("business.portfolio.sectionGrowth")}</h2>
             <p className="muted small">
               {cohortScoped
-                ? `${cohortCaption} — KPIs and charts reload when you change the overview cards above.`
-                : "Portfolio KPIs with industry-aligned churn forecast on total customer value."}
+                ? t("business.portfolio.ledeFiltered", { caption: cohortCaption })
+                : t("business.portfolio.ledeFull")}
               {historyPeriodRange && (
                 <>
                   {" "}
-                  Book history: {historyPeriodRange}.
+                  {t("business.portfolio.bookHistory", { range: historyPeriodRange })}
                 </>
               )}
             </p>
@@ -158,13 +170,13 @@ export default function PortfolioAnalyticsSection({
       )}
       {minimal && (
         <p className="muted small mobile-focus-lead">
-          {cohortCaption} · benchmark status on each card
+          {t("business.portfolio.mobileLead", { caption: cohortCaption })}
         </p>
       )}
 
       <div className="portfolio-kpi-grid">
         <PortfolioKpiCard
-          label="Total book value"
+          label={t("business.portfolio.kpi.totalBookValue")}
           value={formatMoneyIls(kpis?.total_book_value)}
           sub={
             showBookCompare && kpis && bookBaseline.kpis
@@ -181,9 +193,9 @@ export default function PortfolioAnalyticsSection({
           loading={loading}
         />
         <PortfolioKpiCard
-          label="12m retention (forecast)"
-          value={formatPct(kpis?.annual_retention_rate_forecast, 2)}
-          sub={retentionKpiSub(kpis)}
+          label={t("business.portfolio.kpi.retentionForecast")}
+          value={formatPct(kpis?.annual_retention_rate_forecast, 2, emDash)}
+          sub={retentionKpiSub(kpis, t)}
           progress={progress("annual_retention_rate_forecast")}
           targetLabel={
             progress("annual_retention_rate_forecast")
@@ -196,13 +208,13 @@ export default function PortfolioAnalyticsSection({
           loading={loading}
         />
         <PortfolioKpiCard
-          label="Value at churn risk"
+          label={t("business.portfolio.kpi.valueAtChurnRisk")}
           value={formatMoneyIls(kpis?.value_at_risk_12m)}
-          actionHint="Open retention queue in copilot →"
+          actionHint={t("business.portfolio.retentionQueueHint")}
           onClick={() => openRetentionPlaybook(segment, cohortLabel ?? null)}
           sub={
             kpis?.weighted_churn_probability != null
-              ? `Σ customer value × lapse probability (tier-weighted when ML score missing)`
+              ? t("business.portfolio.valueAtRiskSub")
               : undefined
           }
           progress={progress("value_at_risk_12m")}
@@ -214,8 +226,8 @@ export default function PortfolioAnalyticsSection({
           loading={loading}
         />
         <PortfolioKpiCard
-          label="Active customers"
-          value={(kpis?.active_customers ?? 0).toLocaleString()}
+          label={t("business.portfolio.kpi.activeCustomers")}
+          value={formatNumber(kpis?.active_customers ?? 0)}
           progress={progress("active_customers")}
           targetLabel={
             progress("active_customers")
@@ -225,13 +237,16 @@ export default function PortfolioAnalyticsSection({
           loading={loading}
         />
         <PortfolioKpiCard
-          label="Policy records"
-          value={(kpis?.total_policies ?? 0).toLocaleString()}
-          sub={`${(kpis?.active_policies ?? 0).toLocaleString()} active · avg ${(kpis?.avg_policies_per_customer ?? 0).toFixed(1)} / customer`}
+          label={t("business.portfolio.kpi.policyRecords")}
+          value={formatNumber(kpis?.total_policies ?? 0)}
+          sub={t("business.portfolio.policyRecordsSub", {
+            active: formatNumber(kpis?.active_policies ?? 0),
+            avg: (kpis?.avg_policies_per_customer ?? 0).toFixed(1),
+          })}
           loading={loading}
         />
         <PortfolioKpiCard
-          label="Avg customer value"
+          label={t("business.portfolio.kpi.avgCustomerValue")}
           value={formatMoneyIls(kpis?.avg_customer_value)}
           progress={progress("avg_customer_value")}
           targetLabel={
@@ -242,11 +257,13 @@ export default function PortfolioAnalyticsSection({
           loading={loading}
         />
         <PortfolioKpiCard
-          label="High-risk book share"
+          label={t("business.portfolio.kpi.highRiskBookShare")}
           value={
-            kpis?.high_risk_book_pct != null ? `${kpis.high_risk_book_pct}%` : "—"
+            kpis?.high_risk_book_pct != null ? `${kpis.high_risk_book_pct}%` : emDash
           }
-          sub={`${kpis?.high_risk_customers ?? 0} high-risk customers`}
+          sub={t("business.portfolio.highRiskShareSub", {
+            count: kpis?.high_risk_customers ?? 0,
+          })}
           progress={progress("high_risk_book_pct")}
           targetLabel={
             progress("high_risk_book_pct")
@@ -256,11 +273,11 @@ export default function PortfolioAnalyticsSection({
           loading={loading}
         />
         <PortfolioKpiCard
-          label="Book growth (history)"
+          label={t("business.portfolio.kpi.bookGrowthHistory")}
           value={
             kpis?.book_growth_pct != null
               ? `${kpis.book_growth_pct >= 0 ? "+" : ""}${kpis.book_growth_pct}%`
-              : "—"
+              : emDash
           }
           progress={progress("book_growth_pct")}
           targetLabel={
@@ -303,11 +320,10 @@ export default function PortfolioAnalyticsSection({
       {!minimal && (
       <>
       <div className="portfolio-objectives-head">
-        <h2 className="subsection-title">Strategic objective trends</h2>
+        <h2 className="subsection-title">{t("business.portfolio.objectivesTitle")}</h2>
         <p className="muted small">
           {cohortScoped ? `${cohortCaption} · ` : ""}
-          {data?.objectives_note ??
-            "Trends mapped to long-term savings growth, insurance premium momentum, and customer engagement."}
+          {data?.objectives_note ?? t("business.portfolio.objectivesDefaultNote")}
         </p>
       </div>
       <div
@@ -329,7 +345,7 @@ export default function PortfolioAnalyticsSection({
       </>
       )}
       {refreshing && !minimal && (
-        <p className="value-chart-refresh-label muted small">Updating analytics…</p>
+        <p className="value-chart-refresh-label muted small">{t("business.portfolio.updating")}</p>
       )}
 
       {data?.methodology_note && !minimal && (

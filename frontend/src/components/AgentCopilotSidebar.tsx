@@ -1,4 +1,5 @@
 import { FormEvent, KeyboardEvent, useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { isCustomerArea } from "../appRoutes";
 import { parseCohortSearch } from "../cohortQuery";
@@ -62,6 +63,7 @@ type Props = {
 };
 
 export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { isPhone, enterMobileContent } = useMobileUx();
   const location = useLocation();
@@ -154,7 +156,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           text:
             err instanceof Error
               ? err.message
-              : "Could not reach the copilot. Check that the API is running.",
+              : t("errors.copilotUnreachable"),
         });
       } finally {
         setSending(false);
@@ -185,19 +187,17 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
   return (
     <aside
       className={`agent-copilot-sidebar${phoneHome ? " agent-copilot-sidebar-phone-home" : ""}`}
-      aria-label="Executive copilot"
+      aria-label={t("copilot.title")}
     >
       <header className="agent-copilot-head">
         <div>
-          <h2 className="agent-copilot-title">Executive copilot</h2>
+          <h2 className="agent-copilot-title">{t("copilot.title")}</h2>
           <p className="muted small">
-            {phoneHome
-              ? "Ask about the book, then open a link for a focused mobile view."
-              : "Ask about the book; links change the main view."}
+            {phoneHome ? t("copilot.lede.phone") : t("copilot.lede.desktop")}{" "}
             {!phoneHome &&
               (bedrockConfigured
-                ? " Powered by Amazon Bedrock (rules fallback if the model is unavailable)."
-                : " Using rule-based routing until Bedrock is configured.")}
+                ? t("copilot.poweredBy.bedrock")
+                : t("copilot.poweredBy.rules"))}
           </p>
         </div>
       </header>
@@ -210,7 +210,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           className={`agent-copilot-tab${panel === "ask" ? " is-active" : ""}`}
           onClick={() => setTab("ask")}
         >
-          Conversation
+          {t("copilot.tabs.conversation")}
         </button>
         <button
           type="button"
@@ -222,7 +222,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
             setTab("retention_playbook");
           }}
         >
-          Retention queue
+          {t("copilot.tabs.retention")}
         </button>
       </div>
 
@@ -231,8 +231,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           <div ref={historyRef} className="agent-copilot-history">
             {turns.length === 0 && (
               <p className="muted small agent-copilot-empty">
-                Try: “Show the product heatmap”, “How many customers?”, or “Open retention
-                playbook”.
+                {t("copilot.empty.hint")}
               </p>
             )}
             {turns.map((turn) => (
@@ -241,14 +240,14 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
                 className={`agent-copilot-turn agent-copilot-turn-${turn.role}`}
               >
                 <span className="agent-copilot-turn-label">
-                  {turn.role === "user" ? "You" : "Copilot"}
+                  {turn.role === "user" ? t("copilot.turn.user") : t("copilot.turn.assistant")}
                   {turn.role === "assistant" && turn.source && (
                     <span className="agent-copilot-source">
                       {turn.source === "bedrock_tools"
-                        ? " · Bedrock + tools"
+                        ? t("copilot.source.bedrockTools")
                         : turn.source === "bedrock"
-                          ? " · Bedrock"
-                          : " · Rules"}
+                          ? t("copilot.source.bedrock")
+                          : t("copilot.source.rules")}
                     </span>
                   )}
                 </span>
@@ -271,20 +270,20 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           </div>
           <form className="agent-copilot-form" onSubmit={submit}>
             <label className="visually-hidden" htmlFor="agent-copilot-input">
-              Ask Customer 360
+              {t("copilot.input.label")}
             </label>
             <textarea
               id="agent-copilot-input"
               className="agent-copilot-input"
               rows={3}
-              placeholder="Ask about KPIs, customers, products… (Enter to send)"
+              placeholder={t("copilot.input.placeholder")}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onInputKeyDown}
               disabled={sending}
             />
             <button type="submit" className="agent-copilot-send" disabled={sending || !draft.trim()}>
-              {sending ? "Thinking…" : "Ask"}
+              {sending ? t("copilot.send.thinking") : t("copilot.send.submit")}
             </button>
           </form>
         </>

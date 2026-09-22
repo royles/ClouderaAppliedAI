@@ -42,11 +42,11 @@ export function patchProductsParams(
   return next;
 }
 
-export const PRODUCT_COHORT_OPTIONS: { value: CustomerSegment; label: string }[] = [
-  { value: "customers_all", label: "All customers" },
-  { value: "with_policies", label: "With policies" },
-  { value: "with_foreclosures", label: "With foreclosures" },
-  { value: "with_investments", label: "With investments" },
-  { value: "with_insurance_status", label: "With insurance status" },
-  { value: "with_market_products", label: "With market products" },
+export const PRODUCT_COHORT_SEGMENTS: CustomerSegment[] = [
+  "customers_all",
+  "with_policies",
+  "with_foreclosures",
+  "with_investments",
+  "with_insurance_status",
+  "with_market_products",
 ];

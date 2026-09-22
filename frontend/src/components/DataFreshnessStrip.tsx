@@ -1,17 +1,14 @@
+import { useTranslation } from "react-i18next";
 import { useEffect, useState } from "react";
 import { DataFreshness, fetchDataFreshness } from "../api";
+import { formatDateTime } from "../localeFormat";
 
 function formatTs(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso.slice(0, 16).replace("T", " ");
-  return d.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  return formatDateTime(iso);
 }
 
 export default function DataFreshnessStrip() {
+  const { t } = useTranslation();
   const [data, setData] = useState<DataFreshness | null>(null);
 
   useEffect(() => {
@@ -31,23 +28,29 @@ export default function DataFreshnessStrip() {
   if (!data) return null;
 
   return (
-    <div className="data-freshness-strip" role="status" aria-label="Data freshness">
-      <span className="data-freshness-label">Data freshness</span>
+    <div className="data-freshness-strip" role="status" aria-label={t("app.dataFreshness.label")}>
+      <span className="data-freshness-label">{t("app.dataFreshness.label")}</span>
       <span className="data-freshness-item">
-        Warehouse <strong>{formatTs(data.warehouse_loaded_at)}</strong>
+        {t("app.dataFreshness.warehouse")}{" "}
+        <strong>{formatTs(data.warehouse_loaded_at)}</strong>
       </span>
       <span className="data-freshness-item">
-        Metrics cache <strong>{formatTs(data.customer_metrics_at)}</strong>
+        {t("app.dataFreshness.metricsCache")}{" "}
+        <strong>{formatTs(data.customer_metrics_at)}</strong>
       </span>
       <span className="data-freshness-item">
-        Portfolio cache <strong>{formatTs(data.portfolio_cache_at)}</strong>
+        {t("app.dataFreshness.portfolioCache")}{" "}
+        <strong>{formatTs(data.portfolio_cache_at)}</strong>
       </span>
       <span className="data-freshness-item">
-        Churn scores{" "}
+        {t("app.dataFreshness.churnScores")}{" "}
         <strong>
           {data.churn_scored_at
-            ? `${formatTs(data.churn_scored_at)} (${data.churn_customer_count.toLocaleString()} customers)`
-            : "Not scored"}
+            ? t("app.dataFreshness.churnScored", {
+                date: formatTs(data.churn_scored_at),
+                count: data.churn_customer_count.toLocaleString(),
+              })
+            : t("customer.churn.notScored")}
         </strong>
       </span>
     </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { KpiTargetProgress } from "../api";
 
 type Props = {
@@ -5,13 +6,18 @@ type Props = {
 };
 
 export default function KpiThermometer({ progress }: Props) {
+  const { t } = useTranslation();
   const fill = Math.min(100, Math.max(0, progress.progress_pct));
   const pctOfTarget =
     progress.direction === "lower"
       ? progress.actual <= progress.target
-        ? "At or below objective"
-        : `${Math.round((progress.actual / progress.target) * 100)}% of limit`
-      : `${Math.round((progress.actual / progress.target) * 100)}% of objective`;
+        ? t("business.kpi.thermo.atOrBelow")
+        : t("business.kpi.thermo.ofLimit", {
+            pct: Math.round((progress.actual / progress.target) * 100),
+          })
+      : t("business.kpi.thermo.ofObjective", {
+          pct: Math.round((progress.actual / progress.target) * 100),
+        });
 
   return (
     <div
@@ -20,7 +26,7 @@ export default function KpiThermometer({ progress }: Props) {
       aria-valuenow={fill}
       aria-valuemin={0}
       aria-valuemax={100}
-      aria-label={`${progress.status} — ${pctOfTarget}`}
+      aria-label={t("business.kpi.thermo.a11y", { status: progress.status, detail: pctOfTarget })}
       title={pctOfTarget}
     >
       <div className="kpi-thermo-track">
