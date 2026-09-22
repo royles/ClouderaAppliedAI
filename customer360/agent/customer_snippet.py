@@ -40,8 +40,9 @@ def top_customers_snippet(
     where_sql, params = customer_list_where(
         f.segment,
         f.q,
-        policy_type_code=None,
+        policy_type_code=f.policy_type_code,
         city=f.city,
+        churn_risk_tier=f.churn_risk_tier,
     )
     order_sql = order_clause(
         sort_by,

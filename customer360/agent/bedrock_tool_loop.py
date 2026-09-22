@@ -37,6 +37,9 @@ When you have enough information, respond with a single JSON object only (no mar
 
 Use action_ids from the app catalog. Prefer prepare_customer_list_link tool output for customer_list and actions.
 For retention playbook requests set open_retention_playbook true.
+
+For portfolio or KPI questions, call get_portfolio_kpis (includes benchmark_assessments with green/amber/red).
+When status is amber or red, explain using actual vs target and vs_target_summary — do not invent thresholds.
 """
 
 

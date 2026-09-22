@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from customer360.agent.kpi_benchmark_context import benchmark_assessments_for_targets
 from customer360.agent.tools.context import ToolContext
 from customer360.agent.tools.registry import register_tool
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
@@ -20,10 +21,14 @@ _KPI_KEYS = (
 )
 
 
-def _segment_kpis(conn, segment: str) -> dict[str, Any]:
+def _segment_payload(conn, segment: str) -> dict[str, Any]:
     payload = fetch_portfolio_analytics(conn, segment=segment)
     kpis = payload.get("kpis") or {}
-    return {k: kpis.get(k) for k in _KPI_KEYS}
+    kpi_targets = payload.get("kpi_targets") or {}
+    return {
+        "kpis": {k: kpis.get(k) for k in _KPI_KEYS},
+        "benchmark_assessments": benchmark_assessments_for_targets(conn, kpi_targets),
+    }
 
 
 @register_tool(
@@ -50,8 +55,10 @@ def _segment_kpis(conn, segment: str) -> dict[str, Any]:
 def compare_portfolio_segments(ctx: ToolContext, tool_input: dict[str, Any]) -> dict[str, Any]:
     seg_a = normalize_segment(tool_input.get("segment_a"))
     seg_b = normalize_segment(tool_input.get("segment_b"))
-    kpis_a = _segment_kpis(ctx.conn, seg_a)
-    kpis_b = _segment_kpis(ctx.conn, seg_b)
+    pack_a = _segment_payload(ctx.conn, seg_a)
+    pack_b = _segment_payload(ctx.conn, seg_b)
+    kpis_a = pack_a["kpis"]
+    kpis_b = pack_b["kpis"]
     deltas: dict[str, Any] = {}
     for key in _KPI_KEYS:
         a = kpis_a.get(key)
@@ -61,7 +68,15 @@ def compare_portfolio_segments(ctx: ToolContext, tool_input: dict[str, Any]) -> 
         else:
             deltas[key] = None
     return {
-        "segment_a": {"key": seg_a, "kpis": kpis_a},
-        "segment_b": {"key": seg_b, "kpis": kpis_b},
+        "segment_a": {
+            "key": seg_a,
+            "kpis": kpis_a,
+            "benchmark_assessments": pack_a["benchmark_assessments"],
+        },
+        "segment_b": {
+            "key": seg_b,
+            "kpis": kpis_b,
+            "benchmark_assessments": pack_b["benchmark_assessments"],
+        },
         "delta_b_minus_a": deltas,
     }

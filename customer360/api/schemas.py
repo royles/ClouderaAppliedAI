@@ -566,6 +566,8 @@ class AgentCustomerListContext(BaseModel):
     view: str | None = None
     city: str | None = None
     q: str | None = None
+    policy_type_code: int | None = None
+    churn_risk_tier: str | None = None
 
 
 class AgentAskRequest(BaseModel):

@@ -26,6 +26,10 @@ def overview_snippet(conn: sqlite3.Connection) -> str | None:
 
 
 def portfolio_snippet(conn: sqlite3.Connection, segment: str) -> str | None:
+    from customer360.agent.kpi_benchmark_context import (
+        benchmark_assessments_for_targets,
+        format_benchmark_snippet,
+    )
     from customer360.api.portfolio_analytics import fetch_portfolio_analytics
 
     try:
@@ -45,7 +49,13 @@ def portfolio_snippet(conn: sqlite3.Connection, segment: str) -> str | None:
         parts.append(f"value_at_churn_risk_ils={float(risk):,.0f}")
     if not parts:
         return None
-    return f"Portfolio KPIs (segment={segment}): " + ", ".join(parts) + "."
+    lines = [f"Portfolio KPIs (segment={segment}): " + ", ".join(parts) + "."]
+    targets = payload.get("kpi_targets") or {}
+    assessments = benchmark_assessments_for_targets(conn, targets)
+    bench_line = format_benchmark_snippet(assessments)
+    if bench_line:
+        lines.append(bench_line)
+    return " ".join(lines)
 
 
 def gather_context(

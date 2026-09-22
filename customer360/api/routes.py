@@ -549,10 +549,17 @@ def list_customers(
         None,
         description="Filter to customers in this city (matches DWH_DIM_CUSTOMERS_UNIQUE.CITY_NAME)",
     ),
+    churn_tier: str | None = Query(
+        None,
+        alias="churn_tier",
+        description="Filter by churn risk tier: HIGH, MEDIUM, or LOW",
+    ),
 ) -> CustomerListResponse:
     limit = min(max(1, limit), MAX_CUSTOMER_PAGE_SIZE)
     seg = normalize_segment(segment)
-    where_sql, params = _customer_list_where(seg, q, policy_type_code, city)
+    where_sql, params = _customer_list_where(
+        seg, q, policy_type_code, city, churn_risk_tier=churn_tier
+    )
 
     churn_join = ""
     churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"

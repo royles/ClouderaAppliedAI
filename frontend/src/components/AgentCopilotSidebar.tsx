@@ -60,13 +60,13 @@ export default function AgentCopilotSidebar() {
       view: state.view,
       city: state.city,
       q: state.q || null,
+      policy_type_code: state.policyTypeCode,
+      churn_risk_tier: state.churnTier,
     };
   }, [location.pathname, location.search]);
 
   const {
     bedrockConfigured,
-    open,
-    setOpen,
     panel,
     setPanel,
     turns,
@@ -152,8 +152,6 @@ export default function AgentCopilotSidebar() {
     },
     [draft, runAsk],
   );
-
-  if (!open) return null;
 
   const setTab = (next: CopilotPanel) => setPanel(next);
 

@@ -465,6 +465,7 @@ export const fetchCustomers = (options?: {
   metric?: string | null;
   policyTypeCode?: number | null;
   city?: string | null;
+  churnTier?: "HIGH" | "MEDIUM" | "LOW" | null;
 }) => {
   const params = new URLSearchParams();
   if (options?.q?.trim()) params.set("q", options.q.trim());
@@ -486,6 +487,9 @@ export const fetchCustomers = (options?: {
   }
   if (options?.city?.trim()) {
     params.set("city", options.city.trim());
+  }
+  if (options?.churnTier) {
+    params.set("churn_tier", options.churnTier);
   }
   const qs = params.toString();
   return getJson<CustomerList>(`/api/customers${qs ? `?${qs}` : ""}`);
@@ -603,6 +607,8 @@ export type AgentCustomerListContext = {
   view?: string | null;
   city?: string | null;
   q?: string | null;
+  policy_type_code?: number | null;
+  churn_risk_tier?: string | null;
 };
 
 export type AgentToolInfo = {

@@ -17,8 +17,26 @@ from customer360.agent.list_filters import (
 from customer360.agent.query_builder import count_matching_customers
 from customer360.agent.tools.context import ToolContext
 from customer360.agent.tools.registry import register_tool
-from customer360.api.customer_list import customer_list_where, normalize_city_name
+from customer360.api.customer_list import (
+    customer_list_where,
+    normalize_churn_risk_tier,
+    normalize_city_name,
+)
 from customer360.api.segments import normalize_segment
+
+_LIST_FILTER_PROPERTIES: dict[str, Any] = {
+    "segment": {"type": "string", "description": "Overview cohort segment key"},
+    "city": {"type": "string", "description": "e.g. Jerusalem, Tel Aviv"},
+    "policy_type_code": {
+        "type": "integer",
+        "description": "Policy product type code (same as products heatmap / policy_type URL param)",
+    },
+    "churn_risk_tier": {
+        "type": "string",
+        "enum": ["HIGH", "MEDIUM", "LOW"],
+        "description": "Churn risk tier filter",
+    },
+}
 
 
 def _filters_from_tool_input(ctx: ToolContext, tool_input: dict[str, Any]) -> CustomerListFilters:
@@ -36,6 +54,14 @@ def _filters_from_tool_input(ctx: ToolContext, tool_input: dict[str, Any]) -> Cu
     if sort_order not in ("asc", "desc"):
         sort_order = "desc"
     city = normalize_city_name(tool_input.get("city"))
+    policy_raw = tool_input.get("policy_type_code", tool_input.get("policy_type"))
+    policy_type_code: int | None = None
+    if policy_raw is not None and str(policy_raw).strip() != "":
+        try:
+            policy_type_code = int(policy_raw)
+        except (TypeError, ValueError):
+            policy_type_code = None
+    churn_risk_tier = normalize_churn_risk_tier(tool_input.get("churn_risk_tier"))
     view = tool_input.get("view")
     patch = CustomerListFilters(
         segment=normalize_segment(seg) if seg else None,
@@ -45,6 +71,8 @@ def _filters_from_tool_input(ctx: ToolContext, tool_input: dict[str, Any]) -> Cu
         page=1,
         view="table" if view == "table" or (page_size <= 25) else None,
         city=city,
+        policy_type_code=policy_type_code,
+        churn_risk_tier=churn_risk_tier,
     )
     merged = merge_filters(prior, patch, default_segment=ctx.segment)
     if merged is None:
@@ -58,8 +86,7 @@ def _filters_from_tool_input(ctx: ToolContext, tool_input: dict[str, Any]) -> Cu
     input_schema={
         "type": "object",
         "properties": {
-            "segment": {"type": "string"},
-            "city": {"type": "string", "description": "e.g. Jerusalem, Tel Aviv"},
+            **_LIST_FILTER_PROPERTIES,
             "sort_by": {
                 "type": "string",
                 "enum": ["customer_value", "churn_risk", "name", "policy_count", "investment_count"],
@@ -89,8 +116,7 @@ def count_customers(ctx: ToolContext, tool_input: dict[str, Any]) -> dict[str, A
                 "enum": ["customer_value", "churn_risk", "name", "policy_count", "investment_count"],
             },
             "sort_order": {"type": "string", "enum": ["asc", "desc"]},
-            "city": {"type": "string"},
-            "segment": {"type": "string"},
+            **_LIST_FILTER_PROPERTIES,
         },
         "required": ["limit", "sort_by"],
         "additionalProperties": False,
@@ -118,14 +144,13 @@ def preview_customer_ranking(ctx: ToolContext, tool_input: dict[str, Any]) -> di
     input_schema={
         "type": "object",
         "properties": {
-            "segment": {"type": "string"},
+            **_LIST_FILTER_PROPERTIES,
             "sort_by": {
                 "type": "string",
                 "enum": ["customer_value", "churn_risk", "name", "policy_count", "investment_count"],
             },
             "sort_order": {"type": "string", "enum": ["asc", "desc"]},
             "page_size": {"type": "integer", "minimum": 1, "maximum": 100},
-            "city": {"type": "string"},
             "view": {"type": "string", "enum": ["grid", "table"]},
         },
         "additionalProperties": False,
@@ -163,6 +188,20 @@ def prepare_customer_list_link(ctx: ToolContext, tool_input: dict[str, Any]) -> 
         "additionalProperties": False,
     },
 )
+def suggest_app_navigation(ctx: ToolContext, tool_input: dict[str, Any]) -> dict[str, Any]:
+    entry_id = str(tool_input.get("catalog_entry_id", "")).strip()
+    entry = ENTRY_BY_ID.get(entry_id)
+    if entry is None:
+        return {"error": f"Unknown catalog_entry_id: {entry_id}"}
+    seg = normalize_segment(tool_input.get("segment") or ctx.segment)
+    action = action_navigate(
+        entry,
+        segment=seg if entry.path == "/business" else None,
+        default_segment=ctx.segment,
+    )
+    return {"action": action, "catalog_entry_id": entry_id}
+
+
 @register_tool(
     "search_customers_by_name",
     description="Find customers by partial name or id within the active segment (for lookup before opening a profile).",
@@ -170,8 +209,8 @@ def prepare_customer_list_link(ctx: ToolContext, tool_input: dict[str, Any]) -> 
         "type": "object",
         "properties": {
             "query": {"type": "string", "description": "Substring of customer name or id"},
-            "segment": {"type": "string"},
             "limit": {"type": "integer", "minimum": 1, "maximum": 15},
+            **_LIST_FILTER_PROPERTIES,
         },
         "required": ["query"],
         "additionalProperties": False,
@@ -181,13 +220,20 @@ def search_customers_by_name(ctx: ToolContext, tool_input: dict[str, Any]) -> di
     q = str(tool_input.get("query", "")).strip()
     if len(q) < 2:
         return {"error": "query must be at least 2 characters", "matches": []}
-    seg = normalize_segment(tool_input.get("segment") or ctx.segment)
+    filters = _filters_from_tool_input(ctx, {**tool_input, "page_size": 50})
+    f = filters.normalized(default_segment=ctx.segment)
     try:
         limit = int(tool_input.get("limit", 8))
     except (TypeError, ValueError):
         limit = 8
     limit = max(1, min(limit, 15))
-    where, params = customer_list_where(seg, q)
+    where, params = customer_list_where(
+        f.segment,
+        q,
+        policy_type_code=f.policy_type_code,
+        city=f.city,
+        churn_risk_tier=f.churn_risk_tier,
+    )
     rows = ctx.conn.execute(
         f"""
         SELECT c.CUSTOMER_ID AS customer_id, c.CUSTOMER_NAME AS customer_name, c.CITY_NAME AS city_name
@@ -211,18 +257,10 @@ def search_customers_by_name(ctx: ToolContext, tool_input: dict[str, Any]) -> di
         }
         for r in rows
     ]
-    return {"segment": seg, "query": q, "total_matches": int(total or 0), "matches": matches}
-
-
-def suggest_app_navigation(ctx: ToolContext, tool_input: dict[str, Any]) -> dict[str, Any]:
-    entry_id = str(tool_input.get("catalog_entry_id", "")).strip()
-    entry = ENTRY_BY_ID.get(entry_id)
-    if entry is None:
-        return {"error": f"Unknown catalog_entry_id: {entry_id}"}
-    seg = normalize_segment(tool_input.get("segment") or ctx.segment)
-    action = action_navigate(
-        entry,
-        segment=seg if entry.path == "/business" else None,
-        default_segment=ctx.segment,
-    )
-    return {"action": action, "catalog_entry_id": entry_id}
+    return {
+        "segment": f.segment,
+        "query": q,
+        "total_matches": int(total or 0),
+        "matches": matches,
+        "filters": asdict(f),
+    }

@@ -12,8 +12,7 @@ import {
   PRODUCTS_BASE,
 } from "./appRoutes";
 import { AgentCopilotProvider, useAgentCopilot } from "./agentCopilotContext";
-import AgentCopilotSidebar from "./components/AgentCopilotSidebar";
-import AgentCopilotToggle from "./components/AgentCopilotToggle";
+import CopilotRail from "./components/CopilotRail";
 import DataFreshnessStrip from "./components/DataFreshnessStrip";
 import ProductsPage from "./pages/ProductsPage";
 import AdminPage from "./pages/AdminPage";
@@ -112,12 +111,13 @@ function AppSideNav() {
 }
 
 function AppLayout() {
-  const { open } = useAgentCopilot();
+  const { enabled, open } = useAgentCopilot();
 
   return (
     <div className="layout">
-      <AgentCopilotToggle />
-      <header className="header header-with-copilot-toggle">
+      <header
+        className={`header${enabled && !open ? " header-with-copilot-toggle" : ""}`}
+      >
         <Link to={BUSINESS_BASE} className="brand">
           Insurance Customer 360
         </Link>
@@ -139,7 +139,7 @@ function AppLayout() {
             <Route path="*" element={<Navigate to={BUSINESS_BASE} replace />} />
           </Routes>
         </main>
-        <AgentCopilotSidebar />
+        <CopilotRail />
       </div>
     </div>
   );

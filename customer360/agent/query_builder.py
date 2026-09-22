@@ -19,8 +19,9 @@ def compile_customer_list_sql(
     where_sql, params = customer_list_where(
         f.segment,
         f.q,
-        policy_type_code=None,
+        policy_type_code=f.policy_type_code,
         city=f.city,
+        churn_risk_tier=f.churn_risk_tier,
     )
     sql = f"""
 SELECT COUNT(DISTINCT c.CUSTOMER_ID)
@@ -32,6 +33,10 @@ WHERE {where_sql}
         parts.append(f"city={f.city}")
     if f.q:
         parts.append(f"search={f.q!r}")
+    if f.policy_type_code is not None:
+        parts.append(f"policy_type={f.policy_type_code}")
+    if f.churn_risk_tier:
+        parts.append(f"churn_tier={f.churn_risk_tier}")
     if f.sort_by != "churn_risk":
         parts.append(f"sort={f.sort_by} {f.sort_order}")
     description = "Customer list filters: " + ", ".join(parts)

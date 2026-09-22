@@ -7,7 +7,11 @@ from dataclasses import dataclass, replace
 from typing import Any
 from urllib.parse import urlencode
 
-from customer360.api.customer_list import KNOWN_CITIES, normalize_city_name
+from customer360.api.customer_list import (
+    KNOWN_CITIES,
+    normalize_churn_risk_tier,
+    normalize_city_name,
+)
 from customer360.api.segments import normalize_segment
 
 VALID_SORT_BY = frozenset(
@@ -28,6 +32,8 @@ class CustomerListFilters:
     metric: str | None = None
     q: str | None = None
     city: str | None = None
+    policy_type_code: int | None = None
+    churn_risk_tier: str | None = None
 
     def normalized(self, *, default_segment: str) -> CustomerListFilters:
         seg = normalize_segment(self.segment or default_segment)
@@ -41,6 +47,13 @@ class CustomerListFilters:
         metric = self.metric if self.metric in ("total", "investment", "coverage", "at_risk") else None
         q = (self.q or "").strip() or None
         city = normalize_city_name(self.city)
+        policy_type_code = self.policy_type_code
+        if policy_type_code is not None:
+            try:
+                policy_type_code = int(policy_type_code)
+            except (TypeError, ValueError):
+                policy_type_code = None
+        churn_risk_tier = normalize_churn_risk_tier(self.churn_risk_tier)
         return replace(
             self,
             segment=seg,
@@ -52,6 +65,8 @@ class CustomerListFilters:
             metric=metric,
             q=q,
             city=city,
+            policy_type_code=policy_type_code,
+            churn_risk_tier=churn_risk_tier,
         )
 
 
@@ -90,6 +105,10 @@ def to_query_string(filters: CustomerListFilters, *, default_segment: str) -> st
         params["metric"] = f.metric
     if f.city:
         params["city"] = f.city
+    if f.policy_type_code is not None:
+        params["policy_type"] = str(f.policy_type_code)
+    if f.churn_risk_tier:
+        params["churn_tier"] = f.churn_risk_tier
     return urlencode(params)
 
 
@@ -104,10 +123,13 @@ def action_label(filters: CustomerListFilters) -> str:
     }
     sort_label = sort_labels.get(f.sort_by, f.sort_by.replace("_", " "))
     city_part = f" in {f.city}" if f.city else ""
+    tier_part = f" · {f.churn_risk_tier} churn" if f.churn_risk_tier else ""
+    product_part = f" · product {f.policy_type_code}" if f.policy_type_code is not None else ""
     if f.page_size != DEFAULT_PAGE_SIZE and f.page == 1:
-        return f"Top {f.page_size} by {sort_label}{city_part}"
-    if f.city:
-        return f"Customers in {f.city} · {sort_label}"
+        return f"Top {f.page_size} by {sort_label}{city_part}{tier_part}{product_part}"
+    if f.city or f.churn_risk_tier or f.policy_type_code is not None:
+        parts = [p for p in (f.city, f.churn_risk_tier, f.policy_type_code) if p]
+        return f"Customers ({', '.join(str(x) for x in parts)}) · {sort_label}"
     return f"Customer list · {sort_label} ({f.sort_order})"
 
 
@@ -251,6 +273,16 @@ def filters_from_model_payload(raw: Any) -> CustomerListFilters | None:
     metric = str(raw.get("metric") or "").strip().lower() or None
     q = str(raw.get("q") or "").strip() or None
     city = normalize_city_name(str(raw.get("city") or "").strip() or None)
+    policy_raw = raw.get("policy_type_code", raw.get("policy_type"))
+    policy_type_code: int | None = None
+    if policy_raw is not None and str(policy_raw).strip() != "":
+        try:
+            policy_type_code = int(policy_raw)
+        except (TypeError, ValueError):
+            policy_type_code = None
+    churn_risk_tier = normalize_churn_risk_tier(
+        str(raw.get("churn_risk_tier") or raw.get("churn_tier") or "").strip() or None
+    )
     return CustomerListFilters(
         segment=segment,
         sort_by=sort_by,
@@ -261,6 +293,8 @@ def filters_from_model_payload(raw: Any) -> CustomerListFilters | None:
         metric=metric,
         q=q,
         city=city,
+        policy_type_code=policy_type_code,
+        churn_risk_tier=churn_risk_tier,
     )
 
 
@@ -282,6 +316,8 @@ def _refinement_only_patch(p: CustomerListFilters) -> bool:
         and p.metric is None
         and not p.q
         and p.segment is None
+        and p.policy_type_code is None
+        and p.churn_risk_tier is None
     )
 
 
@@ -309,6 +345,8 @@ def merge_filters(
             metric=p.metric or base.metric,
             q=p.q or base.q,
             city=p.city or base.city,
+            policy_type_code=p.policy_type_code if p.policy_type_code is not None else base.policy_type_code,
+            churn_risk_tier=p.churn_risk_tier or base.churn_risk_tier,
         )
     if base is None:
         return None

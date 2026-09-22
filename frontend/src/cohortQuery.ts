@@ -48,7 +48,10 @@ export type CohortQueryState = {
   metric: ChartValueMetric | null;
   policyTypeCode: number | null;
   city: string | null;
+  churnTier: "HIGH" | "MEDIUM" | "LOW" | null;
 };
+
+const VALID_CHURN_TIERS = new Set<string>(["HIGH", "MEDIUM", "LOW"]);
 
 export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
   const rawSegment = params.get("segment") ?? "customers_all";
@@ -83,6 +86,11 @@ export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
   const cityRaw = params.get("city")?.trim();
   const city = cityRaw ? cityRaw : null;
 
+  const tierRaw = (params.get("churn_tier") ?? "").trim().toUpperCase();
+  const churnTier = VALID_CHURN_TIERS.has(tierRaw)
+    ? (tierRaw as "HIGH" | "MEDIUM" | "LOW")
+    : null;
+
   return {
     segment,
     q: params.get("q") ?? "",
@@ -95,6 +103,7 @@ export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
     metric,
     policyTypeCode,
     city,
+    churnTier,
   };
 }
 
@@ -127,6 +136,9 @@ export function cohortSearchString(state: Partial<CohortQueryState>): string {
   if (state.city?.trim()) {
     params.set("city", state.city.trim());
   }
+  if (state.churnTier) {
+    params.set("churn_tier", state.churnTier);
+  }
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -145,6 +157,7 @@ export function patchCohortParams(
     metric: ChartValueMetric | null;
     policyTypeCode: number | null;
     city: string | null;
+    churnTier: "HIGH" | "MEDIUM" | "LOW" | null;
   }>,
 ): URLSearchParams {
   const next = new URLSearchParams(prev);
@@ -175,6 +188,7 @@ export function patchCohortParams(
     apply("policy_type", code == null ? null : String(code));
   }
   if ("city" in patch) apply("city", patch.city ?? null);
+  if ("churnTier" in patch) apply("churn_tier", patch.churnTier ?? null);
   return next;
 }
 

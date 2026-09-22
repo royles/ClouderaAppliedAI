@@ -41,8 +41,18 @@ export default function CustomerDirectoryPanel({
     () => parseCohortSearch(searchParams),
     [searchParams],
   );
-  const { sortBy, sortOrder, page, pageSize, view, asOf, metric, policyTypeCode, city } =
-    urlState;
+  const {
+    sortBy,
+    sortOrder,
+    page,
+    pageSize,
+    view,
+    asOf,
+    metric,
+    policyTypeCode,
+    city,
+    churnTier,
+  } = urlState;
   const effectiveSegment = segment;
 
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
@@ -104,6 +114,7 @@ export default function CustomerDirectoryPanel({
           metric: asOf ? (metric ?? "total") : null,
           policyTypeCode,
           city,
+          churnTier,
         });
         if (cancelled || requestId !== customersRequestRef.current) return;
         setCustomers(result.customers);
@@ -137,6 +148,7 @@ export default function CustomerDirectoryPanel({
     metric,
     policyTypeCode,
     city,
+    churnTier,
   ]);
 
   const clearChartFilter = () => {
