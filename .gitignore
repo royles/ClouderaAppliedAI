@@ -10,6 +10,8 @@ __pycache__/
 .venv/
 venv/
 frontend/node_modules/
+bedrock-playground/frontend/node_modules/
+bedrock-playground/backend/venv/
 .tools/
 
 # Applied AI sentiment demo (see app/ + scripts/train.py)

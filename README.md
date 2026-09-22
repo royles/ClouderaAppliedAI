@@ -220,3 +220,18 @@ bash .cursor/start.sh     # http://localhost:8000
 
 Manual run: `pip install -r applied-ai-sentiment-requirements.txt`, then
 `python -m scripts.train` and `uvicorn app.main:app --host 0.0.0.0 --port 8000`.
+
+## Bedrock Playground
+
+A separate **AWS Bedrock chat playground** (React + FastAPI) lives under
+[`bedrock-playground/`](bedrock-playground/README.md). It does not share the
+Customer 360 `frontend/` tree.
+
+```bash
+cd bedrock-playground
+cp backend/.env.example backend/.env   # optional AWS credentials
+python start.py
+```
+
+See [bedrock-playground/README.md](bedrock-playground/README.md) for architecture,
+CML/CDSW port notes, and security guidance.
