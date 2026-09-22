@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useCallback, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AgentAction, askAgent } from "../api";
 import {
@@ -46,6 +46,7 @@ function ActionButton({
 export default function AgentCopilotSidebar() {
   const navigate = useNavigate();
   const {
+    bedrockConfigured,
     open,
     setOpen,
     panel,
@@ -77,16 +78,15 @@ export default function AgentCopilotSidebar() {
     [askSegment, navigate, openRetentionPlaybook, playbookCohortLabel, setPanel],
   );
 
-  const submit = useCallback(
-    async (e: FormEvent) => {
-      e.preventDefault();
-      const message = draft.trim();
-      if (!message || sending) return;
+  const runAsk = useCallback(
+    async (message: string) => {
+      const trimmed = message.trim();
+      if (!trimmed || sending) return;
       setDraft("");
-      appendTurn({ id: newTurnId(), role: "user", text: message });
+      appendTurn({ id: newTurnId(), role: "user", text: trimmed });
       setSending(true);
       try {
-        const res = await askAgent({ message, segment: askSegment });
+        const res = await askAgent({ message: trimmed, segment: askSegment });
         appendTurn({
           id: newTurnId(),
           role: "assistant",
@@ -111,7 +111,24 @@ export default function AgentCopilotSidebar() {
         setSending(false);
       }
     },
-    [appendTurn, askSegment, draft, sending],
+    [appendTurn, askSegment, sending],
+  );
+
+  const submit = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      void runAsk(draft);
+    },
+    [draft, runAsk],
+  );
+
+  const onInputKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+      e.preventDefault();
+      void runAsk(draft);
+    },
+    [draft, runAsk],
   );
 
   if (!open) return null;
@@ -124,8 +141,10 @@ export default function AgentCopilotSidebar() {
         <div>
           <h2 className="agent-copilot-title">Executive copilot</h2>
           <p className="muted small">
-            Ask about the book; links change the main view. Answers use Amazon Bedrock when
-            configured.
+            Ask about the book; links change the main view.
+            {bedrockConfigured
+              ? " Powered by Amazon Bedrock (rules fallback if the model is unavailable)."
+              : " Using rule-based routing until Bedrock is configured."}
           </p>
         </div>
         <button
@@ -207,9 +226,10 @@ export default function AgentCopilotSidebar() {
               id="agent-copilot-input"
               className="agent-copilot-input"
               rows={3}
-              placeholder="Ask about KPIs, customers, products…"
+              placeholder="Ask about KPIs, customers, products… (Enter to send)"
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={onInputKeyDown}
               disabled={sending}
             />
             <button type="submit" className="agent-copilot-send" disabled={sending || !draft.trim()}>
