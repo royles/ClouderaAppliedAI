@@ -999,11 +999,36 @@ select.control {
   border-top: 1px dashed #e6ebf0;
 }
 
-.customer-detail-top-grid {
+.customer-detail-top-grid,
+.customer-detail-hero-grid {
   display: grid;
-  grid-template-columns: minmax(18rem, 22rem) minmax(0, 1fr);
-  gap: 1rem;
+  grid-template-columns: minmax(17rem, 21rem) minmax(0, 1.45fr);
+  gap: 1.25rem;
   align-items: start;
+}
+
+.customer-detail-insights-pane {
+  min-width: 0;
+}
+
+.insights-panel-embedded {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.insights-panel-embedded .panel-head h2 {
+  font-size: 1.15rem;
+}
+
+.insights-panel-embedded .insights-summary {
+  font-size: 1.02rem;
+}
+
+.customer-detail-records-panel {
+  margin-top: 0;
 }
 
 .customer-detail-tabs-pane {
@@ -1121,7 +1146,8 @@ select.control {
 }
 
 @media (max-width: 900px) {
-  .customer-detail-top-grid {
+  .customer-detail-top-grid,
+  .customer-detail-hero-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -3487,7 +3513,8 @@ a.engagement-act-link {
     color: var(--theme-brand-900);
   }
 
-  .customer-detail-top-grid-compact {
+  .customer-detail-top-grid-compact,
+  .customer-detail-hero-grid-compact {
     grid-template-columns: 1fr;
   }
 

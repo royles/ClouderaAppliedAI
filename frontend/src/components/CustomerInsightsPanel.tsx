@@ -21,6 +21,8 @@ import {
 type Props = {
   customerId: number;
   churnTier?: string | null;
+  /** Render inside customer detail hero (no outer panel wrapper). */
+  embedded?: boolean;
 };
 
 type OpenAction = {
@@ -78,7 +80,11 @@ function insightSubtitle(
   return localOnlyHint(t, provider);
 }
 
-export default function CustomerInsightsPanel({ customerId, churnTier }: Props) {
+export default function CustomerInsightsPanel({
+  customerId,
+  churnTier,
+  embedded = false,
+}: Props) {
   const { t } = useTranslation();
   const [insights, setInsights] = useState<CustomerInsights | null>(null);
   const [bedrockStatus, setBedrockStatus] = useState<BedrockStatus | null>(null);
@@ -162,9 +168,14 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
   const fromLlm = isLlmGeneratedSource(insights?.source);
   const subtitle = insightSubtitle(insights, bedrockStatus, loading, t);
 
+  const Shell = embedded ? "div" : "section";
+  const shellClass = embedded
+    ? "insights-panel insights-panel-embedded"
+    : "panel insights-panel";
+
   return (
     <>
-      <section className="panel insights-panel">
+      <Shell className={shellClass}>
         <div className="panel-head">
           <div>
             <h2>{t("customer.insights.title")}</h2>
@@ -330,7 +341,7 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
             )}
           </>
         )}
-      </section>
+      </Shell>
 
       {openAction && (
         <InsightActionModal

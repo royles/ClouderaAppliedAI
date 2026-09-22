@@ -244,7 +244,7 @@ export default function CustomerDetailPage() {
       )}
       <section className="panel customer-detail-top">
         <div
-          className={`customer-detail-top-grid${mobileFocus ? " customer-detail-top-grid-compact" : ""}`}
+          className={`customer-detail-hero-grid${mobileFocus ? " customer-detail-hero-grid-compact" : ""}`}
         >
           {customerCard && (
             <CustomerSummaryCard
@@ -254,39 +254,59 @@ export default function CustomerDetailPage() {
             />
           )}
           {!mobileFocus && (
-            <div className="customer-detail-tabs-pane">
-              <div className="tab-bar customer-detail-tab-bar">
-        <button
-          type="button"
-          className={tab === "policies" ? "tab active" : "tab"}
-          onClick={() => setTab("policies")}
-        >
-          {t("customer.tabs.policies")} ({policies.length})
-        </button>
-        <button
-          type="button"
-          className={tab === "foreclosures" ? "tab active" : "tab"}
-          onClick={() => setTab("foreclosures")}
-        >
-          {t("customer.tabs.foreclosures")} ({foreclosures.length})
-        </button>
-        <button
-          type="button"
-          className={tab === "investments" ? "tab active" : "tab"}
-          onClick={() => setTab("investments")}
-        >
-          {t("customer.tabs.investments")} ({investments.length})
-        </button>
-        <button
-          type="button"
-          className={tab === "interactions" ? "tab active" : "tab"}
-          onClick={() => setTab("interactions")}
-        >
-          {t("customer.tabs.interactions")} ({interaction_summary?.total_events ?? interactions.length})
-        </button>
-              </div>
+            <div id="customer-insights-anchor" className="customer-detail-insights-pane">
+              <CustomerInsightsPanel
+                embedded
+                customerId={profile.customer_id}
+                churnTier={detail.churn?.churn_risk_tier}
+              />
+            </div>
+          )}
+        </div>
+      </section>
 
-              <div className="customer-detail-tab-body">
+      {!mobileFocus && engagementActionHint && (
+        <p className="engagement-action-banner muted small">
+          {t("customer.engagementHint.prefix")} <strong>{engagementActionHint}</strong>
+        </p>
+      )}
+
+      {!mobileFocus && (
+        <section className="panel customer-detail-records-panel">
+          <div className="customer-detail-tabs-pane">
+            <div className="tab-bar customer-detail-tab-bar">
+              <button
+                type="button"
+                className={tab === "policies" ? "tab active" : "tab"}
+                onClick={() => setTab("policies")}
+              >
+                {t("customer.tabs.policies")} ({policies.length})
+              </button>
+              <button
+                type="button"
+                className={tab === "foreclosures" ? "tab active" : "tab"}
+                onClick={() => setTab("foreclosures")}
+              >
+                {t("customer.tabs.foreclosures")} ({foreclosures.length})
+              </button>
+              <button
+                type="button"
+                className={tab === "investments" ? "tab active" : "tab"}
+                onClick={() => setTab("investments")}
+              >
+                {t("customer.tabs.investments")} ({investments.length})
+              </button>
+              <button
+                type="button"
+                className={tab === "interactions" ? "tab active" : "tab"}
+                onClick={() => setTab("interactions")}
+              >
+                {t("customer.tabs.interactions")} (
+                {interaction_summary?.total_events ?? interactions.length})
+              </button>
+            </div>
+
+            <div className="customer-detail-tab-body">
       {tab === "policies" && (
         <div className="customer-detail-tab-content">
           <h2 className="subsection-title">{t("customer.policies.title")}</h2>
@@ -479,24 +499,9 @@ export default function CustomerDetailPage() {
           )}
         </div>
       )}
-              </div>
             </div>
-          )}
-        </div>
-      </section>
-
-      {!mobileFocus && engagementActionHint && (
-        <p className="engagement-action-banner muted small">
-          {t("customer.engagementHint.prefix")} <strong>{engagementActionHint}</strong>
-        </p>
-      )}
-      {!mobileFocus && (
-        <div id="customer-insights-anchor">
-          <CustomerInsightsPanel
-            customerId={profile.customer_id}
-            churnTier={detail.churn?.churn_risk_tier}
-          />
-        </div>
+          </div>
+        </section>
       )}
 
       {!mobileFocus && (
