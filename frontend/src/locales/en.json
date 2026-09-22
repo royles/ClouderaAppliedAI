@@ -936,6 +936,7 @@
       "atRiskBook": "At risk {{atRisk}} · Book {{book}}",
       "openList": "Open full list in customer hub →",
       "loadingQueue": "Loading queue…",
+      "loadingAction": "Loading best next action…",
       "emptyCohort": "No scored at-risk customers in this cohort yet.",
       "lede": "Prioritized by value at churn risk (next best action per customer).",
       "actions": {

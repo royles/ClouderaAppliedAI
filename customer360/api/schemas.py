@@ -584,7 +584,20 @@ class RetentionPlaybookItem(BaseModel):
     churn_probability: float | None = None
     churn_risk_tier: str | None = None
     value_at_risk: float = 0
+    recommended_action: PlaybookAction | None = None
+
+
+class RetentionRecommendationsRequest(BaseModel):
+    customer_ids: list[int] = Field(default_factory=list, max_length=50)
+
+
+class RetentionRecommendationItem(BaseModel):
+    customer_id: int
     recommended_action: PlaybookAction
+
+
+class RetentionRecommendationsResponse(BaseModel):
+    recommendations: list[RetentionRecommendationItem] = Field(default_factory=list)
 
 
 class RetentionPlaybookResponse(BaseModel):

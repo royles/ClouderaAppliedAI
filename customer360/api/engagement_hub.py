@@ -9,6 +9,7 @@ from customer360.api.segments import normalize_segment, segment_scope_sql
 from customer360.churn.scoring import churn_table_exists
 from customer360.interactions.summary import REFERENCE_DATE, interactions_table_exists
 from customer360.api.metrics_cache import customer_metrics_populated
+from customer360.api.touchpoint_actions import recommended_touchpoint_action
 
 REFERENCE_DAY = REFERENCE_DATE.strftime("%Y-%m-%d")
 
@@ -96,50 +97,6 @@ def _influence_score(row: dict[str, Any], *, value_p90: float) -> float:
     if events_90 >= 12:
         score -= 12.0
     return round(min(100.0, max(0.0, score)), 1)
-
-
-def _recommended_action(row: dict[str, Any]) -> dict[str, str]:
-    unresolved = int(row.get("unresolved_agent_questions") or 0)
-    days_since = float(row.get("days_since_last_interaction") or 999)
-    web_90 = int(row.get("web_search_90d") or 0)
-    reviews_90 = int(row.get("review_count_90d") or 0)
-    tier = (row.get("churn_risk_tier") or "").upper()
-    events_90 = int(row.get("events_last_90d") or 0)
-
-    if unresolved > 0:
-        return {
-            "action_code": "resolve_agent_question",
-            "title": "Resolve open agent question",
-            "detail": f"{unresolved} unresolved question(s) in the last 90 days — call or message while context is fresh.",
-            "channel_hint": "phone",
-        }
-    if tier == "HIGH" and events_90 >= 1:
-        return {
-            "action_code": "retention_call",
-            "title": "Retention call (channel is warm)",
-            "detail": "High churn risk but recent touchpoints — prioritize a human retention conversation.",
-            "channel_hint": "phone",
-        }
-    if days_since >= 90:
-        return {
-            "action_code": "reengagement_outreach",
-            "title": "Re-engagement outreach",
-            "detail": "No recent contact — send a personalized check-in (email or SMS) and offer a digital review.",
-            "channel_hint": "email",
-        }
-    if web_90 >= 2 and reviews_90 == 0:
-        return {
-            "action_code": "invite_review",
-            "title": "Invite feedback after digital research",
-            "detail": "Customer is searching products/help online — ask for a quick review or satisfaction pulse.",
-            "channel_hint": "email",
-        }
-    return {
-        "action_code": "relationship_review",
-        "title": "Schedule relationship review",
-        "detail": "Stable engagement — book a proactive review to discuss coverage and savings goals.",
-        "channel_hint": "phone",
-    }
 
 
 def fetch_engagement_opportunities(
@@ -233,7 +190,7 @@ def fetch_engagement_opportunities(
         influence = _influence_score(base, value_p90=value_p90)
         if influence < 25:
             continue
-        action = _recommended_action(base)
+        action = recommended_touchpoint_action(base)
         touchpoints = {
             "events_last_90d": int(base["events_last_90d"]),
             "reviews_90d": int(base["review_count_90d"]),

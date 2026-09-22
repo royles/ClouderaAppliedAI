@@ -12,27 +12,6 @@ from customer360.api.value_history import CUSTOMER_VALUE_SQL
 _CHURN_PROB = effective_churn_probability_sql("ch")
 
 
-def _recommended_action(tier: str | None, value_at_risk: float) -> dict[str, str]:
-    t = (tier or "").upper()
-    if t == "HIGH":
-        return {
-            "action_code": "retention_call",
-            "title": "Priority retention call",
-            "detail": "High lapse risk on material value — lead with empathy and payment/coverage options.",
-        }
-    if t == "MEDIUM":
-        return {
-            "action_code": "proactive_review",
-            "title": "Proactive policy review",
-            "detail": "Schedule a review before renewal; address open questions from digital touchpoints.",
-        }
-    return {
-        "action_code": "loyalty_check_in",
-        "title": "Loyalty check-in",
-        "detail": "Light-touch wellness check; confirm satisfaction and cross-sell only if sentiment is positive.",
-    }
-
-
 def fetch_retention_playbook(
     conn: sqlite3.Connection,
     *,
@@ -98,7 +77,6 @@ def fetch_retention_playbook(
     items = []
     for row in rows:
         var = float(row["value_at_risk"] or 0)
-        action = _recommended_action(row["churn_risk_tier"], var)
         items.append(
             {
                 "customer_id": int(row["customer_id"]),
@@ -109,7 +87,7 @@ def fetch_retention_playbook(
                 "churn_probability": row["churn_probability"],
                 "churn_risk_tier": row["churn_risk_tier"],
                 "value_at_risk": var,
-                "recommended_action": action,
+                "recommended_action": None,
             }
         )
 

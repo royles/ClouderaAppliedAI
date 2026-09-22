@@ -591,6 +591,12 @@ export const fetchProductCatalog = (options?: {
   return getJson<ProductCatalog>(`/api/products/catalog${qs ? `?${qs}` : ""}`);
 };
 
+export type PlaybookRecommendedAction = {
+  action_code: string;
+  title: string;
+  detail: string;
+};
+
 export type RetentionPlaybookItem = {
   customer_id: number;
   customer_key: string;
@@ -600,11 +606,14 @@ export type RetentionPlaybookItem = {
   churn_probability?: number | null;
   churn_risk_tier?: string | null;
   value_at_risk: number;
-  recommended_action: {
-    action_code: string;
-    title: string;
-    detail: string;
-  };
+  recommended_action?: PlaybookRecommendedAction | null;
+};
+
+export type RetentionRecommendationsResponse = {
+  recommendations: {
+    customer_id: number;
+    recommended_action: PlaybookRecommendedAction;
+  }[];
 };
 
 export type RetentionPlaybook = {
@@ -629,6 +638,12 @@ export const fetchRetentionPlaybook = (opts?: {
   const qs = params.toString();
   return getJson<RetentionPlaybook>(`/api/playbooks/retention${qs ? `?${qs}` : ""}`);
 };
+
+export const fetchRetentionRecommendations = (customerIds: number[]) =>
+  postJson<RetentionRecommendationsResponse>(
+    "/api/playbooks/retention/recommendations",
+    { customer_ids: customerIds },
+  );
 
 export type AgentAction = {
   action_id: string;
