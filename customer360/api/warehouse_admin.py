@@ -635,20 +635,116 @@ def _system_health_checks(conn: sqlite3.Connection, *, database_path: Path) -> l
     return checks
 
 
+_WAREHOUSE_REBUILD_HINT = (
+    "Stop the API, remove or rename the corrupt database file, then rebuild with "
+    "python3 2_job-init-database/init_database.py or python3 -m customer360.seed, "
+    "and restart the application."
+)
+
+
+def _sqlite_integrity_issue(conn: sqlite3.Connection) -> str | None:
+    try:
+        row = conn.execute("PRAGMA quick_check").fetchone()
+    except sqlite3.DatabaseError as exc:
+        return str(exc)
+    if not row:
+        return None
+    result = str(row[0] if isinstance(row, sqlite3.Row) else row).strip()
+    if result.lower() == "ok":
+        return None
+    return result
+
+
+def _safe_table_count(conn: sqlite3.Connection, table: str) -> tuple[bool, int]:
+    try:
+        exists = conn.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
+            (table,),
+        ).fetchone()
+        if not exists:
+            return False, 0
+        count = int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+        return True, count
+    except sqlite3.DatabaseError:
+        return False, 0
+
+
+def _degraded_warehouse_admin(
+    *,
+    database_path: Path,
+    error_detail: str,
+) -> dict:
+    db_size = database_path.stat().st_size if database_path.is_file() else 0
+    integrity_check: dict = {
+        "id": "sqlite_integrity",
+        "label": "SQLite integrity",
+        "status": "critical",
+        "summary": "Warehouse database is corrupt or unreadable.",
+        "detail": f"{error_detail} {_WAREHOUSE_REBUILD_HINT}",
+    }
+    health: list[dict] = [
+        {
+            "id": "api",
+            "label": "Customer 360 API",
+            "status": "ok",
+            "summary": "API is reachable and serving this admin request.",
+            "detail": "Health endpoint: GET /api/health",
+        },
+        {
+            "id": "database",
+            "label": "SQLite warehouse",
+            "status": "critical",
+            "summary": "Database queries failed.",
+            "detail": f"{error_detail} {_WAREHOUSE_REBUILD_HINT}",
+        },
+    ]
+    return {
+        "database_path": str(database_path),
+        "database_size_bytes": db_size,
+        "warehouse_last_loaded_at": None,
+        "tables": [],
+        "relationships": RELATIONSHIPS,
+        "relationship_diagram": MERMAID_ER,
+        "quality_checks": [integrity_check],
+        "health_checks": health,
+    }
+
+
+def fetch_warehouse_admin_for_path(database_path: Path) -> dict:
+    """Load admin metadata, including a degraded payload when the file is missing or corrupt."""
+    if not database_path.is_file():
+        return _degraded_warehouse_admin(
+            database_path=database_path,
+            error_detail=f"Database file not found at {database_path}.",
+        )
+    from customer360.db import connect
+
+    try:
+        conn = connect(database_path)
+    except (sqlite3.Error, OSError) as exc:
+        return _degraded_warehouse_admin(database_path=database_path, error_detail=str(exc))
+    try:
+        return fetch_warehouse_admin(conn, database_path=database_path)
+    finally:
+        conn.close()
+
+
 def fetch_warehouse_admin(conn: sqlite3.Connection, *, database_path: Path) -> dict:
-    manifest = _manifest_map(conn)
+    integrity = _sqlite_integrity_issue(conn)
+    if integrity:
+        return _degraded_warehouse_admin(database_path=database_path, error_detail=integrity)
+
+    try:
+        manifest = _manifest_map(conn)
+    except sqlite3.DatabaseError as exc:
+        return _degraded_warehouse_admin(database_path=database_path, error_detail=str(exc))
+
     tables: list[dict] = []
     warehouse_load: str | None = None
 
     for entry in TABLE_CATALOG:
         table = entry["table_name"]
-        exists = conn.execute(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name=?",
-            (table,),
-        ).fetchone()
-        live_count = 0
-        if exists:
-            live_count = int(conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0])
+        exists, live_count = _safe_table_count(conn, table)
 
         manifest_row = manifest.get(table)
         last_loaded = manifest_row["LAST_LOADED_AT"] if manifest_row else None
@@ -657,18 +753,66 @@ def fetch_warehouse_admin(conn: sqlite3.Connection, *, database_path: Path) -> d
             if warehouse_load is None or last_loaded > warehouse_load:
                 warehouse_load = last_loaded
 
+        columns: list[dict] = []
+        if exists:
+            try:
+                columns = _table_columns(conn, table, exists=True)
+            except sqlite3.DatabaseError:
+                columns = []
+
         tables.append(
             {
                 **entry,
                 "row_count": live_count,
-                "table_exists": bool(exists),
+                "table_exists": exists,
                 "last_loaded_at": last_loaded,
                 "last_source_job": source_job,
-                "columns": _table_columns(conn, table, exists=bool(exists)),
+                "columns": columns,
             }
         )
 
     db_size = database_path.stat().st_size if database_path.is_file() else 0
+
+    quality: list[dict] = []
+    health: list[dict] = []
+    try:
+        quality = _quality_checks(conn)
+    except sqlite3.DatabaseError as exc:
+        quality = [
+            {
+                "id": "quality_checks",
+                "label": "Data quality",
+                "status": "critical",
+                "summary": "Could not run quality checks.",
+                "detail": str(exc),
+            }
+        ]
+    try:
+        health = _system_health_checks(conn, database_path=database_path)
+    except sqlite3.DatabaseError as exc:
+        health = [
+            {
+                "id": "database",
+                "label": "SQLite warehouse",
+                "status": "critical",
+                "summary": "Health checks failed.",
+                "detail": f"{exc} {_WAREHOUSE_REBUILD_HINT}",
+            }
+        ]
+
+    if integrity is None:
+        recheck = _sqlite_integrity_issue(conn)
+        if recheck:
+            quality.insert(
+                0,
+                {
+                    "id": "sqlite_integrity",
+                    "label": "SQLite integrity",
+                    "status": "critical",
+                    "summary": "Integrity check reported problems.",
+                    "detail": f"{recheck} {_WAREHOUSE_REBUILD_HINT}",
+                },
+            )
 
     return {
         "database_path": str(database_path),
@@ -677,6 +821,6 @@ def fetch_warehouse_admin(conn: sqlite3.Connection, *, database_path: Path) -> d
         "tables": tables,
         "relationships": RELATIONSHIPS,
         "relationship_diagram": MERMAID_ER,
-        "quality_checks": _quality_checks(conn),
-        "health_checks": _system_health_checks(conn, database_path=database_path),
+        "quality_checks": quality,
+        "health_checks": health,
     }

@@ -100,7 +100,7 @@ from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE, normalize_
 from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
 from customer360.metrics_refresh import customer_metrics_populated
 from customer360.paths import default_db_path
-from customer360.api.warehouse_admin import fetch_warehouse_admin
+from customer360.api.warehouse_admin import fetch_warehouse_admin_for_path
 from customer360.business_kpi_targets import build_kpi_targets
 from customer360.kpi_benchmarks import benchmark_for_api, list_kpi_benchmarks, save_kpi_benchmarks
 from customer360.data_source import (
@@ -545,11 +545,9 @@ def post_data_source_test(
 
 
 @router.get("/admin/warehouse", response_model=WarehouseAdminResponse)
-def warehouse_admin(
-    conn: Annotated[sqlite3.Connection, Depends(get_db)],
-) -> WarehouseAdminResponse:
+def warehouse_admin() -> WarehouseAdminResponse:
     db_path = resolve_sqlite_warehouse_path()
-    data = fetch_warehouse_admin(conn, database_path=db_path)
+    data = fetch_warehouse_admin_for_path(db_path)
     return WarehouseAdminResponse(**data)
 
 
