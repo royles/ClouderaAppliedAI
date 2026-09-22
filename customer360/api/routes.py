@@ -331,12 +331,20 @@ def _portfolio_analytics_response(
             kpis["active_policies"] = active_policies
             enriched["kpis"] = kpis
         _finalize_portfolio_objectives(enriched, conn)
-        from customer360.api.portfolio_objectives import ensure_engagement_review_averages
+        from customer360.api.portfolio_objectives import (
+            ensure_engagement_review_averages,
+            ensure_premium_avg_policies,
+        )
 
         seg = normalize_segment(enriched.get("segment"))
         enriched["engagement_trend"] = ensure_engagement_review_averages(
             conn,
             enriched.get("engagement_trend"),
+            segment=seg,
+        )
+        enriched["premium_momentum_trend"] = ensure_premium_avg_policies(
+            conn,
+            enriched.get("premium_momentum_trend"),
             segment=seg,
         )
     if not enriched.get("kpi_targets"):

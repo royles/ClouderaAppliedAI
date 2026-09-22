@@ -40,7 +40,11 @@ def load_book_objective_trends(conn: sqlite3.Connection) -> dict | None:
     ).fetchall()
     premium = conn.execute(
         f"""
-        SELECT PERIOD, ACTIVE_POLICY_COUNT, MONTHLY_PREMIUM_TOTAL
+        SELECT
+            PERIOD,
+            ACTIVE_POLICY_COUNT,
+            MONTHLY_PREMIUM_TOTAL,
+            AVG_POLICIES_PER_CUSTOMER
         FROM {_PREMIUM_TABLE}
         ORDER BY PERIOD ASC
         """
@@ -74,6 +78,11 @@ def load_book_objective_trends(conn: sqlite3.Connection) -> dict | None:
                 "period": row["PERIOD"],
                 "active_policy_count": int(row["ACTIVE_POLICY_COUNT"] or 0),
                 "monthly_premium_total": round(float(row["MONTHLY_PREMIUM_TOTAL"] or 0), 2),
+                "avg_policies_per_customer": (
+                    float(row["AVG_POLICIES_PER_CUSTOMER"])
+                    if row["AVG_POLICIES_PER_CUSTOMER"] is not None
+                    else 0.0
+                ),
             }
             for row in premium
         ],
@@ -130,14 +139,19 @@ def refresh_book_objective_trends(conn: sqlite3.Connection) -> dict[str, int]:
     conn.executemany(
         f"""
         INSERT INTO {_PREMIUM_TABLE} (
-            PERIOD, ACTIVE_POLICY_COUNT, MONTHLY_PREMIUM_TOTAL, REFRESHED_AT
-        ) VALUES (?, ?, ?, ?)
+            PERIOD,
+            ACTIVE_POLICY_COUNT,
+            MONTHLY_PREMIUM_TOTAL,
+            AVG_POLICIES_PER_CUSTOMER,
+            REFRESHED_AT
+        ) VALUES (?, ?, ?, ?, ?)
         """,
         [
             (
                 row["period"],
                 row["active_policy_count"],
                 row["monthly_premium_total"],
+                row.get("avg_policies_per_customer"),
                 refreshed_at,
             )
             for row in premium

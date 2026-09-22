@@ -2,7 +2,6 @@ import { useTranslation } from "react-i18next";
 import { PremiumMomentumPoint } from "../../api";
 import AnalyticsLineBarChart from "./AnalyticsLineBarChart";
 import { moneyTooltip } from "./AnalyticsLineChart";
-import { formatTooltipCount } from "./analyticsChartUtils";
 
 type Props = {
   series: PremiumMomentumPoint[];
@@ -16,7 +15,12 @@ export default function PremiumMomentumChart({ series, loading }: Props) {
     kind: "actual" as const,
     tooltipLines: [
       moneyTooltip(t("charts.premiumMomentum.legendPremium"), p.monthly_premium_total),
-      `${formatTooltipCount(p.active_policy_count)} ${t("charts.premiumMomentum.legendPolicies")}`,
+      t("charts.premiumMomentum.tooltipAvgPolicies", {
+        avg: (p.avg_policies_per_customer ?? 0).toFixed(2),
+      }),
+      t("charts.premiumMomentum.tooltipPolicyCount", {
+        count: p.active_policy_count,
+      }),
     ],
   }));
 
@@ -33,11 +37,12 @@ export default function PremiumMomentumChart({ series, loading }: Props) {
         values: series.map((p) => p.monthly_premium_total),
       }}
       bars={{
-        id: "policies",
+        id: "avg-policies",
         visualKey: "obj-policies",
-        label: t("charts.premiumMomentum.legendPolicies"),
-        values: series.map((p) => p.active_policy_count),
+        label: t("charts.premiumMomentum.legendAvgPolicies"),
+        values: series.map((p) => p.avg_policies_per_customer ?? 0),
       }}
+      barFormat="average"
       emptyMessage={t("charts.premiumMomentum.empty")}
     />
   );

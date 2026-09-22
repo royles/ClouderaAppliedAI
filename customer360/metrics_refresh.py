@@ -26,6 +26,23 @@ INVESTMENT_TRACK_COUNT_SQL = """
 """.strip()
 
 
+def _ensure_premium_avg_policies_column(conn: sqlite3.Connection) -> None:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_BOOK_PREMIUM_MOMENTUM_TREND'"
+    ).fetchone()
+    if not row:
+        return
+    cols = {
+        r[1]
+        for r in conn.execute("PRAGMA table_info(APP_BOOK_PREMIUM_MOMENTUM_TREND)").fetchall()
+    }
+    if "AVG_POLICIES_PER_CUSTOMER" not in cols:
+        conn.execute(
+            "ALTER TABLE APP_BOOK_PREMIUM_MOMENTUM_TREND "
+            "ADD COLUMN AVG_POLICIES_PER_CUSTOMER REAL"
+        )
+
+
 def _ensure_engagement_avg_review_column(conn: sqlite3.Connection) -> None:
     row = conn.execute(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_BOOK_ENGAGEMENT_TREND'"
@@ -46,6 +63,7 @@ def ensure_metrics_schema(conn: sqlite3.Connection) -> None:
     if METRICS_SCHEMA.is_file():
         conn.executescript(METRICS_SCHEMA.read_text(encoding="utf-8"))
         _ensure_engagement_avg_review_column(conn)
+        _ensure_premium_avg_policies_column(conn)
         conn.commit()
 
 

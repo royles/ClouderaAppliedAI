@@ -87,6 +87,10 @@ export function formatAxisRating(n: number) {
   return n.toFixed(1);
 }
 
+export function formatAxisAverage(n: number) {
+  return n >= 10 ? n.toFixed(1) : n.toFixed(2);
+}
+
 export function formatTooltipCount(n: number) {
   return n.toLocaleString(intlLocale());
 }
@@ -194,7 +198,7 @@ export function seriesHasPoints(values: (number | null)[]): boolean {
   return values.some((v) => v != null);
 }
 
-export type ChartValueFormat = "money" | "percent" | "count" | "rating";
+export type ChartValueFormat = "money" | "percent" | "count" | "rating" | "average";
 
 export type ChartSeries = {
   id: string;

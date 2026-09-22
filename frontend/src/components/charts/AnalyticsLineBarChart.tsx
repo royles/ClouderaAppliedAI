@@ -5,6 +5,7 @@ import {
   ChartValueFormat,
   SeriesVisualKey,
   SERIES_VISUAL,
+  formatAxisAverage,
   formatAxisCount,
   formatAxisMoney,
   formatPeriodAxisLabel,
@@ -58,8 +59,11 @@ function boundsForValues(
     (rawMax - rawMin) * 0.08 ||
     (format === "count" ? 1 : rawMax * 0.05 || 1);
   const minY =
-    format === "count" ? Math.max(0, rawMin - pad) : rawMin * 0.92;
-  const maxY = format === "count" ? rawMax + pad : rawMax * 1.05;
+    format === "count" || format === "average"
+      ? Math.max(0, rawMin - pad)
+      : rawMin * 0.92;
+  const maxY =
+    format === "count" || format === "average" ? rawMax + pad : rawMax * 1.05;
   return { minY, maxY };
 }
 
@@ -83,7 +87,7 @@ export default function AnalyticsLineBarChart({
   loading,
   emptyMessage,
   lineFormat = "money",
-  barFormat = "count",
+  barFormat = "average",
 }: Props) {
   const { t } = useTranslation();
   const resolvedEmpty = emptyMessage ?? t("charts.common.empty");
@@ -205,7 +209,9 @@ export default function AnalyticsLineBarChart({
             className="chart-axis-label chart-axis-label-right"
             textAnchor="start"
           >
-            {formatAxisCount(barBounds.maxY)}
+            {(barFormat === "average" ? formatAxisAverage : formatAxisCount)(
+              barBounds.maxY,
+            )}
           </text>
           <text
             x={width - padX + 8}
@@ -213,7 +219,9 @@ export default function AnalyticsLineBarChart({
             className="chart-axis-label chart-axis-label-right"
             textAnchor="start"
           >
-            {formatAxisCount(barBounds.minY)}
+            {(barFormat === "average" ? formatAxisAverage : formatAxisCount)(
+              barBounds.minY,
+            )}
           </text>
           {bars.values.map((v, i) => {
             if (v == null) return null;

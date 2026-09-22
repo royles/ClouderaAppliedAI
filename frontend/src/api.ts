@@ -365,6 +365,7 @@ export type PremiumMomentumPoint = {
   period: string;
   active_policy_count: number;
   monthly_premium_total: number;
+  avg_policies_per_customer?: number;
 };
 
 export type EngagementTrendPoint = {

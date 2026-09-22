@@ -100,6 +100,7 @@ class PremiumMomentumPoint(BaseModel):
     period: str
     active_policy_count: int = 0
     monthly_premium_total: float = 0
+    avg_policies_per_customer: float = 0
 
 
 class EngagementTrendPoint(BaseModel):

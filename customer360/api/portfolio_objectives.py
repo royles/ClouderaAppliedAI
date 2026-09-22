@@ -87,6 +87,7 @@ def fetch_premium_momentum_trend(
         policy_month AS (
             SELECT
                 pit.SNAPSHOT_DATE AS period,
+                sc.CUSTOMER_ID AS customer_id,
                 pol.POLICY_NUM AS policy_num,
                 MAX(pol.BRUTO_MONTHLY_PREMIUM) AS monthly_premium
             FROM DWH_FCT_POLICY_INVESTMENT_TRACK pit
@@ -95,12 +96,17 @@ def fetch_premium_momentum_trend(
                 ON pol.CUSTOMER_ID = CAST(sc.CUSTOMER_ID AS TEXT)
                 AND pol.POLICY_NUM = pit.POLICY_NUM
                 AND pol.IS_ACTIVE = 1
-            GROUP BY pit.SNAPSHOT_DATE, pol.POLICY_NUM
+            GROUP BY pit.SNAPSHOT_DATE, sc.CUSTOMER_ID, pol.POLICY_NUM
         )
         SELECT
             period,
             COUNT(*) AS active_policy_count,
-            COALESCE(SUM(monthly_premium), 0) AS monthly_premium_total
+            COUNT(DISTINCT customer_id) AS active_customers,
+            COALESCE(SUM(monthly_premium), 0) AS monthly_premium_total,
+            ROUND(
+                COUNT(*) * 1.0 / NULLIF(COUNT(DISTINCT customer_id), 0),
+                2
+            ) AS avg_policies_per_customer
         FROM policy_month
         GROUP BY period
         ORDER BY period ASC
@@ -109,14 +115,7 @@ def fetch_premium_momentum_trend(
     ).fetchall()
 
     if rows:
-        return [
-            {
-                "period": row["period"],
-                "active_policy_count": int(row["active_policy_count"] or 0),
-                "monthly_premium_total": round(float(row["monthly_premium_total"] or 0), 2),
-            }
-            for row in rows
-        ]
+        return [_premium_momentum_row(row) for row in rows]
 
     status_rows = conn.execute(
         f"""
@@ -128,7 +127,13 @@ def fetch_premium_momentum_trend(
         SELECT
             ps.SNAPSHOT_DATE AS period,
             COUNT(DISTINCT ps.POLICY_NUM) AS active_policy_count,
-            COALESCE(SUM(ps.MONTHLY_PREMIUM), 0) AS monthly_premium_total
+            COUNT(DISTINCT ps.CUSTOMER_ID) AS active_customers,
+            COALESCE(SUM(ps.MONTHLY_PREMIUM), 0) AS monthly_premium_total,
+            ROUND(
+                COUNT(DISTINCT ps.POLICY_NUM) * 1.0
+                / NULLIF(COUNT(DISTINCT ps.CUSTOMER_ID), 0),
+                2
+            ) AS avg_policies_per_customer
         FROM DWH_FCT_POLICY_STATUS ps
         INNER JOIN scoped sc ON sc.CUSTOMER_ID = ps.CUSTOMER_ID
         GROUP BY ps.SNAPSHOT_DATE
@@ -137,14 +142,7 @@ def fetch_premium_momentum_trend(
         params,
     ).fetchall()
     if status_rows:
-        return [
-            {
-                "period": row["period"],
-                "active_policy_count": int(row["active_policy_count"] or 0),
-                "monthly_premium_total": round(float(row["monthly_premium_total"] or 0), 2),
-            }
-            for row in status_rows
-        ]
+        return [_premium_momentum_row(row) for row in status_rows]
 
     # Fallback when no snapshot periods: single point from current policies.
     fallback = conn.execute(
@@ -156,6 +154,7 @@ def fetch_premium_momentum_trend(
         )
         SELECT
             COUNT(DISTINCT pol.POLICY_NUM) AS active_policy_count,
+            COUNT(DISTINCT sc.CUSTOMER_ID) AS active_customers,
             COALESCE(SUM(pol.BRUTO_MONTHLY_PREMIUM), 0) AS monthly_premium_total
         FROM DWH_DIM_ALL_POLICY pol
         INNER JOIN scoped sc ON pol.CUSTOMER_ID = CAST(sc.CUSTOMER_ID AS TEXT)
@@ -165,13 +164,31 @@ def fetch_premium_momentum_trend(
     ).fetchone()
     if fallback is None:
         return []
+    policies = int(fallback["active_policy_count"] or 0)
+    customers = int(fallback["active_customers"] or 0)
+    avg = round(policies / customers, 2) if customers > 0 else 0.0
     return [
         {
             "period": "2025-09-30",
-            "active_policy_count": int(fallback["active_policy_count"] or 0),
+            "active_policy_count": policies,
             "monthly_premium_total": round(float(fallback["monthly_premium_total"] or 0), 2),
+            "avg_policies_per_customer": avg,
         }
     ]
+
+
+def _premium_momentum_row(row: sqlite3.Row) -> dict:
+    policies = int(row["active_policy_count"] or 0)
+    avg = row["avg_policies_per_customer"]
+    if avg is None and "active_customers" in row.keys():
+        customers = int(row["active_customers"] or 0)
+        avg = round(policies / customers, 2) if customers > 0 else 0.0
+    return {
+        "period": row["period"],
+        "active_policy_count": policies,
+        "monthly_premium_total": round(float(row["monthly_premium_total"] or 0), 2),
+        "avg_policies_per_customer": float(avg) if avg is not None else 0.0,
+    }
 
 
 def engagement_trend_needs_avg_refresh(trends: list[dict] | None) -> bool:
@@ -252,6 +269,23 @@ def fetch_engagement_trend(
     return out
 
 
+def premium_trend_needs_avg_policies_refresh(trends: list[dict] | None) -> bool:
+    if not trends:
+        return True
+    return any("avg_policies_per_customer" not in p for p in trends)
+
+
+def ensure_premium_avg_policies(
+    conn: sqlite3.Connection,
+    trends: list[dict] | None,
+    *,
+    segment: str | None,
+) -> list[dict]:
+    if not premium_trend_needs_avg_policies_refresh(trends):
+        return list(trends or [])
+    return fetch_premium_momentum_trend(conn, segment=segment)
+
+
 def fetch_objective_trends(
     conn: sqlite3.Connection,
     *,
@@ -270,6 +304,11 @@ def fetch_objective_trends(
             out["engagement_trend"] = ensure_engagement_review_averages(
                 conn,
                 out.get("engagement_trend"),
+                segment=seg,
+            )
+            out["premium_momentum_trend"] = ensure_premium_avg_policies(
+                conn,
+                out.get("premium_momentum_trend"),
                 segment=seg,
             )
             return out
