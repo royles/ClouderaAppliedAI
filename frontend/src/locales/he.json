@@ -425,6 +425,7 @@
       "title": "AI insights & next best action",
       "refresh": "Refresh insights",
       "loadingLlm": "קורא ל-{{brand}} עם נתוני המחסן והאינטראקציות של לקוח זה…",
+      "loadingGeneric": "מייצר תובנות מנתוני המחסן והאינטראקציות…",
       "streamPreview": "מרכיב תובנה…",
       "loadingLocal": "מייצר הנחיה עם היועץ המקומי (לא הוגדר LLM).",
       "idleHint": "Actionable recommendations can open a draft from account data; send is simulated in this demo.",

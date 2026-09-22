@@ -267,14 +267,24 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
                 {t("assistant.empty.hint")}
               </p>
             )}
-            {turns.map((turn) => (
+            {turns.map((turn) => {
+              const sourceLabel =
+                turn.role === "assistant"
+                  ? assistantSourceLabel(
+                      t,
+                      turn.source,
+                      llmProvider,
+                      turn.responseLlmProvider,
+                    )
+                  : null;
+              return (
               <div
                 key={turn.id}
                 className={`agent-copilot-turn agent-copilot-turn-${turn.role}`}
               >
                 <span className="agent-copilot-turn-label">
                   {turn.role === "user" ? t("assistant.turn.user") : t("assistant.turn.assistant")}
-                  {turn.role === "assistant" && turn.source && (
+                  {sourceLabel && (
                     <span
                       className={`agent-copilot-source${
                         turn.source === "rules" || turn.source === "rules_fallback"
@@ -282,12 +292,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
                           : " agent-copilot-source-llm"
                       }`}
                     >
-                      {assistantSourceLabel(
-                        t,
-                        turn.source,
-                        llmProvider,
-                        turn.responseLlmProvider,
-                      )}
+                      {sourceLabel}
                     </span>
                   )}
                 </span>
@@ -306,7 +311,8 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
                   </div>
                 )}
               </div>
-            ))}
+            );
+            })}
           </div>
           <form className="agent-copilot-form" onSubmit={submit}>
             <label className="visually-hidden" htmlFor="agent-copilot-input">

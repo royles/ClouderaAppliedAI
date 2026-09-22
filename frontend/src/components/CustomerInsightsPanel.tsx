@@ -14,6 +14,7 @@ import {
   isLlmGeneratedSource,
   llmBrandName,
   LlmProviderKind,
+  brandForLlmSource,
   resolveLlmProvider,
 } from "../llmBrand";
 
@@ -30,16 +31,6 @@ type OpenAction = {
 function proseParagraphs(text: string | undefined | null): string[] {
   if (!text?.trim()) return [];
   return text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-}
-
-function brandForSource(
-  t: TFunction,
-  source: string | null | undefined,
-  fallbackProvider: LlmProviderKind,
-): string {
-  if (source === "openai_compatible") return llmBrandName(t, "openai_compatible");
-  if (source === "bedrock") return llmBrandName(t, "bedrock");
-  return llmBrandName(t, fallbackProvider);
 }
 
 function localOnlyHint(t: TFunction, provider: LlmProviderKind): string {
@@ -65,17 +56,14 @@ function insightSubtitle(
   const brand = llmBrandName(t, provider);
 
   if (loading && !insights) {
-    if (bedrockStatus?.configured) {
-      return t("customer.insights.loadingLlm", { brand });
-    }
-    return t("customer.insights.loadingLocal");
+    return t("customer.insights.loadingGeneric");
   }
   if (!insights) {
     return t("customer.insights.idleHint");
   }
   if (isLlmGeneratedSource(insights.source)) {
     const model = insights.model_id ? ` (${insights.model_id})` : "";
-    const insightBrand = brandForSource(t, insights.source, provider);
+    const insightBrand = brandForLlmSource(t, insights.source, provider);
     return t("customer.insights.generatedBy", { brand: insightBrand, model });
   }
   if (insights.bedrock_configured) {
@@ -195,11 +183,7 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
         </div>
 
         {(loading || refreshing) && !insights && (
-          <p className="muted">
-            {bedrockStatus?.configured
-              ? t("customer.insights.loadingLlm", { brand: configuredBrand })
-              : t("customer.insights.loadingLocal")}
-          </p>
+          <p className="muted">{t("customer.insights.loadingGeneric")}</p>
         )}
         {(loading || refreshing) && streamPreview && (
           <div className="insights-stream-preview" aria-live="polite">
@@ -218,7 +202,7 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
               >
                 {fromLlm
                   ? t("customer.insights.poweredBy", {
-                      brand: brandForSource(t, insights.source, llmProvider),
+                      brand: brandForLlmSource(t, insights.source, llmProvider),
                     })
                   : t("customer.insights.localAdvisor")}
               </span>
@@ -240,7 +224,7 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
                 <span
                   className="muted small"
                   title={t("customer.insights.modelTitle", {
-                    brand: brandForSource(t, insights.source, llmProvider),
+                    brand: brandForLlmSource(t, insights.source, llmProvider),
                   })}
                 >
                   {t("customer.insights.modelId", { id: insights.model_id })}

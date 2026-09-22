@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useLocation } from "react-router-dom";
-import { AgentAction, CustomerSegment, fetchAgentStatus } from "./api";
+import { AgentAction, CustomerSegment, fetchAgentStatus, fetchBedrockStatus } from "./api";
 import { isBusinessArea } from "./appRoutes";
 import { parseBusinessSegment } from "./cohortQuery";
 import { LlmProviderKind, resolveLlmProvider } from "./llmBrand";
@@ -66,16 +66,17 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    void fetchAgentStatus()
-      .then((s) => {
+    void Promise.all([fetchAgentStatus(), fetchBedrockStatus()])
+      .then(([s, bedrock]) => {
         if (!cancelled) {
           setEnabled(s.enabled);
           setAgentMode(s.mode);
           setBedrockConfigured(s.bedrock_configured);
+          const providerRaw = s.llm_provider ?? bedrock.provider;
           setLlmProvider(
             resolveLlmProvider({
-              provider: s.llm_provider,
-              configured: s.llm_configured ?? s.bedrock_configured,
+              provider: providerRaw,
+              configured: s.llm_configured ?? bedrock.configured,
             }),
           );
         }

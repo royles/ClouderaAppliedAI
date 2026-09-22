@@ -643,5 +643,5 @@ class AgentStatusResponse(BaseModel):
     enabled: bool
     mode: str = "rules"
     bedrock_configured: bool = False
-    llm_provider: str = "bedrock"
+    llm_provider: str = ""
     llm_configured: bool = False

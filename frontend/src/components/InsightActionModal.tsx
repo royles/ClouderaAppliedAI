@@ -230,7 +230,7 @@ export default function InsightActionModal({
 
         {streaming && (
           <p className="muted small draft-stream-status">
-            {t("customer.outreach.loadingDraft", { brand: configuredBrand })}
+            {t("customer.outreach.streaming")}
           </p>
         )}
         {error && <p className="error">{error}</p>}

@@ -425,6 +425,7 @@
       "title": "AI insights & next best action",
       "refresh": "Refresh insights",
       "loadingLlm": "Calling {{brand}} with this customer's warehouse and interaction data…",
+      "loadingGeneric": "Generating insights from warehouse and interaction data…",
       "streamPreview": "Composing insight…",
       "loadingLocal": "Generating guidance with the built-in local advisor (no LLM is configured).",
       "idleHint": "Actionable recommendations can open a draft from account data; send is simulated in this demo.",
