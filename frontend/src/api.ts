@@ -639,11 +639,13 @@ export const askAgent = (body: {
   message: string;
   segment?: CustomerSegment | null;
   list_context?: AgentCustomerListContext | null;
+  locale?: string | null;
 }) =>
   postJson<AgentAskResponse>("/api/agent/ask", {
     message: body.message,
     segment: body.segment ?? null,
     list_context: body.list_context ?? null,
+    locale: body.locale ?? null,
   });
 
 export const fetchCustomer = (id: number) =>

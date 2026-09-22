@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 
 from customer360.agent.catalog import CATALOG
+from customer360.agent.locale import bedrock_language_instruction, normalize_ui_locale
 
 SYSTEM_PROMPT = """You are the executive assistant for an Insurance Customer 360 web application.
 Executives ask questions in plain language. You help them understand the book and open the right
@@ -64,8 +65,8 @@ def catalog_block() -> str:
     return json.dumps(rows, indent=2)
 
 
-def build_system_prompt() -> str:
-    return SYSTEM_PROMPT + catalog_block()
+def build_system_prompt(locale: str | None = None) -> str:
+    return SYSTEM_PROMPT + bedrock_language_instruction(locale) + "\n" + catalog_block()
 
 
 def build_user_prompt(
@@ -74,15 +75,23 @@ def build_user_prompt(
     segment: str,
     snippets: list[str],
     list_context: dict | None = None,
+    locale: str | None = None,
 ) -> str:
+    ui_locale = normalize_ui_locale(locale)
     ctx = {
         "active_business_segment": segment,
         "live_data": snippets,
         "list_context": list_context or {},
         "user_question": message,
+        "ui_locale": ui_locale,
     }
+    lang_note = (
+        "Respond in Hebrew in the answer field."
+        if ui_locale == "he"
+        else "Respond in English in the answer field."
+    )
     return (
         "Context JSON:\n"
         f"{json.dumps(ctx, indent=2)}\n\n"
-        "Answer the user_question for an insurance executive using this app."
+        f"Answer the user_question for an insurance executive using this app. {lang_note}"
     )

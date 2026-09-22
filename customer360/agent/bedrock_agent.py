@@ -93,6 +93,7 @@ def answer_with_bedrock(
     snippets: list[str],
     list_intent: CustomerListFilters | None = None,
     list_context: dict | None = None,
+    locale: str | None = None,
 ) -> dict:
     """
     Returns payload with answer, actions, citations, source, model_id.
@@ -106,6 +107,7 @@ def answer_with_bedrock(
         segment=segment,
         snippets=snippets,
         list_context=list_context,
+        locale=locale,
     )
     tool_ctx = ToolContext(
         conn=conn,
@@ -117,6 +119,7 @@ def answer_with_bedrock(
         raw, model_id, tools_used = invoke_copilot_with_tools(
             user_prompt=user_prompt,
             ctx=tool_ctx,
+            locale=locale,
         )
         parsed = _parse_agent_json(raw)
         parsed["customer_list"] = parsed.get("customer_list") or None
@@ -132,7 +135,7 @@ def answer_with_bedrock(
         logger.info("Bedrock tool path unavailable, using single-shot JSON: %s", tool_exc)
 
     raw, model_id = invoke_text(
-        system_prompt=build_system_prompt(),
+        system_prompt=build_system_prompt(locale),
         user_prompt=user_prompt,
     )
     parsed = _parse_agent_json(raw)

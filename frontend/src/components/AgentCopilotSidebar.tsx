@@ -63,7 +63,8 @@ type Props = {
 };
 
 export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const apiLocale = i18n.language?.startsWith("he") ? "he" : "en";
   const navigate = useNavigate();
   const { isPhone, enterMobileContent } = useMobileUx();
   const location = useLocation();
@@ -137,6 +138,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           message: trimmed,
           segment: askSegment,
           list_context: listContext,
+          locale: apiLocale,
         });
         appendTurn({
           id: newTurnId(),
@@ -162,7 +164,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
         setSending(false);
       }
     },
-    [appendTurn, askSegment, listContext, sending],
+    [appendTurn, askSegment, listContext, sending, apiLocale, t],
   );
 
   const submit = useCallback(

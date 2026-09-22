@@ -7,6 +7,7 @@ import logging
 import re
 from typing import Any
 
+from customer360.agent.locale import bedrock_language_instruction
 from customer360.agent.tools import ToolContext, bedrock_tool_definitions, execute_tool
 from customer360.bedrock.client import (
     BedrockError,
@@ -76,10 +77,15 @@ def _extract_tool_uses(content: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return [b for b in content if b.get("type") == "tool_use"]
 
 
+def _copilot_system_prompt(locale: str | None) -> str:
+    return COPILOT_SYSTEM + bedrock_language_instruction(locale)
+
+
 def invoke_copilot_with_tools(
     *,
     user_prompt: str,
     ctx: ToolContext,
+    locale: str | None = None,
 ) -> tuple[str, str, list[str]]:
     """
     Run tool loop; returns (final_text, model_id, tools_called_names).
@@ -105,7 +111,7 @@ def invoke_copilot_with_tools(
     for turn in range(MAX_TOOL_TURNS):
         body = _format_body(
             messages=messages,
-            system=COPILOT_SYSTEM,
+            system=_copilot_system_prompt(locale),
             tools=tools,
             max_tokens=settings.max_tokens,
             temperature=settings.temperature,

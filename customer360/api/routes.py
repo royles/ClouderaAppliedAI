@@ -499,6 +499,7 @@ def agent_ask(
         message=body.message,
         segment=body.segment,
         list_context=resolved_list_context,
+        locale=body.locale,
     )
     return AgentAskResponse(**payload)
 

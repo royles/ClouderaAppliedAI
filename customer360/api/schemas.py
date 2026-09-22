@@ -574,6 +574,10 @@ class AgentAskRequest(BaseModel):
     message: str
     segment: str | None = None
     list_context: AgentCustomerListContext | None = None
+    locale: str | None = Field(
+        default=None,
+        description="UI language code from the browser (e.g. en, he) for response language.",
+    )
 
 
 class AgentToolInfo(BaseModel):

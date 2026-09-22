@@ -28,6 +28,7 @@ def answer_question(
     message: str,
     segment: str | None = None,
     list_context: dict | None = None,
+    locale: str | None = None,
 ) -> dict:
     ctx = gather_context(conn, message=message, segment=segment)
     seg = ctx["segment"]
@@ -58,6 +59,7 @@ def answer_question(
                 snippets=ctx["snippets"],
                 list_intent=merged,
                 list_context=list_context,
+                locale=locale,
             )
             payload.pop("_merged_list", None)
             return payload
