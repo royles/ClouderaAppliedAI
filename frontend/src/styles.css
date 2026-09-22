@@ -3349,6 +3349,10 @@ a.engagement-act-link {
   overflow: hidden;
 }
 
+.playbook-action-streaming {
+  opacity: 0.88;
+}
+
 .playbook-view-all {
   display: inline-block;
   margin-top: 0.85rem;

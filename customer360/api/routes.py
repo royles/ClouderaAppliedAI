@@ -43,8 +43,7 @@ from customer360.api.schemas import (
     DataFreshnessResponse,
     ProductCatalogResponse,
     RetentionPlaybookResponse,
-    RetentionRecommendationsRequest,
-    RetentionRecommendationsResponse,
+    RetentionRecommendationStreamRequest,
     AgentAskRequest,
     AgentAskResponse,
     AgentStatusResponse,
@@ -61,7 +60,7 @@ from customer360.agent.tools import bedrock_tool_definitions
 from customer360.api.data_freshness import fetch_data_freshness
 from customer360.api.product_catalog import fetch_product_catalog
 from customer360.api.retention_playbook import fetch_retention_playbook
-from customer360.api.retention_recommendations import fetch_retention_recommendations
+from customer360.api.retention_queue_llm import stream_retention_action_events
 from customer360.api.engagement_hub import fetch_engagement_opportunities
 from customer360.api.policy_counts import policy_totals_for_segment
 from customer360.api.portfolio_analytics import fetch_portfolio_analytics
@@ -620,17 +619,19 @@ def retention_playbook(
     )
 
 
-@router.post("/playbooks/retention/recommendations", response_model=RetentionRecommendationsResponse)
-def retention_playbook_recommendations(
-    body: RetentionRecommendationsRequest,
+@router.post("/playbooks/retention/recommendations/stream")
+def retention_playbook_recommendation_stream(
+    body: RetentionRecommendationStreamRequest,
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
-) -> RetentionRecommendationsResponse:
-    return RetentionRecommendationsResponse(
-        **fetch_retention_recommendations(
+) -> StreamingResponse:
+    return StreamingResponse(
+        stream_retention_action_events(
             conn,
-            body.customer_ids,
+            body.customer_id,
             locale=body.locale,
         ),
+        media_type="text/event-stream",
+        headers=SSE_HEADERS,
     )
 
 

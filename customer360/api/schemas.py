@@ -587,22 +587,12 @@ class RetentionPlaybookItem(BaseModel):
     recommended_action: PlaybookAction | None = None
 
 
-class RetentionRecommendationsRequest(BaseModel):
-    customer_ids: list[int] = Field(default_factory=list, max_length=50)
+class RetentionRecommendationStreamRequest(BaseModel):
+    customer_id: int
     locale: str | None = Field(
         default=None,
         description="UI locale for generated copy (en or he)",
     )
-
-
-class RetentionRecommendationItem(BaseModel):
-    customer_id: int
-    recommended_action: PlaybookAction
-
-
-class RetentionRecommendationsResponse(BaseModel):
-    recommendations: list[RetentionRecommendationItem] = Field(default_factory=list)
-    llm_configured: bool = False
 
 
 class RetentionPlaybookResponse(BaseModel):
