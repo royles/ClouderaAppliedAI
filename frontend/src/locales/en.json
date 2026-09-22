@@ -620,7 +620,8 @@
       "a11y": "Admin configuration",
       "tabs": {
         "warehouse": "Warehouse backend",
-        "kpiBenchmarks": "Business KPI benchmarks"
+        "kpiBenchmarks": "Business KPI benchmarks",
+        "appearance": "Appearance & themes"
       }
     },
     "datasource": {
@@ -682,6 +683,22 @@
       "rowsSuffix": "rows",
       "notCreated": "not created",
       "noColumns": "No columns (table missing in DB)"
+    },
+    "appearance": {
+      "modeLegend": "Light / dark mode",
+      "mode": {
+        "light": "Light",
+        "dark": "Dark"
+      },
+      "colorLegend": "Accent palette",
+      "colorLede": "Pastel workspace tints simulate a light reskin — header, navigation, links, and primary controls follow the accent.",
+      "colors": {
+        "blue": "Blue (default)",
+        "purple": "Purple",
+        "green": "Green",
+        "red": "Red",
+        "teal": "Teal"
+      }
     }
   },
   "assistant": {

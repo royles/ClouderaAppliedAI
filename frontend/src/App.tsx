@@ -24,6 +24,7 @@ import CustomerDetailPage from "./pages/CustomerDetailPage";
 import CustomerHubPage from "./pages/CustomerHubPage";
 import EngagementHubPage from "./pages/EngagementHubPage";
 import LanguageSwitcher from "./components/LanguageSwitcher";
+import { ThemeProvider } from "./theme/ThemeContext";
 import { useTranslation } from "react-i18next";
 
 function LegacyRootRedirect() {
@@ -172,10 +173,12 @@ function AppLayout() {
 
 export default function App() {
   return (
-    <AgentCopilotProvider>
-      <MobileUxProvider>
-        <AppLayout />
-      </MobileUxProvider>
-    </AgentCopilotProvider>
+    <ThemeProvider>
+      <AgentCopilotProvider>
+        <MobileUxProvider>
+          <AppLayout />
+        </MobileUxProvider>
+      </AgentCopilotProvider>
+    </ThemeProvider>
   );
 }

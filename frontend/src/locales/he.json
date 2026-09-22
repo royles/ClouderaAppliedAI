@@ -620,7 +620,8 @@
       "a11y": "Admin configuration",
       "tabs": {
         "warehouse": "Warehouse backend",
-        "kpiBenchmarks": "Business KPI benchmarks"
+        "kpiBenchmarks": "Business KPI benchmarks",
+        "appearance": "מראה וערכות נושא"
       }
     },
     "datasource": {
@@ -682,6 +683,22 @@
       "rowsSuffix": "שורות",
       "notCreated": "לא נוצר",
       "noColumns": "אין עמודות (טבלה חסרה ב-DB)"
+    },
+    "appearance": {
+      "modeLegend": "מצב בהיר / כהה",
+      "mode": {
+        "light": "בהיר",
+        "dark": "כהה"
+      },
+      "colorLegend": "פלטת צבעי דגש",
+      "colorLede": "גוונים pastel בסביבת העבודה — כותרת, ניווט, קישורים ופקדים ראשיים עוקבים אחרי הדגש.",
+      "colors": {
+        "blue": "כחול (ברירת מחדל)",
+        "purple": "סגול",
+        "green": "ירוק",
+        "red": "אדום",
+        "teal": "טורקיז"
+      }
     }
   },
   "assistant": {

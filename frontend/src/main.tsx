@@ -4,7 +4,11 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import ErrorBoundary from "./ErrorBoundary";
 import "./i18n";
+import { initTheme } from "./theme";
+import "./theme/themes.css";
 import "./styles.css";
+
+initTheme();
 
 const basename =
   import.meta.env.BASE_URL === "./"

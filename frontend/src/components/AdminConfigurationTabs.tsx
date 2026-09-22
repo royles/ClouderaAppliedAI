@@ -1,9 +1,10 @@
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
+import AdminAppearancePanel from "./AdminAppearancePanel";
 import AdminDataSourcePanel from "./AdminDataSourcePanel";
 import AdminKpiBenchmarksPanel from "./AdminKpiBenchmarksPanel";
 
-type ConfigTab = "warehouse" | "kpi_benchmarks";
+type ConfigTab = "warehouse" | "kpi_benchmarks" | "appearance";
 
 export default function AdminConfigurationTabs() {
   const { t } = useTranslation();
@@ -32,13 +33,20 @@ export default function AdminConfigurationTabs() {
         >
           {t("admin.config.tabs.kpiBenchmarks")}
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "appearance"}
+          className={`admin-config-tab${tab === "appearance" ? " is-active" : ""}`}
+          onClick={() => setTab("appearance")}
+        >
+          {t("admin.config.tabs.appearance")}
+        </button>
       </div>
       <div className="admin-config-tab-panel" role="tabpanel">
-        {tab === "warehouse" ? (
-          <AdminDataSourcePanel layout="embedded" />
-        ) : (
-          <AdminKpiBenchmarksPanel />
-        )}
+        {tab === "warehouse" && <AdminDataSourcePanel layout="embedded" />}
+        {tab === "kpi_benchmarks" && <AdminKpiBenchmarksPanel />}
+        {tab === "appearance" && <AdminAppearancePanel />}
       </div>
     </section>
   );
