@@ -1,8 +1,19 @@
 # ClouderaAppliedAI
 
-## Get the latest code
+## Development workflow
 
-All Customer 360 work is on **`main`** (not the `cursor/*` feature branches).
+**Use `main` only.** New fixes and features are committed and pushed directly to
+`main` (no long-lived feature branches). Pull before you work; push when done.
+
+```bash
+git checkout main
+git pull origin main
+# … edit, test …
+git add -A && git commit -m "Describe the change"
+git push origin main
+```
+
+### Get the latest code on another machine
 
 ```bash
 git fetch origin
@@ -10,11 +21,10 @@ git checkout main
 git pull origin main
 ```
 
-If `git pull` says **Already up to date** but the UI looks old, you are usually on a
-feature branch or an old local `main`. Run `git branch --show-current` and
-`git log -1 --oneline`; you should see commit **`e4cdbaf`** or newer on `main`.
-Then restart the API and hard-refresh the browser (committed `frontend/dist` is served
-by the app).
+If `git pull` says **Already up to date** but the app looks old, run
+`git branch --show-current` — it must be **`main`**, not an old `cursor/*` branch.
+Then restart the API and hard-refresh the browser (`frontend/dist` is committed with
+the app).
 
 ## Insurance Customer 360
 
