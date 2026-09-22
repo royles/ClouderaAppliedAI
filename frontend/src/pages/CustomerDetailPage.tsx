@@ -19,7 +19,6 @@ import {
   formatLastLogin,
   maskDate,
   displayCustomerName,
-  maskStreet,
 } from "../pii";
 import { useMobileFocus } from "../mobileUxContext";
 
@@ -274,42 +273,6 @@ export default function CustomerDetailPage() {
         <p className="muted small customer-detail-privacy">
           {t("customer.privacyNotice")}
         </p>
-        )}
-        {!mobileFocus && (
-        <div className="detail-grid customer-detail-profile-grid">
-          <div>
-            <span className="label">{t("customer.profile.type")}</span>
-            <div>{profile.customer_type_dsc ?? emDash}</div>
-          </div>
-          <div>
-            <span className="label">{t("customer.profile.birthDate")}</span>
-            <div>{maskDate(profile.birth_date)}</div>
-          </div>
-          <div>
-            <span className="label">{t("customer.profile.maritalStatus")}</span>
-            <div>{profile.marital_status_dsc ?? emDash}</div>
-          </div>
-          <div>
-            <span className="label">{t("customer.profile.address")}</span>
-            <div>
-              {[maskStreet(profile.street_name), formatCity(profile.city_name)]
-                .filter((x) => x !== emDash)
-                .join(", ") || emDash}
-            </div>
-          </div>
-          <div>
-            <span className="label">{t("customer.profile.communication")}</span>
-            <div>{profile.communication_dsc ?? emDash}</div>
-          </div>
-          <div>
-            <span className="label">{t("customer.profile.lastInteraction")}</span>
-            <div>
-              {interaction_summary?.last_event_ts
-                ? formatLastLogin(interaction_summary.last_event_ts)
-                : emDash}
-            </div>
-          </div>
-        </div>
         )}
       </section>
 
