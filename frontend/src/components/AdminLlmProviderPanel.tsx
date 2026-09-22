@@ -143,7 +143,7 @@ export default function AdminLlmProviderPanel() {
 
   if (loading) {
     return (
-      <div className="admin-llm-form" aria-busy="true">
+      <div className="admin-llm-panel" aria-busy="true">
         <p className="muted small">{t("admin.llm.loading")}</p>
         <div className="skeleton skeleton-title" style={{ maxWidth: "28rem" }} />
         <div className="skeleton skeleton-stat" style={{ maxWidth: "20rem", marginTop: "0.75rem" }} />
@@ -153,7 +153,7 @@ export default function AdminLlmProviderPanel() {
 
   if (!form) {
     return (
-      <div className="admin-llm-form">
+      <div className="admin-llm-panel">
         <p className="error">{error ?? t("admin.llm.loadError")}</p>
         <button type="button" className="btn secondary" onClick={() => void load()}>
           {t("admin.llm.retry")}
@@ -163,162 +163,183 @@ export default function AdminLlmProviderPanel() {
   }
 
   return (
-    <form className="admin-llm-form" onSubmit={(e) => void onSubmit(e)}>
-      <p className="muted small">{t("admin.llm.lede")}</p>
-      {meta?.env_note && <p className="muted small admin-llm-env-note">{meta.env_note}</p>}
+    <div className="admin-llm-panel">
+      <header className="admin-llm-intro">
+        <p className="muted small">{t("admin.llm.lede")}</p>
+        {meta?.env_note && <p className="muted small admin-llm-env-note">{meta.env_note}</p>}
+      </header>
 
-      <fieldset className="admin-fieldset">
-        <legend>{t("admin.llm.providerLegend")}</legend>
-        <label className="admin-radio">
-          <input
-            type="radio"
-            name="provider_type"
-            checked={form.provider_type === "bedrock"}
-            onChange={() => setForm({ ...form, provider_type: "bedrock" })}
-          />
-          {t("admin.llm.providers.bedrock")}
-        </label>
-        <label className="admin-radio">
-          <input
-            type="radio"
-            name="provider_type"
-            checked={form.provider_type === "openai_compatible"}
-            onChange={() => setForm({ ...form, provider_type: "openai_compatible" })}
-          />
-          {t("admin.llm.providers.privateAi")}
-        </label>
-      </fieldset>
-
-      {form.provider_type === "bedrock" && (
-        <div className="admin-llm-section">
-          <h3 className="subsection-title">{t("admin.llm.bedrockSection")}</h3>
-          <p className="muted small">{t("admin.llm.bedrockHint")}</p>
-          <label className="admin-field">
-            <span>{t("admin.llm.bedrockRegion")}</span>
-            <input
-              type="text"
-              value={form.bedrock_region}
-              onChange={(e) => setForm({ ...form, bedrock_region: e.target.value })}
-              placeholder="us-east-1"
-              autoComplete="off"
-            />
-          </label>
-          <label className="admin-field">
-            <span>{t("admin.llm.bedrockModelId")}</span>
-            <input
-              type="text"
-              value={form.bedrock_model_id}
-              onChange={(e) => setForm({ ...form, bedrock_model_id: e.target.value })}
-              placeholder="anthropic.claude-haiku-4-5-20251001-v1:0"
-              autoComplete="off"
-            />
-          </label>
-        </div>
-      )}
-
-      {form.provider_type === "openai_compatible" && (
-        <div className="admin-llm-section">
-          <h3 className="subsection-title">{t("admin.llm.privateAiSection")}</h3>
-          <label className="admin-field">
-            <span>{t("admin.llm.privateAiBaseUrl")}</span>
-            <input
-              type="url"
-              value={form.openai_base_url}
-              onChange={(e) => setForm({ ...form, openai_base_url: e.target.value })}
-              placeholder="https://api.openai.com/v1"
-              autoComplete="off"
-            />
-          </label>
-          <label className="admin-field">
-            <span>{t("admin.llm.privateAiModelId")}</span>
-            <input
-              type="text"
-              value={form.openai_model_id}
-              onChange={(e) => setForm({ ...form, openai_model_id: e.target.value })}
-              placeholder="gpt-4o-mini"
-              autoComplete="off"
-            />
-          </label>
-          <label className="admin-field">
-            <span>{t("admin.llm.privateAiToken")}</span>
-            <input
-              type="password"
-              value={form.openai_api_token}
-              onChange={(e) => setForm({ ...form, openai_api_token: e.target.value })}
-              placeholder={
-                meta.openai_api_token_set
-                  ? t("admin.llm.tokenPlaceholderSet")
-                  : t("admin.llm.tokenPlaceholderEmpty")
-              }
-              autoComplete="new-password"
-            />
-          </label>
-          {meta.openai_api_token_set && (
-            <label className="admin-checkbox">
+      <form className="admin-datasource-form admin-llm-form" onSubmit={(e) => void onSubmit(e)}>
+        <fieldset>
+          <legend>{t("admin.llm.providerLegend")}</legend>
+          <div className="admin-llm-provider-options">
+            <label className="admin-datasource-radio">
               <input
-                type="checkbox"
-                checked={form.clear_openai_api_token}
-                onChange={(e) =>
-                  setForm({ ...form, clear_openai_api_token: e.target.checked })
-                }
+                type="radio"
+                name="provider_type"
+                checked={form.provider_type === "bedrock"}
+                onChange={() => setForm({ ...form, provider_type: "bedrock" })}
               />
-              {t("admin.llm.clearToken")}
+              {t("admin.llm.providers.bedrock")}
             </label>
-          )}
+            <label className="admin-datasource-radio">
+              <input
+                type="radio"
+                name="provider_type"
+                checked={form.provider_type === "openai_compatible"}
+                onChange={() => setForm({ ...form, provider_type: "openai_compatible" })}
+              />
+              {t("admin.llm.providers.privateAi")}
+            </label>
+          </div>
+        </fieldset>
+
+        {form.provider_type === "bedrock" && (
+          <section className="admin-llm-section" aria-labelledby="admin-llm-bedrock-heading">
+            <h3 id="admin-llm-bedrock-heading" className="subsection-title">
+              {t("admin.llm.bedrockSection")}
+            </h3>
+            <p className="muted small admin-llm-section-lede">{t("admin.llm.bedrockHint")}</p>
+            <div className="admin-datasource-row">
+              <label className="admin-datasource-field admin-datasource-field-narrow">
+                <span>{t("admin.llm.bedrockRegion")}</span>
+                <input
+                  type="text"
+                  value={form.bedrock_region}
+                  onChange={(e) => setForm({ ...form, bedrock_region: e.target.value })}
+                  placeholder="us-east-1"
+                  autoComplete="off"
+                />
+              </label>
+              <label className="admin-datasource-field">
+                <span>{t("admin.llm.bedrockModelId")}</span>
+                <input
+                  type="text"
+                  className="admin-llm-input-mono"
+                  value={form.bedrock_model_id}
+                  onChange={(e) => setForm({ ...form, bedrock_model_id: e.target.value })}
+                  placeholder="anthropic.claude-haiku-4-5-20251001-v1:0"
+                  autoComplete="off"
+                />
+              </label>
+            </div>
+          </section>
+        )}
+
+        {form.provider_type === "openai_compatible" && (
+          <section className="admin-llm-section" aria-labelledby="admin-llm-privateai-heading">
+            <h3 id="admin-llm-privateai-heading" className="subsection-title">
+              {t("admin.llm.privateAiSection")}
+            </h3>
+            <label className="admin-datasource-field admin-llm-field-wide">
+              <span>{t("admin.llm.privateAiBaseUrl")}</span>
+              <input
+                type="url"
+                className="admin-llm-input-mono"
+                value={form.openai_base_url}
+                onChange={(e) => setForm({ ...form, openai_base_url: e.target.value })}
+                placeholder="https://your-gateway.example.com/v1"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <label className="admin-datasource-field admin-llm-field-wide">
+              <span>{t("admin.llm.privateAiModelId")}</span>
+              <input
+                type="text"
+                className="admin-llm-input-mono"
+                value={form.openai_model_id}
+                onChange={(e) => setForm({ ...form, openai_model_id: e.target.value })}
+                placeholder="gpt-4o-mini"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <label className="admin-datasource-field admin-llm-field-wide">
+              <span>{t("admin.llm.privateAiToken")}</span>
+              <input
+                type="password"
+                className="admin-llm-input-mono"
+                value={form.openai_api_token}
+                onChange={(e) => setForm({ ...form, openai_api_token: e.target.value })}
+                placeholder={t("admin.llm.tokenPlaceholderEmpty")}
+                autoComplete="new-password"
+              />
+              {meta.openai_api_token_set && (
+                <span className="muted small admin-llm-field-hint">{t("admin.llm.tokenHintSet")}</span>
+              )}
+            </label>
+            {meta.openai_api_token_set && (
+              <label className="admin-datasource-checkbox">
+                <input
+                  type="checkbox"
+                  checked={form.clear_openai_api_token}
+                  onChange={(e) =>
+                    setForm({ ...form, clear_openai_api_token: e.target.checked })
+                  }
+                />
+                {t("admin.llm.clearToken")}
+              </label>
+            )}
+          </section>
+        )}
+
+        <section className="admin-llm-section" aria-labelledby="admin-llm-sampling-heading">
+          <h3 id="admin-llm-sampling-heading" className="subsection-title">
+            {t("admin.llm.samplingSection")}
+          </h3>
+          <div className="admin-llm-sampling-row">
+            <label className="admin-datasource-field admin-datasource-field-narrow">
+              <span>{t("admin.llm.maxTokens")}</span>
+              <input
+                type="number"
+                min={64}
+                max={8192}
+                value={form.bedrock_max_tokens}
+                onChange={(e) => setForm({ ...form, bedrock_max_tokens: e.target.value })}
+                placeholder="900"
+              />
+            </label>
+            <label className="admin-datasource-field admin-datasource-field-narrow">
+              <span>{t("admin.llm.temperature")}</span>
+              <input
+                type="number"
+                step="0.05"
+                min={0}
+                max={2}
+                value={form.bedrock_temperature}
+                onChange={(e) => setForm({ ...form, bedrock_temperature: e.target.value })}
+                placeholder="0.35"
+              />
+            </label>
+          </div>
+        </section>
+
+        {error && <p className="error">{error}</p>}
+        {savedNote && <p className="admin-datasource-success">{savedNote}</p>}
+        {testMessage && <p className="admin-datasource-test">{testMessage}</p>}
+
+        <div className="admin-datasource-actions">
+          <button type="submit" className="btn primary" disabled={saving}>
+            {saving ? t("admin.llm.saving") : t("admin.llm.save")}
+          </button>
+          <button
+            type="button"
+            className="btn secondary"
+            disabled={testing}
+            onClick={() => void onTest()}
+          >
+            {testing ? t("admin.llm.testing") : t("admin.llm.test")}
+          </button>
         </div>
-      )}
-
-      <div className="admin-llm-section">
-        <h3 className="subsection-title">{t("admin.llm.samplingSection")}</h3>
-        <label className="admin-field">
-          <span>{t("admin.llm.maxTokens")}</span>
-          <input
-            type="number"
-            min={64}
-            max={8192}
-            value={form.bedrock_max_tokens}
-            onChange={(e) => setForm({ ...form, bedrock_max_tokens: e.target.value })}
-            placeholder="900"
-          />
-        </label>
-        <label className="admin-field">
-          <span>{t("admin.llm.temperature")}</span>
-          <input
-            type="number"
-            step="0.05"
-            min={0}
-            max={2}
-            value={form.bedrock_temperature}
-            onChange={(e) => setForm({ ...form, bedrock_temperature: e.target.value })}
-            placeholder="0.35"
-          />
-        </label>
-      </div>
-
-      {error && <p className="error">{error}</p>}
-      {savedNote && <p className="muted small">{savedNote}</p>}
-      {testMessage && <p className="muted small admin-test-result">{testMessage}</p>}
-
-      <div className="admin-form-actions">
-        <button type="submit" className="btn primary" disabled={saving}>
-          {saving ? t("admin.llm.saving") : t("admin.llm.save")}
-        </button>
-        <button
-          type="button"
-          className="btn secondary"
-          disabled={testing}
-          onClick={() => void onTest()}
-        >
-          {testing ? t("admin.llm.testing") : t("admin.llm.test")}
-        </button>
-      </div>
-      {meta.updated_at && (
-        <p className="muted small">
-          {t("admin.datasource.lastUpdated", {
-            date: new Date(meta.updated_at).toLocaleString(),
-          })}
-        </p>
-      )}
-    </form>
+        {meta.updated_at && (
+          <p className="muted small admin-llm-updated">
+            {t("admin.datasource.lastUpdated", {
+              date: new Date(meta.updated_at).toLocaleString(),
+            })}
+          </p>
+        )}
+      </form>
+    </div>
   );
 }
