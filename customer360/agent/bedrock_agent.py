@@ -141,6 +141,7 @@ def answer_with_bedrock(
     raw, model_id = invoke_text(
         system_prompt=build_system_prompt(locale),
         user_prompt=user_prompt,
+        json_mode=True,
     )
     parsed = _parse_agent_json(raw)
     source = "openai_compatible" if provider == "openai_compatible" else "bedrock"

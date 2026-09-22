@@ -5,7 +5,11 @@ from __future__ import annotations
 import logging
 import sqlite3
 
-from customer360.agent.bedrock_agent import answer_with_bedrock
+from customer360.agent.bedrock_agent import _build_payload, answer_with_bedrock
+from customer360.agent.llm_resilience import complete_agent_model_json
+from customer360.agent.prompt import build_system_prompt, build_user_prompt
+from customer360.llm.errors import LLMError
+from customer360.llm_provider import get_active_provider
 from customer360.agent.context import gather_context
 from customer360.agent.customer_snippet import top_customers_snippet
 from customer360.agent.list_filters import (
@@ -52,20 +56,61 @@ def answer_question(
             ctx["snippets"].append(rank_snippet)
 
     if is_llm_configured() and (message or "").strip():
+        fallback_reason: str | None = None
         try:
-            payload = answer_with_bedrock(
-                conn=conn,
+            provider = get_active_provider()
+            if provider == "bedrock":
+                payload = answer_with_bedrock(
+                    conn=conn,
+                    message=message.strip(),
+                    segment=seg,
+                    snippets=ctx["snippets"],
+                    list_intent=merged,
+                    list_context=list_context,
+                    locale=locale,
+                )
+                payload.pop("_merged_list", None)
+                return attach_agent_llm_meta(payload, llm_attempted=True)
+            system_prompt = build_system_prompt(locale)
+            user_prompt = build_user_prompt(
                 message=message.strip(),
                 segment=seg,
                 snippets=ctx["snippets"],
-                list_intent=merged,
                 list_context=list_context,
                 locale=locale,
             )
+            parsed, _raw, model_id = complete_agent_model_json(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                prefer_stream=False,
+            )
+            source = "openai_compatible"
+            payload = _build_payload(
+                parsed,
+                segment=seg,
+                list_intent=merged,
+                model_id=model_id,
+                source=source,
+            )
             payload.pop("_merged_list", None)
             return attach_agent_llm_meta(payload, llm_attempted=True)
-        except Exception as exc:
-            logger.warning("Bedrock copilot failed, using rules: %s", exc, exc_info=True)
+        except (LLMError, ValueError, Exception) as exc:
+            fallback_reason = str(exc)[:300]
+            logger.warning("Executive assistant LLM failed, using rules: %s", exc, exc_info=True)
+
+        payload = answer_question_rules(
+            conn,
+            message=message,
+            segment=seg,
+            merged_list=merged,
+            extra_snippets=ctx["snippets"],
+        )
+        payload["model_id"] = None
+        return attach_agent_llm_meta(
+            payload,
+            llm_attempted=True,
+            fallback_reason=fallback_reason,
+        )
 
     payload = answer_question_rules(
         conn,
@@ -75,5 +120,4 @@ def answer_question(
         extra_snippets=ctx["snippets"],
     )
     payload["model_id"] = None
-    attempted = is_llm_configured() and bool((message or "").strip())
-    return attach_agent_llm_meta(payload, llm_attempted=attempted)
+    return attach_agent_llm_meta(payload, llm_attempted=False)

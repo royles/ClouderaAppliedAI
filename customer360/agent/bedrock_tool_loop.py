@@ -173,14 +173,6 @@ def invoke_copilot_with_tools(
 
 
 def parse_final_json(text: str) -> dict[str, Any]:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = re.sub(r"^```(?:json)?\s*", "", stripped)
-        stripped = re.sub(r"\s*```$", "", stripped)
-    try:
-        return json.loads(stripped)
-    except json.JSONDecodeError:
-        match = re.search(r"\{[\s\S]*\}", stripped)
-        if not match:
-            raise ValueError("Model did not return JSON") from None
-        return json.loads(match.group(0))
+    from customer360.agent.json_parse import load_first_json_object
+
+    return load_first_json_object(text)

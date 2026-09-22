@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 import urllib.error
 import urllib.request
 from collections.abc import Iterator
@@ -24,34 +25,72 @@ def _chat_completions_url(base_url: str) -> str:
     return f"{raw}/v1/chat/completions"
 
 
+_RETRYABLE_HTTP = frozenset({408, 429, 500, 502, 503, 504})
+_MAX_HTTP_ATTEMPTS = 3
+
+
+def _message_text(message: dict[str, Any]) -> str:
+    content = message.get("content")
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for block in content:
+            if isinstance(block, dict):
+                if block.get("type") == "text" and block.get("text"):
+                    parts.append(str(block["text"]))
+                elif block.get("text"):
+                    parts.append(str(block["text"]))
+        return "".join(parts)
+    return str(content)
+
+
 def _post_chat_completion(
     *,
     url: str,
     token: str,
     body: dict[str, Any],
 ) -> dict[str, Any]:
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:500]
-        logger.error("OpenAI-compatible HTTP %s: %s", exc.code, detail)
-        status = 401 if exc.code in (401, 403) else 502
-        raise LLMError(
-            f"PrivateAI API error ({exc.code}): {detail or exc.reason}",
-            status_code=status,
-        ) from exc
-    except urllib.error.URLError as exc:
-        raise LLMError(f"PrivateAI connection error: {exc.reason}", status_code=502) from exc
+    payload = json.dumps(body).encode("utf-8")
+    last_exc: LLMError | None = None
+    for attempt in range(_MAX_HTTP_ATTEMPTS):
+        req = urllib.request.Request(
+            url,
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=120) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:500]
+            logger.error("OpenAI-compatible HTTP %s: %s", exc.code, detail)
+            status = 401 if exc.code in (401, 403) else 502
+            last_exc = LLMError(
+                f"PrivateAI API error ({exc.code}): {detail or exc.reason}",
+                status_code=status,
+            )
+            if exc.code in _RETRYABLE_HTTP and attempt + 1 < _MAX_HTTP_ATTEMPTS:
+                time.sleep(0.6 * (2**attempt))
+                continue
+            raise last_exc from exc
+        except urllib.error.URLError as exc:
+            last_exc = LLMError(
+                f"PrivateAI connection error: {exc.reason}",
+                status_code=502,
+            )
+            if attempt + 1 < _MAX_HTTP_ATTEMPTS:
+                time.sleep(0.6 * (2**attempt))
+                continue
+            raise last_exc from exc
+    assert last_exc is not None
+    raise last_exc
 
 
 def invoke_openai_compatible_text(
@@ -99,10 +138,10 @@ def invoke_openai_compatible_text(
     if not choices:
         raise LLMError("PrivateAI API returned no choices", status_code=502)
     message = choices[0].get("message") or {}
-    text = message.get("content")
-    if not text:
+    text = _message_text(message)
+    if not text.strip():
         raise LLMError("PrivateAI API returned empty content", status_code=502)
-    return str(text), model
+    return text, model
 
 
 def stream_openai_compatible_text(
@@ -139,49 +178,70 @@ def stream_openai_compatible_text(
     url = _chat_completions_url(base)
 
     def _read_stream(request_body: dict[str, Any]) -> Iterator[str]:
-        request = urllib.request.Request(
-            url,
-            data=json.dumps(request_body).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {token}",
-                "Accept": "text/event-stream",
-            },
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(request, timeout=300) as resp:
-                while True:
-                    line = resp.readline()
-                    if not line:
-                        break
-                    decoded = line.decode("utf-8", errors="replace").strip()
-                    if not decoded or not decoded.startswith("data:"):
-                        continue
-                    data = decoded[5:].strip()
-                    if data == "[DONE]":
-                        break
-                    try:
-                        chunk = json.loads(data)
-                    except json.JSONDecodeError:
-                        continue
-                    choices = chunk.get("choices") or []
-                    if not choices:
-                        continue
-                    delta = choices[0].get("delta") or {}
-                    piece = delta.get("content")
-                    if piece:
-                        yield str(piece)
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")[:500]
-            logger.error("OpenAI-compatible stream HTTP %s: %s", exc.code, detail)
-            status = 401 if exc.code in (401, 403) else 502
-            raise LLMError(
-                f"PrivateAI API error ({exc.code}): {detail or exc.reason}",
-                status_code=status,
-            ) from exc
-        except urllib.error.URLError as exc:
-            raise LLMError(f"PrivateAI connection error: {exc.reason}", status_code=502) from exc
+        payload = json.dumps(request_body).encode("utf-8")
+        last_exc: LLMError | None = None
+        for attempt in range(_MAX_HTTP_ATTEMPTS):
+            request = urllib.request.Request(
+                url,
+                data=payload,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {token}",
+                    "Accept": "text/event-stream",
+                },
+                method="POST",
+            )
+            try:
+                with urllib.request.urlopen(request, timeout=300) as resp:
+                    while True:
+                        line = resp.readline()
+                        if not line:
+                            break
+                        decoded = line.decode("utf-8", errors="replace").strip()
+                        if not decoded or not decoded.startswith("data:"):
+                            continue
+                        data = decoded[5:].strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data)
+                        except json.JSONDecodeError:
+                            continue
+                        choices = chunk.get("choices") or []
+                        if not choices:
+                            continue
+                        delta = choices[0].get("delta") or {}
+                        piece = delta.get("content")
+                        if isinstance(piece, list):
+                            for block in piece:
+                                if isinstance(block, dict) and block.get("text"):
+                                    yield str(block["text"])
+                        elif piece:
+                            yield str(piece)
+                return
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="replace")[:500]
+                logger.error("OpenAI-compatible stream HTTP %s: %s", exc.code, detail)
+                status = 401 if exc.code in (401, 403) else 502
+                last_exc = LLMError(
+                    f"PrivateAI API error ({exc.code}): {detail or exc.reason}",
+                    status_code=status,
+                )
+                if exc.code in _RETRYABLE_HTTP and attempt + 1 < _MAX_HTTP_ATTEMPTS:
+                    time.sleep(0.6 * (2**attempt))
+                    continue
+                raise last_exc from exc
+            except urllib.error.URLError as exc:
+                last_exc = LLMError(
+                    f"PrivateAI connection error: {exc.reason}",
+                    status_code=502,
+                )
+                if attempt + 1 < _MAX_HTTP_ATTEMPTS:
+                    time.sleep(0.6 * (2**attempt))
+                    continue
+                raise last_exc from exc
+        if last_exc:
+            raise last_exc
 
     try:
         yield from _read_stream(body)

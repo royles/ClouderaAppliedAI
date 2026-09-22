@@ -637,6 +637,7 @@ class AgentAskResponse(BaseModel):
     llm_provider: str | None = None
     model_id: str | None = None
     tools_used: list[str] = Field(default_factory=list)
+    fallback_reason: str | None = None
 
 
 class AgentStatusResponse(BaseModel):

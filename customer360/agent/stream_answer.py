@@ -6,7 +6,7 @@ import logging
 import sqlite3
 from collections.abc import Iterator
 
-from customer360.agent.bedrock_agent import _build_payload, _parse_agent_json
+from customer360.agent.bedrock_agent import _build_payload
 from customer360.agent.context import gather_context
 from customer360.agent.customer_snippet import top_customers_snippet
 from customer360.agent.list_filters import (
@@ -15,11 +15,12 @@ from customer360.agent.list_filters import (
     parse_customer_list_intent,
     parse_refinement_intent,
 )
+from customer360.agent.llm_resilience import stream_agent_deltas_then_parse
 from customer360.agent.prompt import build_system_prompt, build_user_prompt
 from customer360.agent.query_builder import count_matching_customers
 from customer360.agent.router import answer_question_rules
 from customer360.llm.errors import LLMError
-from customer360.llm.router import is_llm_configured, stream_text_chunks
+from customer360.llm.router import is_llm_configured
 from customer360.llm_provider import get_active_provider
 from customer360.agent.payload_meta import attach_agent_llm_meta
 from customer360.bedrock.config import effective_bedrock_settings
@@ -55,6 +56,15 @@ def _prepare_agent_context(
             ctx["snippets"].append(rank_snippet)
 
     return ctx, seg, merged
+
+
+def _model_id_for_provider() -> str:
+    provider = get_active_provider()
+    if provider == "openai_compatible":
+        from customer360.llm_provider import load_llm_config
+
+        return (load_llm_config().openai_model_id or "").strip() or "privateai"
+    return effective_bedrock_settings().model_id
 
 
 def stream_agent_answer(
@@ -96,51 +106,35 @@ def stream_agent_answer(
     )
     system_prompt = build_system_prompt(locale)
 
-    buffer: list[str] = []
+    fallback_reason: str | None = None
     try:
-        for piece in stream_text_chunks(
+        parsed = None
+        for event, data in stream_agent_deltas_then_parse(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
-            json_mode=False,
         ):
-            buffer.append(piece)
-            yield ("delta", {"text": piece})
-    except LLMError as exc:
-        logger.warning("Streaming agent LLM failed, using rules: %s", exc)
-        payload = answer_question_rules(
-            conn,
-            message=message,
-            segment=seg,
-            merged_list=merged,
-            extra_snippets=ctx["snippets"],
-        )
-        payload["model_id"] = None
-        yield ("done", attach_agent_llm_meta(payload, llm_attempted=True))
-        return
+            if event == "delta":
+                yield ("delta", {"text": data})
+            elif event == "parsed":
+                parsed = data
 
-    raw = "".join(buffer)
-    provider = get_active_provider()
-    if provider == "openai_compatible":
-        from customer360.llm_provider import load_llm_config
+        if parsed is None:
+            raise ValueError("No parsed assistant response")
 
-        model_id = (load_llm_config().openai_model_id or "").strip() or "privateai"
-    else:
-        model_id = effective_bedrock_settings().model_id
-
-    try:
-        parsed = _parse_agent_json(raw)
+        provider = get_active_provider()
         source = "openai_compatible" if provider == "openai_compatible" else "bedrock"
         payload = _build_payload(
             parsed,
             segment=seg,
             list_intent=merged,
-            model_id=str(model_id),
+            model_id=str(_model_id_for_provider()),
             source=source,
         )
         payload.pop("_merged_list", None)
         yield ("done", attach_agent_llm_meta(payload, llm_attempted=True))
-    except Exception as exc:
-        logger.warning("Agent stream JSON parse failed: %s", exc)
+    except (LLMError, ValueError) as exc:
+        fallback_reason = str(exc)[:300]
+        logger.warning("Streaming agent LLM failed, using rules: %s", exc, exc_info=True)
         payload = answer_question_rules(
             conn,
             message=message,
@@ -149,4 +143,11 @@ def stream_agent_answer(
             extra_snippets=ctx["snippets"],
         )
         payload["model_id"] = None
-        yield ("done", attach_agent_llm_meta(payload, llm_attempted=True))
+        yield (
+            "done",
+            attach_agent_llm_meta(
+                payload,
+                llm_attempted=True,
+                fallback_reason=fallback_reason,
+            ),
+        )
