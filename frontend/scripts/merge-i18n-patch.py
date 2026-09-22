@@ -20,14 +20,15 @@ def deep_merge(base: dict, patch: dict) -> dict:
 def main() -> None:
     for lang in ("en", "he"):
         target = ROOT / f"{lang}.json"
-        patch_path = ROOT / f"i18n-patch-{lang}.json"
-        if not patch_path.is_file():
-            continue
-        data = json.loads(target.read_text(encoding="utf-8"))
-        patch = json.loads(patch_path.read_text(encoding="utf-8"))
-        deep_merge(data, patch)
-        target.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        print(f"Merged {patch_path.name} -> {target.name}")
+        for patch_name in (f"i18n-patch-{lang}.json", f"i18n-patch-{lang}-titles.json"):
+            patch_path = ROOT / patch_name
+            if not patch_path.is_file():
+                continue
+            data = json.loads(target.read_text(encoding="utf-8"))
+            patch = json.loads(patch_path.read_text(encoding="utf-8"))
+            deep_merge(data, patch)
+            target.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+            print(f"Merged {patch_path.name} -> {target.name}")
 
 
 if __name__ == "__main__":

@@ -39,10 +39,10 @@
   },
   "products": {
     "classes": {
-      "life_protection": "Life & protection",
-      "health": "Health & supplementary",
-      "property": "Property & elementary",
-      "long_term_savings": "Long-term savings"
+      "life_protection": "Life and Protection",
+      "health": "Health and Supplementary",
+      "property": "Property and Elementary",
+      "long_term_savings": "Long-Term Savings"
     }
   },
   "admin": {
