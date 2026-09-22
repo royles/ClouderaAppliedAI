@@ -130,11 +130,7 @@ function AppLayout() {
       }${mobileFocus ? " layout-phone-content" : ""}`}
     >
       {!phoneCopilotHome && (
-        <header
-          className={`header${isPhone ? " header-phone" : ""}${
-            enabled && !open && !isPhone ? " header-with-copilot-toggle" : ""
-          }`}
-        >
+        <header className={`header${isPhone ? " header-phone" : ""}`}>
           <Link to={BUSINESS_BASE} className="brand">
             {t("app.brand.title")}
           </Link>
