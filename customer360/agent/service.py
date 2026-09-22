@@ -64,7 +64,7 @@ def answer_question(
                 segment=seg,
                 snippets=ctx["snippets"],
                 list_intent=merged,
-                list_context=list_ctx,
+                list_context=list_context,
             )
             final_filters = payload.pop("_merged_list", None) or merged
             _attach_query_preview(payload, final_filters, seg)
