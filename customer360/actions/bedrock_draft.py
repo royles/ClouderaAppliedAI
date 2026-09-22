@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import re
 
-from customer360.bedrock.client import BedrockError, invoke_text
+from customer360.llm.router import invoke_text
 
 ACTION_DRAFT_SYSTEM = """You draft customer communications for an insurance Customer 360 workspace.
 Use ONLY facts from the provided customer JSON. Do not invent policies, amounts, or products.

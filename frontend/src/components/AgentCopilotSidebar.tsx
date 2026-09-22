@@ -87,6 +87,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
 
   const {
     bedrockConfigured,
+    agentMode,
     panel,
     setPanel,
     turns,
@@ -198,7 +199,9 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
             {phoneHome ? t("assistant.lede.phone") : t("assistant.lede.desktop")}{" "}
             {!phoneHome &&
               (bedrockConfigured
-                ? t("assistant.poweredBy.bedrock")
+                ? agentMode === "openai_chat"
+                  ? t("assistant.poweredBy.llm")
+                  : t("assistant.poweredBy.bedrock")
                 : t("assistant.poweredBy.rules"))}
           </p>
         </div>
@@ -249,7 +252,9 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
                         ? t("assistant.source.bedrockTools")
                         : turn.source === "bedrock"
                           ? t("assistant.source.bedrock")
-                          : t("assistant.source.rules")}
+                          : turn.source === "openai_compatible"
+                            ? t("assistant.source.openaiCompatible")
+                            : t("assistant.source.rules")}
                     </span>
                   )}
                 </span>

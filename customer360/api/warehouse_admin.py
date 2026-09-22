@@ -6,8 +6,8 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from customer360.bedrock.client import is_bedrock_configured
-from customer360.bedrock.config import get_bedrock_settings
+from customer360.llm.router import is_llm_configured
+from customer360.llm_provider import effective_bedrock_settings, load_llm_config, provider_label
 
 TABLE_CATALOG: list[dict] = [
     {
@@ -567,24 +567,37 @@ def _system_health_checks(conn: sqlite3.Connection, *, database_path: Path) -> l
                 detail=str(exc),
             )
 
-    settings = get_bedrock_settings()
-    if is_bedrock_configured():
-        add(
-            "bedrock",
-            "Amazon Bedrock",
-            "ok",
-            f"Configured for model {settings.model_id} in {settings.bedrock_region}.",
-            detail="Insights and outreach drafts can use Bedrock when requested.",
-        )
+    llm_admin = load_llm_config()
+    llm_label = provider_label(llm_admin.provider_type)
+    if is_llm_configured():
+        if llm_admin.provider_type == "openai_compatible":
+            model = (llm_admin.openai_model_id or "").strip() or "—"
+            endpoint = (llm_admin.openai_base_url or "").strip() or "—"
+            add(
+                "llm",
+                "LLM provider",
+                "ok",
+                f"{llm_label}: {model}.",
+                detail=f"Endpoint {endpoint}. Token stored in admin database.",
+            )
+        else:
+            settings = effective_bedrock_settings()
+            add(
+                "llm",
+                "LLM provider",
+                "ok",
+                f"{llm_label}: {settings.model_id} ({settings.bedrock_region}).",
+                detail="Insights, drafts, and assistant use Bedrock when credentials are available.",
+            )
     else:
         add(
-            "bedrock",
-            "Amazon Bedrock",
+            "llm",
+            "LLM provider",
             "warn",
-            "Not configured — insights use local fallback rules.",
+            f"{llm_label} not ready — insights use local fallback rules.",
             detail=(
-                "Set AWS credentials and Bedrock model environment variables "
-                "(see docs/CAI_APPLICATION.md)."
+                "Configure Bedrock via AWS credentials or choose OpenAI-compatible "
+                "under Data & Admin → Configuration → LLM provider."
             ),
         )
 

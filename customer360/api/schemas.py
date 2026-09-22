@@ -295,6 +295,48 @@ class BedrockStatusResponse(BaseModel):
     configured: bool
     model_id: str
     region: str
+    provider: str = "bedrock"
+    provider_label: str = "Amazon Bedrock"
+
+
+class LlmProviderConfigResponse(BaseModel):
+    provider_type: str = "bedrock"
+    provider_label: str = "Amazon Bedrock"
+    bedrock_region: str | None = None
+    bedrock_model_id: str | None = None
+    bedrock_max_tokens: int | None = None
+    bedrock_temperature: float | None = None
+    openai_base_url: str | None = None
+    openai_model_id: str | None = None
+    openai_api_token_set: bool = False
+    updated_at: str | None = None
+    env_note: str = ""
+
+
+class LlmProviderUpdateRequest(BaseModel):
+    provider_type: str | None = None
+    bedrock_region: str | None = None
+    bedrock_model_id: str | None = None
+    bedrock_max_tokens: int | None = None
+    bedrock_temperature: float | None = None
+    openai_base_url: str | None = None
+    openai_model_id: str | None = None
+    openai_api_token: str | None = Field(
+        default=None,
+        description="Leave empty to keep existing API token.",
+    )
+    clear_openai_api_token: bool = False
+
+
+class LlmProviderTestRequest(BaseModel):
+    config: LlmProviderUpdateRequest | None = None
+
+
+class LlmProviderTestResponse(BaseModel):
+    ok: bool
+    provider_type: str
+    message: str
+    detail: str | None = None
 
 
 class InsightActionDraftRequest(BaseModel):
@@ -598,3 +640,5 @@ class AgentStatusResponse(BaseModel):
     enabled: bool
     mode: str = "rules"
     bedrock_configured: bool = False
+    llm_provider: str = "bedrock"
+    llm_configured: bool = False

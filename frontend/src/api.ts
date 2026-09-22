@@ -146,9 +146,32 @@ export type BedrockStatus = {
   configured: boolean;
   model_id: string;
   region: string;
+  provider?: string;
+  provider_label?: string;
 };
 
 export const fetchBedrockStatus = () => getJson<BedrockStatus>("/api/bedrock/status");
+
+export type LlmProviderConfig = {
+  provider_type: string;
+  provider_label: string;
+  bedrock_region?: string | null;
+  bedrock_model_id?: string | null;
+  bedrock_max_tokens?: number | null;
+  bedrock_temperature?: number | null;
+  openai_base_url?: string | null;
+  openai_model_id?: string | null;
+  openai_api_token_set: boolean;
+  updated_at?: string | null;
+  env_note?: string;
+};
+
+export type LlmProviderTestResult = {
+  ok: boolean;
+  provider_type: string;
+  message: string;
+  detail?: string | null;
+};
 
 export const fetchOverview = () => getJson<Overview>("/api/overview");
 
@@ -261,6 +284,17 @@ export const updateDataSourceConfig = (payload: Record<string, unknown>) =>
 
 export const testDataSourceConnection = (config?: Record<string, unknown>) =>
   postJson<DataSourceTestResult>("/api/admin/data-source/test", {
+    config: config ?? null,
+  });
+
+export const fetchLlmProviderConfig = () =>
+  getJson<LlmProviderConfig>("/api/admin/llm");
+
+export const updateLlmProviderConfig = (payload: Record<string, unknown>) =>
+  putJson<LlmProviderConfig>("/api/admin/llm", payload);
+
+export const testLlmProvider = (config?: Record<string, unknown>) =>
+  postJson<LlmProviderTestResult>("/api/admin/llm/test", {
     config: config ?? null,
   });
 

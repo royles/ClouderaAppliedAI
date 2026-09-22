@@ -17,7 +17,7 @@ from customer360.bedrock.client import (
     _normalize_model_id,
     resolve_inference_model_id,
 )
-from customer360.bedrock.config import get_bedrock_settings
+from customer360.llm_provider import effective_bedrock_settings
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def invoke_copilot_with_tools(
     except ImportError as exc:
         raise BedrockError("boto3 is not installed", status_code=503) from exc
 
-    settings = get_bedrock_settings()
+    settings = effective_bedrock_settings()
     catalog_model = settings.model_id
     ui_region = settings.bedrock_region
     inference_model = resolve_inference_model_id(catalog_model, ui_region)

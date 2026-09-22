@@ -47,6 +47,10 @@ from customer360.api.schemas import (
     AgentAskResponse,
     AgentStatusResponse,
     AgentToolInfo,
+    LlmProviderConfigResponse,
+    LlmProviderUpdateRequest,
+    LlmProviderTestRequest,
+    LlmProviderTestResponse,
 )
 import customer360.agent.tools  # noqa: F401 — register copilot tool handlers
 from customer360.agent.config import agent_enabled
@@ -70,6 +74,18 @@ from customer360.actions.draft import build_action_draft, classify_recommendatio
 from customer360.interactions.summary import load_interaction_bundle
 from customer360.bedrock.config import get_bedrock_settings
 from customer360.bedrock.client import is_bedrock_configured
+from customer360.llm.router import is_llm_configured
+from customer360.llm.openai_compatible import test_openai_compatible
+from customer360.llm_provider import (
+    LlmProviderConfig,
+    config_for_api,
+    effective_bedrock_settings,
+    load_llm_config,
+    merge_llm_update,
+    normalize_provider,
+    provider_label,
+    save_llm_config,
+)
 from customer360.insights.service import get_customer_insights
 from customer360.api.customer_list import customer_list_where as _customer_list_where
 from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE, normalize_segment
@@ -131,11 +147,99 @@ def health() -> HealthResponse:
 
 @router.get("/bedrock/status", response_model=BedrockStatusResponse)
 def bedrock_status() -> BedrockStatusResponse:
-    settings = get_bedrock_settings()
+    admin = load_llm_config()
+    if admin.provider_type == "openai_compatible":
+        model_id = (admin.openai_model_id or "").strip() or "—"
+        region = (admin.openai_base_url or "").strip() or "—"
+    else:
+        settings = effective_bedrock_settings()
+        model_id = settings.model_id
+        region = settings.bedrock_region
     return BedrockStatusResponse(
-        configured=is_bedrock_configured(),
-        model_id=settings.model_id,
-        region=settings.bedrock_region,
+        configured=is_llm_configured(),
+        model_id=model_id,
+        region=region,
+        provider=admin.provider_type,
+        provider_label=provider_label(admin.provider_type),
+    )
+
+
+def _llm_env_note() -> str:
+    return (
+        "Amazon Bedrock uses AWS credentials from the environment or instance profile. "
+        "OpenAI-compatible mode stores the API token only in the local admin database "
+        "(never returned by the API)."
+    )
+
+
+def _llm_provider_response() -> LlmProviderConfigResponse:
+    cfg = load_llm_config()
+    data = config_for_api(cfg)
+    data["env_note"] = _llm_env_note()
+    return LlmProviderConfigResponse(**data)
+
+
+def _llm_config_for_test(body: LlmProviderTestRequest | None) -> LlmProviderConfig:
+    saved = load_llm_config()
+    if body is None or body.config is None:
+        return saved
+    updates = body.config.model_dump(exclude_unset=True)
+    clear_token = bool(updates.pop("clear_openai_api_token", False))
+    token = updates.pop("openai_api_token", None)
+    if token:
+        updates["openai_api_token"] = token
+    merged = merge_llm_update(saved, updates, clear_openai_api_token=clear_token)
+    return merged
+
+
+@router.get("/admin/llm", response_model=LlmProviderConfigResponse)
+def get_llm_provider_config() -> LlmProviderConfigResponse:
+    return _llm_provider_response()
+
+
+@router.put("/admin/llm", response_model=LlmProviderConfigResponse)
+def put_llm_provider_config(body: LlmProviderUpdateRequest) -> LlmProviderConfigResponse:
+    saved = load_llm_config()
+    updates = body.model_dump(exclude_unset=True)
+    provider = updates.pop("provider_type", None)
+    if provider is not None:
+        updates["provider_type"] = normalize_provider(provider)
+    clear_token = bool(updates.pop("clear_openai_api_token", False))
+    token = updates.pop("openai_api_token", None)
+    if token:
+        updates["openai_api_token"] = token
+    merged = merge_llm_update(saved, updates, clear_openai_api_token=clear_token)
+    save_llm_config(merged)
+    return _llm_provider_response()
+
+
+@router.post("/admin/llm/test", response_model=LlmProviderTestResponse)
+def post_llm_provider_test(
+    body: LlmProviderTestRequest | None = None,
+) -> LlmProviderTestResponse:
+    cfg = _llm_config_for_test(body)
+    provider = normalize_provider(cfg.provider_type)
+    if provider == "openai_compatible":
+        result = test_openai_compatible(cfg)
+        return LlmProviderTestResponse(
+            ok=bool(result.get("ok")),
+            provider_type=provider,
+            message=str(result.get("message", "")),
+            detail=result.get("detail"),
+        )
+    if not is_bedrock_configured():
+        return LlmProviderTestResponse(
+            ok=False,
+            provider_type=provider,
+            message="Bedrock is not configured.",
+            detail="Set AWS credentials or an instance profile with Bedrock access.",
+        )
+    settings = effective_bedrock_settings()
+    return LlmProviderTestResponse(
+        ok=True,
+        provider_type=provider,
+        message=f"Bedrock credentials detected for model {settings.model_id}.",
+        detail=f"Region {settings.bedrock_region}. Use the assistant to verify inference.",
     )
 
 
@@ -468,11 +572,20 @@ def products_catalog(
 
 @router.get("/agent/status", response_model=AgentStatusResponse)
 def agent_status() -> AgentStatusResponse:
-    mode = "bedrock_tools" if is_bedrock_configured() else "rules"
+    provider = load_llm_config().provider_type
+    llm_ready = is_llm_configured()
+    if llm_ready and provider == "bedrock":
+        mode = "bedrock_tools"
+    elif llm_ready and provider == "openai_compatible":
+        mode = "openai_chat"
+    else:
+        mode = "rules"
     return AgentStatusResponse(
         enabled=agent_enabled(),
         mode=mode,
-        bedrock_configured=is_bedrock_configured(),
+        bedrock_configured=llm_ready,
+        llm_provider=provider,
+        llm_configured=llm_ready,
     )
 
 

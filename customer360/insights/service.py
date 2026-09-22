@@ -7,7 +7,9 @@ import logging
 import re
 import sqlite3
 
-from customer360.bedrock.client import BedrockError, invoke_text, is_bedrock_configured
+from customer360.llm.errors import LLMError
+from customer360.llm.router import invoke_text, is_llm_configured
+from customer360.llm_provider import get_active_provider
 from customer360.insights.cache import load_cached, save_cached
 from customer360.insights.context import load_customer_context
 from customer360.insights.fallback import generate_fallback
@@ -64,14 +66,14 @@ def get_customer_insights(
     if ctx is None:
         return None
 
-    bedrock_ready = is_bedrock_configured()
+    llm_ready = is_llm_configured()
 
     if not refresh:
         cached = load_cached(conn, customer_id, ctx.context_hash)
         if cached:
-            stale_fallback = bedrock_ready and cached.get("source") == "fallback"
+            stale_fallback = llm_ready and cached.get("source") == "fallback"
             if not stale_fallback:
-                cached["bedrock_configured"] = bedrock_ready
+                cached["bedrock_configured"] = llm_ready
                 cached["cached"] = True
                 cached.setdefault("experience_note", "")
                 cached.setdefault("fallback_reason", None)
@@ -82,16 +84,17 @@ def get_customer_insights(
     model_id: str | None = None
     fallback_reason: str | None = None
 
-    if bedrock_ready:
+    if llm_ready:
         try:
             raw, model_id = invoke_text(
                 system_prompt=SYSTEM_PROMPT,
                 user_prompt=build_user_prompt(ctx.payload, ctx.churn_tier),
             )
             parsed = _align_focus_with_churn(_parse_model_json(raw), ctx.churn_tier)
-            source = "bedrock"
-        except (BedrockError, ValueError) as exc:
-            logger.warning("Bedrock insight generation failed: %s", exc)
+            provider = get_active_provider()
+            source = "openai_compatible" if provider == "openai_compatible" else "bedrock"
+        except (LLMError, ValueError) as exc:
+            logger.warning("LLM insight generation failed: %s", exc)
             fallback_reason = str(exc)
             parsed = generate_fallback(ctx.payload)
             source = "fallback"
@@ -120,7 +123,7 @@ def get_customer_insights(
         "source": source,
         "model_id": model_id,
         "generated_at": generated_at,
-        "bedrock_configured": bedrock_ready,
+        "bedrock_configured": llm_ready,
         "fallback_reason": fallback_reason,
         "cached": False,
     }

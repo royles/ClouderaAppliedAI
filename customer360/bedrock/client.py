@@ -7,6 +7,7 @@ import logging
 from typing import Any
 
 from customer360.bedrock.config import get_bedrock_settings
+from customer360.llm_provider import effective_bedrock_settings
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ def _anthropic_disallows_sampling(model_id: str) -> bool:
 
 
 def is_bedrock_configured() -> bool:
-    settings = get_bedrock_settings()
+    settings = get_bedrock_settings()  # env / instance profile only
     if settings.has_explicit_credentials():
         return True
     try:
@@ -77,7 +78,7 @@ def is_bedrock_configured() -> bool:
 def _build_session():
     import boto3
 
-    settings = get_bedrock_settings()
+    settings = effective_bedrock_settings()
     region = resolve_client_region(settings.bedrock_region)
     kwargs: dict[str, Any] = {"region_name": region}
     if settings.has_explicit_credentials():
@@ -134,7 +135,7 @@ def invoke_text(*, system_prompt: str, user_prompt: str) -> tuple[str, str]:
     except ImportError as exc:
         raise BedrockError("boto3 is not installed", status_code=503) from exc
 
-    settings = get_bedrock_settings()
+    settings = effective_bedrock_settings()
     catalog_model = settings.model_id
     ui_region = settings.bedrock_region
     inference_model = resolve_inference_model_id(catalog_model, ui_region)

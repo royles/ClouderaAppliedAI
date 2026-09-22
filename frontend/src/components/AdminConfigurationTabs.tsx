@@ -3,8 +3,9 @@ import { useState } from "react";
 import AdminAppearancePanel from "./AdminAppearancePanel";
 import AdminDataSourcePanel from "./AdminDataSourcePanel";
 import AdminKpiBenchmarksPanel from "./AdminKpiBenchmarksPanel";
+import AdminLlmProviderPanel from "./AdminLlmProviderPanel";
 
-type ConfigTab = "warehouse" | "kpi_benchmarks" | "appearance";
+type ConfigTab = "warehouse" | "llm" | "kpi_benchmarks" | "appearance";
 
 export default function AdminConfigurationTabs() {
   const { t } = useTranslation();
@@ -27,6 +28,15 @@ export default function AdminConfigurationTabs() {
         <button
           type="button"
           role="tab"
+          aria-selected={tab === "llm"}
+          className={`admin-config-tab${tab === "llm" ? " is-active" : ""}`}
+          onClick={() => setTab("llm")}
+        >
+          {t("admin.config.tabs.llm")}
+        </button>
+        <button
+          type="button"
+          role="tab"
           aria-selected={tab === "kpi_benchmarks"}
           className={`admin-config-tab${tab === "kpi_benchmarks" ? " is-active" : ""}`}
           onClick={() => setTab("kpi_benchmarks")}
@@ -45,6 +55,7 @@ export default function AdminConfigurationTabs() {
       </div>
       <div className="admin-config-tab-panel" role="tabpanel">
         {tab === "warehouse" && <AdminDataSourcePanel layout="embedded" />}
+        {tab === "llm" && <AdminLlmProviderPanel />}
         {tab === "kpi_benchmarks" && <AdminKpiBenchmarksPanel />}
         {tab === "appearance" && <AdminAppearancePanel />}
       </div>

@@ -20,6 +20,21 @@ CREATE TABLE IF NOT EXISTS APP_ADMIN_DATA_SOURCE (
     UPDATED_AT          TEXT NOT NULL
 );
 
+-- Executive assistant / insights LLM backend (Bedrock default or OpenAI-compatible HTTP)
+CREATE TABLE IF NOT EXISTS APP_ADMIN_LLM (
+    ID                      INTEGER PRIMARY KEY CHECK (ID = 1),
+    PROVIDER_TYPE           TEXT NOT NULL DEFAULT 'bedrock'
+                                CHECK (PROVIDER_TYPE IN ('bedrock', 'openai_compatible')),
+    BEDROCK_REGION          TEXT,
+    BEDROCK_MODEL_ID        TEXT,
+    BEDROCK_MAX_TOKENS      INTEGER,
+    BEDROCK_TEMPERATURE     REAL,
+    OPENAI_BASE_URL         TEXT,
+    OPENAI_MODEL_ID         TEXT,
+    OPENAI_API_TOKEN        TEXT,
+    UPDATED_AT              TEXT NOT NULL
+);
+
 -- Business KPI objectives for The business thermometers (lookup / benchmark table)
 CREATE TABLE IF NOT EXISTS APP_ADMIN_KPI_BENCHMARK (
     KPI_KEY             TEXT PRIMARY KEY,

@@ -13,7 +13,9 @@ from customer360.agent.list_filters import (
 )
 from customer360.agent.prompt import build_system_prompt, build_user_prompt
 from customer360.agent.tools import ToolContext
-from customer360.bedrock.client import BedrockError, invoke_text, is_bedrock_configured
+from customer360.bedrock.client import BedrockError
+from customer360.llm.router import invoke_text
+from customer360.llm_provider import get_active_provider, is_llm_configured
 
 logger = logging.getLogger(__name__)
 
@@ -99,8 +101,8 @@ def answer_with_bedrock(
     Returns payload with answer, actions, citations, source, model_id.
     Raises BedrockError or ValueError on failure.
     """
-    if not is_bedrock_configured():
-        raise BedrockError("Bedrock is not configured", status_code=503)
+    if not is_llm_configured():
+        raise BedrockError("LLM backend is not configured", status_code=503)
 
     user_prompt = build_user_prompt(
         message=message,
@@ -115,34 +117,37 @@ def answer_with_bedrock(
         list_context=list_context,
     )
 
-    try:
-        raw, model_id, tools_used = invoke_copilot_with_tools(
-            user_prompt=user_prompt,
-            ctx=tool_ctx,
-            locale=locale,
-        )
-        parsed = _parse_agent_json(raw)
-        parsed["customer_list"] = parsed.get("customer_list") or None
-        return _build_payload(
-            parsed,
-            segment=segment,
-            list_intent=list_intent,
-            model_id=model_id,
-            source="bedrock_tools" if tools_used else "bedrock",
-            tools_used=tools_used,
-        )
-    except (BedrockError, ValueError) as tool_exc:
-        logger.info("Bedrock tool path unavailable, using single-shot JSON: %s", tool_exc)
+    provider = get_active_provider()
+    if provider == "bedrock":
+        try:
+            raw, model_id, tools_used = invoke_copilot_with_tools(
+                user_prompt=user_prompt,
+                ctx=tool_ctx,
+                locale=locale,
+            )
+            parsed = _parse_agent_json(raw)
+            parsed["customer_list"] = parsed.get("customer_list") or None
+            return _build_payload(
+                parsed,
+                segment=segment,
+                list_intent=list_intent,
+                model_id=model_id,
+                source="bedrock_tools" if tools_used else "bedrock",
+                tools_used=tools_used,
+            )
+        except (BedrockError, ValueError) as tool_exc:
+            logger.info("Bedrock tool path unavailable, using single-shot JSON: %s", tool_exc)
 
     raw, model_id = invoke_text(
         system_prompt=build_system_prompt(locale),
         user_prompt=user_prompt,
     )
     parsed = _parse_agent_json(raw)
+    source = "openai_compatible" if provider == "openai_compatible" else "bedrock"
     return _build_payload(
         parsed,
         segment=segment,
         list_intent=list_intent,
         model_id=model_id,
-        source="bedrock",
+        source=source,
     )

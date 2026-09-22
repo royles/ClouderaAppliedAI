@@ -17,7 +17,7 @@ from customer360.agent.list_filters import (
 )
 from customer360.agent.query_builder import count_matching_customers
 from customer360.agent.router import answer_question_rules
-from customer360.bedrock.client import BedrockError, is_bedrock_configured
+from customer360.llm.router import is_llm_configured
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ def answer_question(
         if rank_snippet and rank_snippet not in ctx["snippets"]:
             ctx["snippets"].append(rank_snippet)
 
-    if is_bedrock_configured() and (message or "").strip():
+    if is_llm_configured() and (message or "").strip():
         try:
             payload = answer_with_bedrock(
                 conn=conn,

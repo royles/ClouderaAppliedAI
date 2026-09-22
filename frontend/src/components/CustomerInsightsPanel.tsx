@@ -34,9 +34,11 @@ function insightSubtitle(
   if (!insights) {
     return t("customer.insights.idleHint");
   }
-  if (insights.source === "bedrock") {
+  if (insights.source === "bedrock" || insights.source === "openai_compatible") {
     const model = insights.model_id ? ` (${insights.model_id})` : "";
-    return t("customer.insights.bedrockGenerated", { model });
+    return insights.source === "openai_compatible"
+      ? t("customer.insights.llmGenerated", { model })
+      : t("customer.insights.bedrockGenerated", { model });
   }
   if (insights.bedrock_configured) {
     if (insights.fallback_reason) {
@@ -113,7 +115,8 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
       : t("customer.insights.focusUpsell");
 
   const actionMeta = insights?.recommendation_actions ?? [];
-  const fromBedrock = insights?.source === "bedrock";
+  const fromLlm =
+    insights?.source === "bedrock" || insights?.source === "openai_compatible";
   const subtitle = insightSubtitle(insights, bedrockStatus, loading, t);
 
   return (
@@ -148,11 +151,13 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
             <div className="insights-meta">
               <span
                 className={
-                  fromBedrock ? "source-badge source-bedrock" : "source-badge source-local"
+                  fromLlm ? "source-badge source-bedrock" : "source-badge source-local"
                 }
               >
-                {fromBedrock
-                  ? t("customer.insights.poweredBedrock")
+                {fromLlm
+                  ? insights.source === "openai_compatible"
+                    ? t("customer.insights.poweredLlm")
+                    : t("customer.insights.poweredBedrock")
                   : t("customer.insights.localAdvisor")}
               </span>
               <span
@@ -169,7 +174,7 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
                   {t("customer.insights.churnTier", { tier: churnTier })}
                 </span>
               )}
-              {fromBedrock && insights.model_id && (
+              {fromLlm && insights.model_id && (
                 <span
                   className="muted small"
                   title={t("customer.insights.modelIdTitle")}
@@ -236,19 +241,19 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
               </p>
             )}
 
-            {!fromBedrock && insights.fallback_reason && (
+            {!fromLlm && insights.fallback_reason && (
               <p className="error small insights-hint">
                 {t("customer.insights.bedrockError", { reason: insights.fallback_reason })}
               </p>
             )}
 
-            {!fromBedrock && !insights.bedrock_configured && (
+            {!fromLlm && !insights.bedrock_configured && (
               <p className="muted small insights-hint">
                 {t("customer.insights.envHint")}
               </p>
             )}
 
-            {!fromBedrock && insights.bedrock_configured && !insights.fallback_reason && (
+            {!fromLlm && insights.bedrock_configured && !insights.fallback_reason && (
               <p className="muted small insights-hint">
                 {t("customer.insights.regionHint")}
               </p>
