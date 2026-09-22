@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { CustomerSummary } from "../api";
 import ChurnBadge from "../ChurnBadge";
 import CustomerAvatar from "./CustomerAvatar";
+import ReviewStarRating from "./ReviewStarRating";
 import { formatMoneyIls } from "../localeFormat";
 import {
   displayCustomerId,
@@ -28,6 +29,8 @@ export type CustomerSummaryCardData = Pick<
   | "customer_value"
   | "churn_probability"
   | "churn_risk_tier"
+  | "avg_review_rating"
+  | "review_count"
 >;
 
 /** Extra profile fields for the customer detail hero card (not shown on directory tiles). */
@@ -107,6 +110,12 @@ export default function CustomerSummaryCard(props: Props) {
                   formatCity(customer.city_name) !== emDash &&
                   ` · ${formatCity(customer.city_name)}`}
               </p>
+              <ReviewStarRating
+                average={customer.avg_review_rating}
+                reviewCount={customer.review_count}
+                compact={!showProfile}
+                className="customer-card-review-stars"
+              />
             </div>
             <ChurnBadge
               probability={customer.churn_probability}

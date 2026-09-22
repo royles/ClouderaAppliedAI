@@ -920,6 +920,57 @@ select.control {
   gap: 0.5rem;
 }
 
+.review-star-rating {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.review-star-rating-compact {
+  margin-top: 0.15rem;
+}
+
+.review-star-rating-empty {
+  margin: 0.15rem 0 0;
+}
+
+.review-star-rating-stars {
+  display: inline-flex;
+  gap: 0.05rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+.review-star-rating-star {
+  font-size: 0.95rem;
+  color: var(--theme-border-strong, #cbd5e1);
+}
+
+.review-star-rating-star-full {
+  color: #d97706;
+}
+
+.review-star-rating-star-half {
+  color: transparent;
+  background: linear-gradient(
+    90deg,
+    #d97706 50%,
+    var(--theme-border-strong, #cbd5e1) 50%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.review-star-rating-meta {
+  line-height: 1.2;
+}
+
+.customer-card-review-stars {
+  max-width: 100%;
+}
+
 .customer-card-identity {
   min-width: 0;
   flex: 1;

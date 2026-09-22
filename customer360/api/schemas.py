@@ -134,6 +134,8 @@ class CustomerSummary(BaseModel):
     customer_value: float = 0
     churn_probability: float | None = None
     churn_risk_tier: str | None = None
+    avg_review_rating: float | None = None
+    review_count: int = 0
 
 
 class CustomerListResponse(BaseModel):
@@ -254,6 +256,8 @@ class InteractionSummary(BaseModel):
     total_events: int = 0
     events_last_90d: int = 0
     avg_review_rating: float | None = None
+    avg_review_rating_all: float | None = None
+    review_count: int = 0
     unresolved_agent_questions: int = 0
     help_search_share: float | None = None
     last_event_ts: str | None = None

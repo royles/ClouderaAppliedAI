@@ -46,6 +46,8 @@ export type CustomerSummary = {
   customer_value: number;
   churn_probability?: number | null;
   churn_risk_tier?: string | null;
+  avg_review_rating?: number | null;
+  review_count?: number;
 };
 
 export type CustomerSortBy =
@@ -119,6 +121,8 @@ export type InteractionSummary = {
   total_events: number;
   events_last_90d: number;
   avg_review_rating?: number | null;
+  avg_review_rating_all?: number | null;
+  review_count?: number;
   unresolved_agent_questions: number;
   help_search_share?: number | null;
   last_event_ts?: string | null;

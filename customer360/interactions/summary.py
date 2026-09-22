@@ -32,6 +32,8 @@ def load_interaction_bundle(conn: sqlite3.Connection, customer_id: int, *, limit
                 "total_events": 0,
                 "events_last_90d": 0,
                 "avg_review_rating": None,
+                "avg_review_rating_all": None,
+                "review_count": 0,
                 "unresolved_agent_questions": 0,
                 "help_search_share": None,
                 "last_event_ts": None,
@@ -67,6 +69,8 @@ def load_interaction_bundle(conn: sqlite3.Connection, customer_id: int, *, limit
             SUM(CASE WHEN julianday(?) - julianday(EVENT_TS) <= 90 THEN 1 ELSE 0 END) AS events_last_90d,
             AVG(CASE WHEN EVENT_TYPE = 'REVIEW' AND julianday(?) - julianday(EVENT_TS) <= 90
                 THEN RATING END) AS avg_review_rating_90d,
+            AVG(CASE WHEN EVENT_TYPE = 'REVIEW' THEN RATING END) AS avg_review_rating_all,
+            COUNT(CASE WHEN EVENT_TYPE = 'REVIEW' AND RATING IS NOT NULL THEN 1 END) AS review_count,
             SUM(CASE WHEN EVENT_TYPE = 'AGENT_QUESTION' AND COALESCE(RESOLVED, 1) = 0
                 AND julianday(?) - julianday(EVENT_TS) <= 90 THEN 1 ELSE 0 END) AS unresolved_agent_90d,
             SUM(CASE WHEN EVENT_TYPE = 'WEB_SEARCH' AND julianday(?) - julianday(EVENT_TS) <= 90
@@ -107,10 +111,13 @@ def load_interaction_bundle(conn: sqlite3.Connection, customer_id: int, *, limit
             break
 
     avg_rating = agg["avg_review_rating_90d"]
+    avg_all = agg["avg_review_rating_all"]
     summary = {
         "total_events": int(agg["total_events"] or 0),
         "events_last_90d": int(agg["events_last_90d"] or 0),
         "avg_review_rating": round(float(avg_rating), 2) if avg_rating is not None else None,
+        "avg_review_rating_all": round(float(avg_all), 2) if avg_all is not None else None,
+        "review_count": int(agg["review_count"] or 0),
         "unresolved_agent_questions": int(agg["unresolved_agent_90d"] or 0),
         "help_search_share": help_share,
         "last_event_ts": agg["last_event_ts"],
@@ -136,6 +143,26 @@ def load_interaction_bundle(conn: sqlite3.Connection, customer_id: int, *, limit
         )
 
     return {"events": event_dicts, "summary": summary}
+
+
+def customer_list_review_rating_sql() -> tuple[str, str]:
+    """SQL join + SELECT columns for all-time review average on customer list queries."""
+    join = """
+        LEFT JOIN (
+            SELECT
+                CUSTOMER_ID,
+                ROUND(AVG(RATING), 2) AS avg_review_rating,
+                COUNT(*) AS review_count
+            FROM APP_CUSTOMER_INTERACTION_EVENTS
+            WHERE EVENT_TYPE = 'REVIEW' AND RATING IS NOT NULL
+            GROUP BY CUSTOMER_ID
+        ) review ON review.CUSTOMER_ID = c.CUSTOMER_ID
+    """
+    cols = (
+        "review.avg_review_rating AS avg_review_rating, "
+        "COALESCE(review.review_count, 0) AS review_count"
+    )
+    return join, cols
 
 
 def days_since_last_interaction(conn: sqlite3.Connection, customer_id: int) -> float:

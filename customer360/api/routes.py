@@ -73,7 +73,11 @@ from customer360.api.value_history import (
     normalize_value_metric,
 )
 from customer360.actions.draft import build_action_draft, classify_recommendation, simulate_send
-from customer360.interactions.summary import load_interaction_bundle
+from customer360.interactions.summary import (
+    customer_list_review_rating_sql,
+    interactions_table_exists,
+    load_interaction_bundle,
+)
 from customer360.bedrock.config import get_bedrock_settings
 from customer360.bedrock.client import is_bedrock_configured
 from customer360.llm.router import is_llm_configured
@@ -740,6 +744,11 @@ def list_customers(
         sort_key = "name"
     order_key = normalize_sort_order(sort_order, sort_by=sort_key)
 
+    review_join = ""
+    review_cols = "NULL AS avg_review_rating, 0 AS review_count"
+    if interactions_table_exists(conn):
+        review_join, review_cols = customer_list_review_rating_sql()
+
     sql = f"""
         SELECT
             c.CUSTOMER_ID AS customer_id,
@@ -752,10 +761,12 @@ def list_customers(
             {policy_count_sql},
             {investment_count_sql},
             {customer_value_sql} AS customer_value,
-            {churn_cols}
+            {churn_cols},
+            {review_cols}
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
         {metrics_join}
         {churn_join}
+        {review_join}
         WHERE {where_sql}
     """
     list_params = list(params)

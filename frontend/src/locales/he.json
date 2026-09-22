@@ -418,7 +418,12 @@
       "investments": "Investments",
       "lastLogin": "כניסה אחרונה",
       "churnScored": "ציון נטישה",
-      "a11ySummary": "סיכום לקוח"
+      "a11ySummary": "סיכום לקוח",
+      "reviewsNone": "אין דירוגי ביקורת עדיין",
+      "reviewsAvg": "ממוצע {{avg}} · {{count}} ביקורות",
+      "reviewsAvgShort": "ממוצע {{avg}}",
+      "reviewsStarsA11y": "דירוג ביקורת ממוצע {{avg}} מתוך 5 מ-{{count}} ביקורות",
+      "reviewsStarsA11yNoCount": "דירוג ביקורת ממוצע {{avg}} מתוך 5"
     },
     "insights": {
       "title": "תובנות AI והפעולה המומלצת הבאה",

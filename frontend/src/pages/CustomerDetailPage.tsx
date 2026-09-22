@@ -199,6 +199,11 @@ export default function CustomerDetailPage() {
         customer_value: customerValue,
         churn_probability: churn?.churn_probability,
         churn_risk_tier: churn?.churn_risk_tier,
+        avg_review_rating:
+          interaction_summary?.avg_review_rating_all ??
+          interaction_summary?.avg_review_rating ??
+          null,
+        review_count: interaction_summary?.review_count ?? 0,
       },
       profileDetails,
     };

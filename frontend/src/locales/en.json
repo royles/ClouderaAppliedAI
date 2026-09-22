@@ -418,7 +418,12 @@
       "investments": "Investments",
       "lastLogin": "Last Login",
       "churnScored": "Churn Scored",
-      "a11ySummary": "Customer Summary"
+      "a11ySummary": "Customer Summary",
+      "reviewsNone": "No review ratings yet",
+      "reviewsAvg": "{{avg}} average · {{count}} reviews",
+      "reviewsAvgShort": "{{avg}} average",
+      "reviewsStarsA11y": "Average review rating {{avg}} out of 5 from {{count}} reviews",
+      "reviewsStarsA11yNoCount": "Average review rating {{avg}} out of 5"
     },
     "insights": {
       "title": "AI Insights and Next Best Action",
