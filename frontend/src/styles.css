@@ -3333,6 +3333,20 @@ a.engagement-act-link {
   margin: 0.35rem 0 0.15rem;
   font-weight: 600;
   font-size: 0.88rem;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.playbook-action-detail {
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
 }
 
 .playbook-view-all {

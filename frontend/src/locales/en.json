@@ -936,9 +936,11 @@
       "atRiskBook": "At risk {{atRisk}} · Book {{book}}",
       "openList": "Open full list in customer hub →",
       "loadingQueue": "Loading queue…",
-      "loadingAction": "Loading best next action…",
       "emptyCohort": "No scored at-risk customers in this cohort yet.",
-      "lede": "Prioritized by value at churn risk (next best action per customer).",
+      "lede": "Prioritized by value at churn risk; AI drafts a short next action per customer.",
+      "loadingAction": "Generating personalized actions…",
+      "llmUnavailable": "AI is not configured — open a customer profile for full insight guidance.",
+      "actionMissing": "Could not generate an action for this row — open the profile to refresh insights.",
       "actions": {
         "retention_call": {
           "title": "Priority Retention Call",

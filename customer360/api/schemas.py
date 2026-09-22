@@ -589,6 +589,10 @@ class RetentionPlaybookItem(BaseModel):
 
 class RetentionRecommendationsRequest(BaseModel):
     customer_ids: list[int] = Field(default_factory=list, max_length=50)
+    locale: str | None = Field(
+        default=None,
+        description="UI locale for generated copy (en or he)",
+    )
 
 
 class RetentionRecommendationItem(BaseModel):
@@ -598,6 +602,7 @@ class RetentionRecommendationItem(BaseModel):
 
 class RetentionRecommendationsResponse(BaseModel):
     recommendations: list[RetentionRecommendationItem] = Field(default_factory=list)
+    llm_configured: bool = False
 
 
 class RetentionPlaybookResponse(BaseModel):

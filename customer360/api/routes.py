@@ -626,7 +626,11 @@ def retention_playbook_recommendations(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
 ) -> RetentionRecommendationsResponse:
     return RetentionRecommendationsResponse(
-        **fetch_retention_recommendations(conn, body.customer_ids),
+        **fetch_retention_recommendations(
+            conn,
+            body.customer_ids,
+            locale=body.locale,
+        ),
     )
 
 

@@ -614,6 +614,7 @@ export type RetentionRecommendationsResponse = {
     customer_id: number;
     recommended_action: PlaybookRecommendedAction;
   }[];
+  llm_configured: boolean;
 };
 
 export type RetentionPlaybook = {
@@ -639,10 +640,13 @@ export const fetchRetentionPlaybook = (opts?: {
   return getJson<RetentionPlaybook>(`/api/playbooks/retention${qs ? `?${qs}` : ""}`);
 };
 
-export const fetchRetentionRecommendations = (customerIds: number[]) =>
+export const fetchRetentionRecommendations = (
+  customerIds: number[],
+  locale?: string | null,
+) =>
   postJson<RetentionRecommendationsResponse>(
     "/api/playbooks/retention/recommendations",
-    { customer_ids: customerIds },
+    { customer_ids: customerIds, locale: locale ?? null },
   );
 
 export type AgentAction = {

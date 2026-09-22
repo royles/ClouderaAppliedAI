@@ -16,6 +16,7 @@ import { formatMoneyIls, formatNumber } from "../localeFormat";
 import ChurnBadge from "../ChurnBadge";
 import { displayCustomerName } from "../pii";
 import { useMobileUx } from "../mobileUxContext";
+import { apiLocaleCode } from "../i18n/index";
 
 type Props = {
   segment: CustomerSegment;
@@ -36,6 +37,7 @@ export default function RetentionPlaybookPanel({
     Record<number, PlaybookRecommendedAction>
   >({});
   const [actionsLoading, setActionsLoading] = useState(false);
+  const [llmConfigured, setLlmConfigured] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,9 +67,10 @@ export default function RetentionPlaybookPanel({
     if (customerIds.length === 0) return;
     let cancelled = false;
     setActionsLoading(true);
-    void fetchRetentionRecommendations(customerIds)
+    void fetchRetentionRecommendations(customerIds, apiLocaleCode())
       .then((res) => {
         if (cancelled) return;
+        setLlmConfigured(res.llm_configured);
         const next: Record<number, PlaybookRecommendedAction> = {};
         for (const row of res.recommendations) {
           next[row.customer_id] = row.recommended_action;
@@ -75,7 +78,10 @@ export default function RetentionPlaybookPanel({
         setActionsByCustomer(next);
       })
       .catch(() => {
-        if (!cancelled) setActionsByCustomer({});
+        if (!cancelled) {
+          setActionsByCustomer({});
+          setLlmConfigured(false);
+        }
       })
       .finally(() => {
         if (!cancelled) setActionsLoading(false);
@@ -117,6 +123,9 @@ export default function RetentionPlaybookPanel({
               total: formatNumber(data.total),
             })}
           </p>
+          {!actionsLoading && !llmConfigured && (
+            <p className="muted small">{t("assistant.retention.llmUnavailable")}</p>
+          )}
           <ol className="playbook-queue">
             {data.items.map((item: RetentionPlaybookItem, idx) => {
               const action = actionsByCustomer[item.customer_id];
@@ -146,10 +155,13 @@ export default function RetentionPlaybookPanel({
                         {t("assistant.retention.loadingAction")}
                       </p>
                     )}
+                    {!actionsLoading && llmConfigured && !action && (
+                      <p className="muted small">{t("assistant.retention.actionMissing")}</p>
+                    )}
                     {action && (
                       <>
                         <p className="playbook-action-title">{action.title}</p>
-                        <p className="muted small">{action.detail}</p>
+                        <p className="muted small playbook-action-detail">{action.detail}</p>
                       </>
                     )}
                   </div>

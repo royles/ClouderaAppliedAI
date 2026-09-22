@@ -1,4 +1,4 @@
-"""Retention queue recommendations should vary by customer context."""
+"""Retention queue recommendations API."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import pytest
 
 from customer360.api.retention_playbook import fetch_retention_playbook
 from customer360.api.retention_recommendations import fetch_retention_recommendations
+from customer360.llm.router import is_llm_configured
 from customer360.paths import default_db_path
 
 
@@ -25,12 +26,17 @@ def test_playbook_queue_has_no_inline_actions(conn: sqlite3.Connection) -> None:
     assert all(item["recommended_action"] is None for item in data["items"])
 
 
-def test_batch_recommendations_differ(conn: sqlite3.Connection) -> None:
-    queue = fetch_retention_playbook(conn, limit=8)
+def test_batch_recommendations_use_llm_when_configured(conn: sqlite3.Connection) -> None:
+    queue = fetch_retention_playbook(conn, limit=6)
     ids = [item["customer_id"] for item in queue["items"]]
     assert len(ids) >= 2
-    batch = fetch_retention_recommendations(conn, ids)
-    by_id = {row["customer_id"]: row["recommended_action"] for row in batch["recommendations"]}
-    assert len(by_id) >= 2
-    details = {by_id[cid]["detail"] for cid in by_id}
-    assert len(details) >= 2, "expected personalized best-next-touch copy per customer"
+    batch = fetch_retention_recommendations(conn, ids, locale="en")
+    assert "llm_configured" in batch
+    if not is_llm_configured():
+        assert batch["llm_configured"] is False
+        assert batch["recommendations"] == []
+        return
+    assert batch["llm_configured"] is True
+    assert len(batch["recommendations"]) >= 2
+    details = {row["recommended_action"]["detail"] for row in batch["recommendations"]}
+    assert len(details) >= 2
