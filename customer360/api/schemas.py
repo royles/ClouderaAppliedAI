@@ -559,8 +559,11 @@ class AgentAskResponse(BaseModel):
     answer: str
     actions: list[AgentAction] = Field(default_factory=list)
     citations: list[str] = Field(default_factory=list)
+    source: str = "rules"
+    model_id: str | None = None
 
 
 class AgentStatusResponse(BaseModel):
     enabled: bool
     mode: str = "rules"
+    bedrock_configured: bool = False

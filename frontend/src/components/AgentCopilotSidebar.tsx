@@ -92,6 +92,8 @@ export default function AgentCopilotSidebar() {
           role: "assistant",
           text: res.answer,
           actions: res.actions,
+          source: res.source,
+          modelId: res.model_id ?? null,
         });
         requestAnimationFrame(() => {
           historyRef.current?.scrollTo({ top: historyRef.current.scrollHeight, behavior: "smooth" });
@@ -121,7 +123,10 @@ export default function AgentCopilotSidebar() {
       <header className="agent-copilot-head">
         <div>
           <h2 className="agent-copilot-title">Executive copilot</h2>
-          <p className="muted small">Ask about the book; links change the main view.</p>
+          <p className="muted small">
+            Ask about the book; links change the main view. Answers use Amazon Bedrock when
+            configured.
+          </p>
         </div>
         <button
           type="button"
@@ -173,6 +178,11 @@ export default function AgentCopilotSidebar() {
               >
                 <span className="agent-copilot-turn-label">
                   {turn.role === "user" ? "You" : "Copilot"}
+                  {turn.role === "assistant" && turn.source && (
+                    <span className="agent-copilot-source">
+                      {turn.source === "bedrock" ? " · Bedrock" : " · Rules"}
+                    </span>
+                  )}
                 </span>
                 <p className="agent-copilot-turn-text">{turn.text}</p>
                 {turn.actions && turn.actions.length > 0 && (

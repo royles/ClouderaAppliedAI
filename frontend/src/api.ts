@@ -575,11 +575,14 @@ export type AgentAskResponse = {
   answer: string;
   actions: AgentAction[];
   citations: string[];
+  source: string;
+  model_id?: string | null;
 };
 
 export type AgentStatus = {
   enabled: boolean;
   mode: string;
+  bedrock_configured: boolean;
 };
 
 export const fetchAgentStatus = () => getJson<AgentStatus>("/api/agent/status");

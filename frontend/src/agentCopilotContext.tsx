@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useLocation } from "react-router-dom";
 import { AgentAction, CustomerSegment, fetchAgentStatus } from "./api";
-import { BUSINESS_BASE, isBusinessArea } from "./appRoutes";
+import { isBusinessArea } from "./appRoutes";
 import { parseBusinessSegment } from "./cohortQuery";
 
 export type CopilotPanel = "ask" | "retention_playbook";
@@ -19,10 +19,14 @@ export type CopilotTurn = {
   role: "user" | "assistant";
   text: string;
   actions?: AgentAction[];
+  source?: string | null;
+  modelId?: string | null;
 };
 
 type AgentCopilotContextValue = {
   enabled: boolean;
+  agentMode: string;
+  bedrockConfigured: boolean;
   open: boolean;
   setOpen: (open: boolean) => void;
   toggleOpen: () => void;
@@ -46,6 +50,8 @@ function newTurnId() {
 export function AgentCopilotProvider({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [enabled, setEnabled] = useState(false);
+  const [agentMode, setAgentMode] = useState("rules");
+  const [bedrockConfigured, setBedrockConfigured] = useState(false);
   const [open, setOpen] = useState(false);
   const [panel, setPanel] = useState<CopilotPanel>("ask");
   const [turns, setTurns] = useState<CopilotTurn[]>([]);
@@ -56,7 +62,11 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     void fetchAgentStatus()
       .then((s) => {
-        if (!cancelled) setEnabled(s.enabled);
+        if (!cancelled) {
+          setEnabled(s.enabled);
+          setAgentMode(s.mode);
+          setBedrockConfigured(s.bedrock_configured);
+        }
       })
       .catch(() => {
         if (!cancelled) setEnabled(false);
@@ -92,6 +102,8 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     (): AgentCopilotContextValue => ({
       enabled,
+      agentMode,
+      bedrockConfigured,
       open,
       setOpen,
       toggleOpen,
@@ -107,6 +119,8 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
     }),
     [
       enabled,
+      agentMode,
+      bedrockConfigured,
       open,
       toggleOpen,
       panel,

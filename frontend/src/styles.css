@@ -324,6 +324,13 @@ body,
   margin-bottom: 0.25rem;
 }
 
+.agent-copilot-source {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #0f6db8;
+}
+
 .agent-copilot-turn-text {
   margin: 0;
   font-size: 0.86rem;

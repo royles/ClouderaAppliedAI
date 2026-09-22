@@ -48,7 +48,7 @@ from customer360.api.schemas import (
     AgentStatusResponse,
 )
 from customer360.agent.config import agent_enabled
-from customer360.agent.router import answer_question
+from customer360.agent.service import answer_question
 from customer360.api.data_freshness import fetch_data_freshness
 from customer360.api.product_catalog import fetch_product_catalog
 from customer360.api.retention_playbook import fetch_retention_playbook
@@ -476,7 +476,12 @@ def products_catalog(
 
 @router.get("/agent/status", response_model=AgentStatusResponse)
 def agent_status() -> AgentStatusResponse:
-    return AgentStatusResponse(enabled=agent_enabled(), mode="rules")
+    mode = "bedrock" if is_bedrock_configured() else "rules"
+    return AgentStatusResponse(
+        enabled=agent_enabled(),
+        mode=mode,
+        bedrock_configured=is_bedrock_configured(),
+    )
 
 
 @router.post("/agent/ask", response_model=AgentAskResponse)
