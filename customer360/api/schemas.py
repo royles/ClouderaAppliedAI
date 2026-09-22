@@ -277,7 +277,9 @@ class RecommendationActionMeta(BaseModel):
 
 
 class CustomerInsightsResponse(BaseModel):
+    preamble: str = ""
     summary: str
+    guidance: str = ""
     primary_focus: str
     recommendations: list[str] = Field(default_factory=list)
     recommendation_actions: list[RecommendationActionMeta] = Field(default_factory=list)

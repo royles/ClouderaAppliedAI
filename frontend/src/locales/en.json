@@ -444,6 +444,8 @@
       "cachedCopy": "Cached copy",
       "generatedAt": "Generated: {{at}}",
       "recommendedActions": "Recommended actions",
+      "guidanceHeading": "Personalized guidance",
+      "outreachHeading": "Suggested outreach",
       "bestNextTouch": "Best next touch",
       "llmError": "{{brand}} error: {{reason}}",
       "envHintBedrock": "To enable {{brand}}-generated text, set AWS credentials and optional CUSTOMER360_BEDROCK_* variables (see .env.example).",

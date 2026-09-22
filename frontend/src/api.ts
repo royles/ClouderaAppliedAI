@@ -701,7 +701,9 @@ export type RecommendationActionMeta = {
 };
 
 export type CustomerInsights = {
+  preamble?: string;
   summary: string;
+  guidance?: string;
   primary_focus: "upsell" | "retention" | string;
   recommendations: string[];
   recommendation_actions?: RecommendationActionMeta[];

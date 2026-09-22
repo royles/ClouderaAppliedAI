@@ -26,6 +26,14 @@ def ensure_insights_table(conn: sqlite3.Connection) -> None:
         )
     if "FALLBACK_REASON" not in cols:
         conn.execute("ALTER TABLE APP_CUSTOMER_AI_INSIGHTS ADD COLUMN FALLBACK_REASON TEXT")
+    if "PREAMBLE" not in cols:
+        conn.execute(
+            "ALTER TABLE APP_CUSTOMER_AI_INSIGHTS ADD COLUMN PREAMBLE TEXT NOT NULL DEFAULT ''"
+        )
+    if "GUIDANCE" not in cols:
+        conn.execute(
+            "ALTER TABLE APP_CUSTOMER_AI_INSIGHTS ADD COLUMN GUIDANCE TEXT NOT NULL DEFAULT ''"
+        )
     conn.commit()
 
 
@@ -38,7 +46,7 @@ def load_cached(
     row = conn.execute(
         """
         SELECT SUMMARY, PRIMARY_FOCUS, RECOMMENDATIONS, SOURCE, MODEL_ID, GENERATED_AT,
-               EXPERIENCE_NOTE, FALLBACK_REASON
+               EXPERIENCE_NOTE, FALLBACK_REASON, PREAMBLE, GUIDANCE
         FROM APP_CUSTOMER_AI_INSIGHTS
         WHERE CUSTOMER_ID = ? AND CONTEXT_HASH = ?
         """,
@@ -53,8 +61,14 @@ def load_cached(
     keys = row.keys() if hasattr(row, "keys") else []
     experience_note = row["EXPERIENCE_NOTE"] if "EXPERIENCE_NOTE" in keys else ""
     fallback_reason = row["FALLBACK_REASON"] if "FALLBACK_REASON" in keys else None
+    preamble = row["PREAMBLE"] if "PREAMBLE" in keys else ""
+    guidance = row["GUIDANCE"] if "GUIDANCE" in keys else ""
+    if not guidance and recommendations:
+        guidance = " ".join(recommendations)
     return {
+        "preamble": preamble or "",
         "summary": row["SUMMARY"],
+        "guidance": guidance or "",
         "primary_focus": row["PRIMARY_FOCUS"],
         "recommendations": recommendations,
         "experience_note": experience_note or "",
@@ -75,6 +89,8 @@ def save_cached(
     recommendations: list[str],
     source: str,
     model_id: str | None,
+    preamble: str = "",
+    guidance: str = "",
     experience_note: str = "",
     fallback_reason: str | None = None,
 ) -> str:
@@ -85,8 +101,8 @@ def save_cached(
         INSERT INTO APP_CUSTOMER_AI_INSIGHTS (
             CUSTOMER_ID, SUMMARY, PRIMARY_FOCUS, RECOMMENDATIONS,
             SOURCE, MODEL_ID, CONTEXT_HASH, GENERATED_AT,
-            EXPERIENCE_NOTE, FALLBACK_REASON
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            EXPERIENCE_NOTE, FALLBACK_REASON, PREAMBLE, GUIDANCE
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(CUSTOMER_ID) DO UPDATE SET
             SUMMARY = excluded.SUMMARY,
             PRIMARY_FOCUS = excluded.PRIMARY_FOCUS,
@@ -96,7 +112,9 @@ def save_cached(
             CONTEXT_HASH = excluded.CONTEXT_HASH,
             GENERATED_AT = excluded.GENERATED_AT,
             EXPERIENCE_NOTE = excluded.EXPERIENCE_NOTE,
-            FALLBACK_REASON = excluded.FALLBACK_REASON
+            FALLBACK_REASON = excluded.FALLBACK_REASON,
+            PREAMBLE = excluded.PREAMBLE,
+            GUIDANCE = excluded.GUIDANCE
         """,
         (
             customer_id,
@@ -109,6 +127,8 @@ def save_cached(
             generated_at,
             experience_note,
             fallback_reason,
+            preamble,
+            guidance,
         ),
     )
     conn.commit()

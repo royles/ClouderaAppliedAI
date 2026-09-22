@@ -25,6 +25,11 @@ type OpenAction = {
   source: "recommendation" | "experience_note";
 };
 
+function proseParagraphs(text: string | undefined | null): string[] {
+  if (!text?.trim()) return [];
+  return text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+}
+
 function brandForSource(
   t: TFunction,
   source: string | null | undefined,
@@ -231,32 +236,51 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
               )}
             </div>
 
+            {insights.preamble?.trim() && (
+              <p className="insights-preamble">{insights.preamble}</p>
+            )}
+
             <p className="insights-summary">{insights.summary}</p>
 
-            <h2 className="insights-subhead">{t("customer.insights.recommendedActions")}</h2>
-            <ul className="insights-list">
-              {insights.recommendations.map((item, idx) => {
-                const meta = actionMeta[idx];
-                const actionable = meta?.actionable ?? false;
-                return (
-                  <li key={item}>
-                    {actionable ? (
-                      <button
-                        type="button"
-                        className="insight-action-link"
-                        onClick={() =>
-                          setOpenAction({ recommendation: item, source: "recommendation" })
-                        }
-                      >
-                        {item}
-                      </button>
-                    ) : (
-                      item
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+            {proseParagraphs(insights.guidance).length > 0 && (
+              <>
+                <h2 className="insights-subhead">{t("customer.insights.guidanceHeading")}</h2>
+                <div className="insights-prose">
+                  {proseParagraphs(insights.guidance).map((para) => (
+                    <p key={para.slice(0, 48)}>{para}</p>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {insights.recommendations.length > 0 && (
+              <>
+                <h2 className="insights-subhead">{t("customer.insights.outreachHeading")}</h2>
+                <div className="insights-outreach">
+                  {insights.recommendations.map((item, idx) => {
+                    const meta = actionMeta[idx];
+                    const actionable = meta?.actionable ?? false;
+                    return (
+                      <p key={`${idx}-${item.slice(0, 32)}`} className="insights-outreach-item">
+                        {actionable ? (
+                          <button
+                            type="button"
+                            className="insight-action-link"
+                            onClick={() =>
+                              setOpenAction({ recommendation: item, source: "recommendation" })
+                            }
+                          >
+                            {item}
+                          </button>
+                        ) : (
+                          item
+                        )}
+                      </p>
+                    );
+                  })}
+                </div>
+              </>
+            )}
 
             {insights.experience_note && (
               <p className="insights-note">

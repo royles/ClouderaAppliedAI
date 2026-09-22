@@ -444,6 +444,8 @@
       "cachedCopy": "עותק במטמון",
       "generatedAt": "נוצר: {{at}}",
       "recommendedActions": "פעולות מומלצות",
+      "guidanceHeading": "הנחיה מותאמת אישית",
+      "outreachHeading": "פנייה מוצעת",
       "bestNextTouch": "מגע הבא מומלץ",
       "llmError": "שגיאת {{brand}}: {{reason}}",
       "envHintBedrock": "להפעלת טקסט מ-{{brand}}, הגדר AWS ו-CUSTOMER360_BEDROCK_* (ראה .env.example).",

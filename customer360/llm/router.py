@@ -11,12 +11,18 @@ def is_llm_configured() -> bool:
     return _is_llm_configured()
 
 
-def invoke_text(*, system_prompt: str, user_prompt: str) -> tuple[str, str]:
+def invoke_text(
+    *,
+    system_prompt: str,
+    user_prompt: str,
+    json_mode: bool = False,
+) -> tuple[str, str]:
     provider = get_active_provider()
     if provider == "openai_compatible":
         return invoke_openai_compatible_text(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
+            json_mode=json_mode,
         )
 
     from customer360.bedrock.client import BedrockError, invoke_text as invoke_bedrock_text

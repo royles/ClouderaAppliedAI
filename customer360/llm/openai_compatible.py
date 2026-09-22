@@ -23,11 +23,42 @@ def _chat_completions_url(base_url: str) -> str:
     return f"{raw}/v1/chat/completions"
 
 
+def _post_chat_completion(
+    *,
+    url: str,
+    token: str,
+    body: dict[str, Any],
+) -> dict[str, Any]:
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {token}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")[:500]
+        logger.error("OpenAI-compatible HTTP %s: %s", exc.code, detail)
+        status = 401 if exc.code in (401, 403) else 502
+        raise LLMError(
+            f"PrivateAI API error ({exc.code}): {detail or exc.reason}",
+            status_code=status,
+        ) from exc
+    except urllib.error.URLError as exc:
+        raise LLMError(f"PrivateAI connection error: {exc.reason}", status_code=502) from exc
+
+
 def invoke_openai_compatible_text(
     *,
     system_prompt: str,
     user_prompt: str,
     config: LlmProviderConfig | None = None,
+    json_mode: bool = False,
 ) -> tuple[str, str]:
     cfg = config or load_llm_config()
     token = (cfg.openai_api_token or "").strip()
@@ -49,28 +80,19 @@ def invoke_openai_compatible_text(
         "temperature": temperature,
     }
     url = _chat_completions_url(base)
-    req = urllib.request.Request(
-        url,
-        data=json.dumps(body).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=120) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")[:500]
-        logger.error("OpenAI-compatible HTTP %s: %s", exc.code, detail)
-        status = 401 if exc.code in (401, 403) else 502
-        raise LLMError(
-            f"PrivateAI API error ({exc.code}): {detail or exc.reason}",
-            status_code=status,
-        ) from exc
-    except urllib.error.URLError as exc:
-        raise LLMError(f"PrivateAI connection error: {exc.reason}", status_code=502) from exc
+    payload: dict[str, Any]
+    if json_mode:
+        body_with_json = {**body, "response_format": {"type": "json_object"}}
+        try:
+            payload = _post_chat_completion(url=url, token=token, body=body_with_json)
+        except LLMError as exc:
+            if "response_format" in str(exc).lower() or exc.status_code == 400:
+                logger.info("PrivateAI json_mode unsupported, retrying without response_format")
+                payload = _post_chat_completion(url=url, token=token, body=body)
+            else:
+                raise
+    else:
+        payload = _post_chat_completion(url=url, token=token, body=body)
 
     choices = payload.get("choices") or []
     if not choices:

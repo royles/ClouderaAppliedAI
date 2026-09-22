@@ -22,12 +22,31 @@ def _active_policy_summary(policies: list[sqlite3.Row]) -> dict:
     active = [p for p in policies if p["is_active"]]
     types = sorted({p["policy_type_desc"] for p in active if p["policy_type_desc"]})
     premium = sum(p["bruto_monthly_premium"] or 0 for p in active)
+    lines: list[dict] = []
+    for p in active[:12]:
+        lines.append(
+            {
+                "type": p["policy_type_desc"],
+                "status": p["policy_status_desc"],
+                "monthly_premium_ils": round(float(p["bruto_monthly_premium"] or 0), 2),
+            }
+        )
     return {
         "total_policies": len(policies),
         "active_policies": len(active),
         "active_policy_types": types[:8],
         "total_monthly_premium_ils": round(premium, 2),
+        "active_policy_lines": lines,
     }
+
+
+def _trim_event_detail(detail: str | None, *, max_len: int = 220) -> str | None:
+    if not detail:
+        return None
+    text = str(detail).strip()
+    if len(text) <= max_len:
+        return text
+    return text[: max_len - 1].rstrip() + "…"
 
 
 def _investment_summary(investments: list[sqlite3.Row]) -> dict:
@@ -125,7 +144,22 @@ def load_customer_context(conn: sqlite3.Connection, customer_id: int) -> Custome
     ).fetchall()
 
     churn_tier, churn_prob = _fetch_churn(conn, customer_id)
-    interaction_bundle = load_interaction_bundle(conn, customer_id, limit=12)
+    interaction_bundle = load_interaction_bundle(conn, customer_id, limit=20)
+
+    recent_events: list[dict] = []
+    for ev in interaction_bundle["events"][:14]:
+        recent_events.append(
+            {
+                "event_type": ev.get("event_type"),
+                "event_ts": ev.get("event_ts"),
+                "channel": ev.get("channel"),
+                "topic": ev.get("topic"),
+                "title": ev.get("query_or_title"),
+                "rating": ev.get("rating"),
+                "resolved": ev.get("resolved"),
+                "detail": _trim_event_detail(ev.get("detail")),
+            }
+        )
 
     payload = {
         "customer_id": profile_row["customer_id"],
@@ -146,7 +180,10 @@ def load_customer_context(conn: sqlite3.Connection, customer_id: int) -> Custome
             "probability": churn_prob,
         },
         "interactions": interaction_bundle["summary"],
-        "recent_interactions": interaction_bundle["summary"].get("recent_highlights", []),
+        "recent_interaction_highlights": interaction_bundle["summary"].get(
+            "recent_highlights", []
+        ),
+        "recent_interaction_events": recent_events,
     }
     canonical = json.dumps(payload, sort_keys=True, ensure_ascii=False)
     context_hash = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
