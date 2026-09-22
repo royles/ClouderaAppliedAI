@@ -79,7 +79,7 @@ from customer360.llm.openai_compatible import test_openai_compatible
 from customer360.bedrock.config import effective_bedrock_settings
 from customer360.llm_provider import (
     LlmProviderConfig,
-    config_for_api,
+    config_for_api as llm_config_for_api,
     load_llm_config,
     merge_llm_update,
     normalize_provider,
@@ -174,7 +174,7 @@ def _llm_env_note() -> str:
 
 def _llm_provider_response() -> LlmProviderConfigResponse:
     cfg = load_llm_config()
-    data = config_for_api(cfg)
+    data = llm_config_for_api(cfg)
     data["env_note"] = _llm_env_note()
     return LlmProviderConfigResponse(**data)
 
