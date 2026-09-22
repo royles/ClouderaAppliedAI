@@ -9,7 +9,6 @@ export function resolveLlmProvider(
   const raw = status?.provider?.trim().toLowerCase();
   if (raw === "openai_compatible") return "openai_compatible";
   if (raw === "bedrock") return "bedrock";
-  if (status?.configured) return "bedrock";
   return "none";
 }
 
@@ -33,7 +32,7 @@ export function assistantSourceLabel(
 ): string | null {
   const providerFromApi = resolveLlmProvider({
     provider: responseProvider ?? undefined,
-    configured: true,
+    configured: responseProvider != null && responseProvider !== "",
   });
   const brand = llmBrandName(
     t,

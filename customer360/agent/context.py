@@ -90,6 +90,28 @@ def gather_context(
         if port:
             snippets.append(port)
 
+    if any(w in lowered for w in ("product", "products", "heatmap", "policy type", "profitable")):
+        from customer360.api.product_catalog import fetch_product_catalog
+
+        try:
+            catalog = fetch_product_catalog(conn, segment=seg)
+            ranked: list[tuple[str, int]] = []
+            for group in catalog.get("classes", []):
+                for product in group.get("products", []):
+                    ranked.append(
+                        (
+                            str(product.get("policy_type_desc") or product.get("policy_type_code")),
+                            int(product.get("customer_count") or 0),
+                        )
+                    )
+            ranked.sort(key=lambda x: x[1], reverse=True)
+            if ranked:
+                top = ranked[:5]
+                line = ", ".join(f"{name} ({count:,} customers)" for name, count in top)
+                snippets.append(f"Product catalog (by adoption): {line}.")
+        except Exception:
+            pass
+
     if not snippets:
         ov = overview_snippet(conn)
         port = portfolio_snippet(conn, seg)

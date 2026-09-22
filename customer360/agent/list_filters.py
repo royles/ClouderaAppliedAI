@@ -169,9 +169,19 @@ def parse_refinement_intent(message: str) -> CustomerListFilters | None:
     return None
 
 
+def _is_policy_product_question(text: str) -> bool:
+    """Policy/investment product heatmap — not a ranked customer directory request."""
+    if "product" not in text:
+        return False
+    return not any(w in text for w in ("customer", "customers", "client", "clients", "who"))
+
+
 def parse_customer_list_intent(message: str) -> CustomerListFilters | None:
     text = (message or "").lower()
     if not text.strip():
+        return None
+
+    if _is_policy_product_question(text):
         return None
 
     list_cues = (

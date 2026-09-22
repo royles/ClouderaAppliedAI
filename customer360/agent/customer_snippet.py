@@ -10,6 +10,25 @@ from customer360.api.sorting import normalize_sort_by, normalize_sort_order, ord
 from customer360.api.value_history import CUSTOMER_VALUE_SQL
 from customer360.metrics_refresh import customer_metrics_populated
 
+_POLICY_COUNT_SELECT = """
+(
+    SELECT COUNT(*)
+    FROM DWH_DIM_ALL_POLICY p
+    WHERE p.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
+) AS policy_count
+""".strip()
+
+_INVESTMENT_COUNT_SELECT = """
+(
+    SELECT COUNT(*)
+    FROM (
+        SELECT DISTINCT pit.POLICY_NUM, pit.INVESTMENT_TRACK_ID
+        FROM DWH_FCT_POLICY_INVESTMENT_TRACK pit
+        WHERE pit.CUSTOMER_ID = c.CUSTOMER_ID
+    )
+) AS investment_count
+""".strip()
+
 
 def top_customers_snippet(
     conn: sqlite3.Connection,
@@ -33,9 +52,13 @@ def top_customers_snippet(
     if customer_metrics_populated(conn):
         value_sql = "m.CUSTOMER_VALUE"
         metrics_join = "INNER JOIN APP_CUSTOMER_METRICS m ON m.CUSTOMER_ID = c.CUSTOMER_ID"
+        policy_count_sql = "m.POLICY_COUNT AS policy_count"
+        investment_count_sql = "m.INVESTMENT_TRACK_COUNT AS investment_count"
     else:
         value_sql = f"ROUND({CUSTOMER_VALUE_SQL}, 2)"
         metrics_join = ""
+        policy_count_sql = _POLICY_COUNT_SELECT
+        investment_count_sql = _INVESTMENT_COUNT_SELECT
 
     where_sql, params = customer_list_where(
         f.segment,
@@ -55,6 +78,8 @@ def top_customers_snippet(
         SELECT
             c.CUSTOMER_NAME AS customer_name,
             c.CITY_NAME AS city_name,
+            {policy_count_sql},
+            {investment_count_sql},
             {value_sql} AS customer_value
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
         {metrics_join}
