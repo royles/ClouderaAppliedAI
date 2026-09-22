@@ -17,8 +17,7 @@ from customer360.api.sse import sse_event
 from customer360.insights.context import load_customer_context
 from customer360.insights.parse import parse_insight_json
 from customer360.insights.prompt import SYSTEM_PROMPT, build_user_prompt
-from customer360.insights.service import _align_focus_with_churn, get_customer_insights
-from customer360.insights.cache import save_cached
+from customer360.insights.service import _align_focus_with_churn, _generated_at_stamp, get_customer_insights
 from customer360.insights.fallback import generate_fallback
 from customer360.llm.errors import LLMError
 from customer360.llm.router import is_llm_configured, stream_text_chunks
@@ -58,23 +57,13 @@ def stream_insights_events(
     *,
     refresh: bool,
 ) -> Iterator[bytes]:
+    del refresh
     ctx = load_customer_context(conn, customer_id)
     if ctx is None:
         yield sse_event("error", {"detail": "Customer not found"})
         return
 
     llm_ready = is_llm_configured()
-    if not refresh:
-        cached = get_customer_insights(conn, customer_id, refresh=False)
-        if cached and cached.get("source") != "fallback":
-            cached["recommendation_actions"] = [
-                insight_action_meta(text) for text in cached.get("recommendations", [])
-            ]
-            note = cached.get("experience_note") or ""
-            cached["experience_note_actionable"] = experience_note_actionable(note)
-            yield sse_event("done", cached)
-            return
-
     if not llm_ready:
         result = get_customer_insights(conn, customer_id, refresh=True)
         if result:
@@ -106,20 +95,6 @@ def stream_insights_events(
         else:
             model_id = effective_bedrock_settings().model_id
 
-        generated_at = save_cached(
-            conn,
-            customer_id,
-            ctx.context_hash,
-            summary=parsed["summary"],
-            primary_focus=parsed["primary_focus"],
-            recommendations=parsed["recommendations"],
-            preamble=parsed.get("preamble", ""),
-            guidance=parsed.get("guidance", ""),
-            experience_note=parsed.get("experience_note", ""),
-            source=source,
-            model_id=model_id,
-            fallback_reason=None,
-        )
         result = {
             "preamble": parsed.get("preamble", ""),
             "summary": parsed["summary"],
@@ -129,7 +104,7 @@ def stream_insights_events(
             "experience_note": parsed.get("experience_note", ""),
             "source": source,
             "model_id": model_id,
-            "generated_at": generated_at,
+            "generated_at": _generated_at_stamp(),
             "bedrock_configured": llm_ready,
             "fallback_reason": None,
             "cached": False,
@@ -143,20 +118,6 @@ def stream_insights_events(
         yield sse_event("done", result)
     except (LLMError, ValueError) as exc:
         parsed = generate_fallback(ctx.payload)
-        generated_at = save_cached(
-            conn,
-            customer_id,
-            ctx.context_hash,
-            summary=parsed["summary"],
-            primary_focus=parsed["primary_focus"],
-            recommendations=parsed["recommendations"],
-            preamble=parsed.get("preamble", ""),
-            guidance=parsed.get("guidance", ""),
-            experience_note=parsed.get("experience_note", ""),
-            source="fallback",
-            model_id=None,
-            fallback_reason=str(exc),
-        )
         result = {
             "preamble": parsed.get("preamble", ""),
             "summary": parsed["summary"],
@@ -166,7 +127,7 @@ def stream_insights_events(
             "experience_note": parsed.get("experience_note", ""),
             "source": "fallback",
             "model_id": None,
-            "generated_at": generated_at,
+            "generated_at": _generated_at_stamp(),
             "bedrock_configured": llm_ready,
             "fallback_reason": str(exc),
             "cached": False,
@@ -206,6 +167,40 @@ def stream_action_draft_events(
         return
 
     expected_channel = channel_for_action_kind(action_kind)
+    email_row = conn.execute(
+        "SELECT CUSTOMER_NAME, EMAIL, MOBILE_NO FROM DWH_DIM_CUSTOMERS_UNIQUE "
+        "WHERE CURRENT_IND = 1 AND CUSTOMER_ID = ?",
+        (customer_id,),
+    ).fetchone()
+    name = ctx.payload.get("customer_name") or "Customer"
+    email = None
+    phone = None
+    if email_row is not None:
+        keys = email_row.keys() if hasattr(email_row, "keys") else []
+        if "CUSTOMER_NAME" in keys and email_row["CUSTOMER_NAME"]:
+            name = email_row["CUSTOMER_NAME"]
+        email = email_row["EMAIL"] if "EMAIL" in keys else None
+        phone = email_row["MOBILE_NO"] if "MOBILE_NO" in keys else None
+    provider = active_provider()
+    brand = user_facing_brand(provider)
+    channel_labels = {
+        "email": f"Draft email ({brand})",
+        "sms": f"Draft SMS ({brand})",
+        "call": f"Call script ({brand})",
+    }
+    yield sse_event(
+        "meta",
+        {
+            "actionable": True,
+            "action_kind": action_kind,
+            "channel": expected_channel,
+            "recipient_name": name,
+            "recipient_email": email,
+            "recipient_phone": phone,
+            "preview_label": channel_labels.get(expected_channel, f"Draft ({brand})"),
+        },
+    )
+
     user_prompt = (
         f"Customer ID: {customer_id}\n"
         f"Action type: {action_kind}\n"
@@ -235,27 +230,7 @@ def stream_action_draft_events(
             model_id = (load_llm_config().openai_model_id or "").strip() or "privateai"
         else:
             model_id = effective_bedrock_settings().model_id
-        brand = user_facing_brand(provider)
         draft_source = "openai_compatible" if provider == "openai_compatible" else "bedrock"
-        email_row = conn.execute(
-            "SELECT CUSTOMER_NAME, EMAIL, MOBILE_NO FROM DWH_DIM_CUSTOMERS_UNIQUE "
-            "WHERE CURRENT_IND = 1 AND CUSTOMER_ID = ?",
-            (customer_id,),
-        ).fetchone()
-        name = ctx.payload.get("customer_name") or "Customer"
-        email = None
-        phone = None
-        if email_row is not None:
-            keys = email_row.keys() if hasattr(email_row, "keys") else []
-            if "CUSTOMER_NAME" in keys and email_row["CUSTOMER_NAME"]:
-                name = email_row["CUSTOMER_NAME"]
-            email = email_row["EMAIL"] if "EMAIL" in keys else None
-            phone = email_row["MOBILE_NO"] if "MOBILE_NO" in keys else None
-        channel_labels = {
-            "email": f"Draft email ({brand})",
-            "sms": f"Draft SMS ({brand})",
-            "call": f"Call script ({brand})",
-        }
         yield sse_event(
             "done",
             {

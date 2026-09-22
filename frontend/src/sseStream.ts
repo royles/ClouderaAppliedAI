@@ -1,10 +1,31 @@
 import { apiUrl } from "./apiBase";
 
 export type SseHandlers<TDone> = {
+  onMeta?: (payload: Record<string, unknown>) => void;
   onDelta?: (text: string, buffer: string) => void;
   onDone: (payload: TDone) => void;
   onError?: (detail: string) => void;
 };
+
+function dispatchSseEvent<TDone>(
+  event: string,
+  payload: Record<string, unknown>,
+  handlers: SseHandlers<TDone>,
+  rawRef: { value: string },
+): void {
+  if (event === "meta") {
+    handlers.onMeta?.(payload);
+  } else if (event === "delta" && typeof payload.text === "string") {
+    rawRef.value += payload.text;
+    handlers.onDelta?.(payload.text, rawRef.value);
+  } else if (event === "done") {
+    handlers.onDone(payload as TDone);
+  } else if (event === "error") {
+    const detail = String(payload.detail ?? "Stream error");
+    handlers.onError?.(detail);
+    throw new Error(detail);
+  }
+}
 
 function parseSseBlock(block: string): { event: string; data: string } | null {
   let event = "message";
@@ -42,7 +63,7 @@ export async function postSseStream<TDone>(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let raw = "";
+  const rawRef = { value: "" };
 
   while (true) {
     const { done, value } = await reader.read();
@@ -59,16 +80,7 @@ export async function postSseStream<TDone>(
       } catch {
         continue;
       }
-      if (parsed.event === "delta" && typeof payload.text === "string") {
-        raw += payload.text;
-        handlers.onDelta?.(payload.text, raw);
-      } else if (parsed.event === "done") {
-        handlers.onDone(payload as TDone);
-      } else if (parsed.event === "error") {
-        const detail = String(payload.detail ?? "Stream error");
-        handlers.onError?.(detail);
-        throw new Error(detail);
-      }
+      dispatchSseEvent(parsed.event, payload, handlers, rawRef);
     }
   }
 }
@@ -92,7 +104,7 @@ export async function getSseStream<TDone>(
   const reader = res.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
-  let raw = "";
+  const rawRef = { value: "" };
 
   while (true) {
     const { done, value } = await reader.read();
@@ -109,16 +121,7 @@ export async function getSseStream<TDone>(
       } catch {
         continue;
       }
-      if (parsed.event === "delta" && typeof payload.text === "string") {
-        raw += payload.text;
-        handlers.onDelta?.(payload.text, raw);
-      } else if (parsed.event === "done") {
-        handlers.onDone(payload as TDone);
-      } else if (parsed.event === "error") {
-        const detail = String(payload.detail ?? "Stream error");
-        handlers.onError?.(detail);
-        throw new Error(detail);
-      }
+      dispatchSseEvent(parsed.event, payload, handlers, rawRef);
     }
   }
 }

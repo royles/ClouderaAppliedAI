@@ -128,10 +128,10 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
               },
               onDone: (data) => setInsights(data),
             },
-            { refresh },
+            { refresh: true },
           );
         } else {
-          setInsights(await fetchCustomerInsights(customerId, { refresh }));
+          setInsights(await fetchCustomerInsights(customerId, { refresh: true }));
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : t("customer.insights.loadError"));
@@ -245,9 +245,6 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
                 >
                   {t("customer.insights.modelId", { id: insights.model_id })}
                 </span>
-              )}
-              {insights.cached && (
-                <span className="muted small">{t("customer.insights.cachedCopy")}</span>
               )}
               {insights.generated_at && (
                 <span className="muted small">

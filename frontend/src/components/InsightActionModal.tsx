@@ -6,10 +6,17 @@ import {
   SimulateSendResult,
   draftInsightActionStream,
   fetchBedrockStatus,
+  fetchCustomer,
   simulateInsightSend,
 } from "../api";
 import { isLlmGeneratedSource, llmBrandName, resolveLlmProvider } from "../llmBrand";
 import { partialJsonStringField } from "../jsonStreamPreview";
+import {
+  DraftChannel,
+  draftPreviewTitle,
+  inferDraftChannel,
+  type DraftStreamMeta,
+} from "../outreachDraft";
 import { maskEmail, maskPhone } from "../pii";
 
 type Props = {
@@ -30,13 +37,22 @@ export default function InsightActionModal({
   const [body, setBody] = useState("");
   const [subject, setSubject] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [streaming, setStreaming] = useState(true);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<SimulateSendResult | null>(null);
   const [copied, setCopied] = useState(false);
-  const [streamPreview, setStreamPreview] = useState("");
   const [llmStatus, setLlmStatus] = useState<BedrockStatus | null>(null);
+  const [channel, setChannel] = useState<DraftChannel>(() => inferDraftChannel(recommendation));
+  const [previewLabel, setPreviewLabel] = useState(() => t("customer.outreach.title"));
+  const [recipientName, setRecipientName] = useState("");
+  const [recipientEmail, setRecipientEmail] = useState<string | null>(null);
+  const [recipientPhone, setRecipientPhone] = useState<string | null>(null);
+  const [contentSource, setContentSource] = useState<string | null>(null);
+  const [modelId, setModelId] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  const llmProvider = resolveLlmProvider(llmStatus);
+  const configuredBrand = llmBrandName(t, llmProvider);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,31 +68,69 @@ export default function InsightActionModal({
     };
   }, []);
 
-  const llmProvider = resolveLlmProvider(llmStatus);
-  const configuredBrand = llmBrandName(t, llmProvider);
+  useEffect(() => {
+    let cancelled = false;
+    const ch = inferDraftChannel(recommendation);
+    setChannel(ch);
+    setPreviewLabel(draftPreviewTitle(ch, configuredBrand, t("customer.outreach.title")));
+    void fetchCustomer(customerId)
+      .then((detail) => {
+        if (cancelled) return;
+        setRecipientName(detail.profile.customer_name);
+        setRecipientEmail(detail.profile.email ?? null);
+        setRecipientPhone(detail.profile.mobile_no ?? null);
+      })
+      .catch(() => {
+        /* meta event or done payload will fill recipients */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId, recommendation, configuredBrand, t]);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    setStreaming(true);
+    setDraft(null);
+    setBody("");
+    setSubject("");
+    setError(null);
+
+    void (async () => {
       try {
         await draftInsightActionStream(
           customerId,
           { recommendation, source },
           {
+            onMeta: (meta) => {
+              if (cancelled) return;
+              applyDraftMeta(meta as DraftStreamMeta);
+            },
             onDelta: (_piece, buffer) => {
               if (cancelled) return;
-              const preview =
-                partialJsonStringField(buffer, "body") ||
-                partialJsonStringField(buffer, "subject") ||
-                t("customer.outreach.streaming");
-              setStreamPreview(preview);
+              const nextSubject = partialJsonStringField(buffer, "subject");
+              const nextBody = partialJsonStringField(buffer, "body");
+              if (nextSubject) setSubject(nextSubject);
+              if (nextBody) setBody(nextBody);
+              const ch = partialJsonStringField(buffer, "channel");
+              if (ch === "email" || ch === "sms" || ch === "call") {
+                setChannel(ch);
+              }
             },
             onDone: (next) => {
               if (cancelled) return;
               setDraft(next);
-              setBody(next.body ?? "");
-              setSubject(next.subject ?? "");
-              setStreamPreview("");
+              if (next.body) setBody(next.body);
+              if (next.subject) setSubject(next.subject ?? "");
+              if (next.channel === "email" || next.channel === "sms" || next.channel === "call") {
+                setChannel(next.channel);
+              }
+              if (next.preview_label) setPreviewLabel(next.preview_label);
+              if (next.recipient_name) setRecipientName(next.recipient_name);
+              if (next.recipient_email !== undefined) setRecipientEmail(next.recipient_email);
+              if (next.recipient_phone !== undefined) setRecipientPhone(next.recipient_phone);
+              setContentSource(next.content_source ?? null);
+              setModelId(next.model_id ?? null);
               setError(null);
             },
           },
@@ -86,13 +140,29 @@ export default function InsightActionModal({
           setError(e instanceof Error ? e.message : t("customer.outreach.draftError"));
         }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setStreaming(false);
       }
     })();
+
+    function applyDraftMeta(meta: DraftStreamMeta) {
+      if (meta.channel === "email" || meta.channel === "sms" || meta.channel === "call") {
+        setChannel(meta.channel);
+      }
+      if (meta.preview_label) setPreviewLabel(meta.preview_label);
+      else if (meta.channel) {
+        setPreviewLabel(
+          draftPreviewTitle(meta.channel as DraftChannel, configuredBrand, t("customer.outreach.title")),
+        );
+      }
+      if (meta.recipient_name) setRecipientName(meta.recipient_name);
+      if (meta.recipient_email !== undefined) setRecipientEmail(meta.recipient_email);
+      if (meta.recipient_phone !== undefined) setRecipientPhone(meta.recipient_phone);
+    }
+
     return () => {
       cancelled = true;
     };
-  }, [customerId, recommendation, source]);
+  }, [customerId, recommendation, source, configuredBrand, t]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -103,14 +173,18 @@ export default function InsightActionModal({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
+  const showForm = draft?.actionable !== false;
+  const notActionable = draft != null && !draft.actionable;
+  const canSend = !streaming && draft?.actionable && body.trim().length > 0;
+
   async function handleSend() {
-    if (!draft?.actionable || !body.trim() || !draft.channel) return;
+    if (!canSend) return;
     setSending(true);
     setError(null);
     try {
       setSent(
         await simulateInsightSend(customerId, {
-          channel: draft.channel,
+          channel,
           subject: subject.trim() || undefined,
           body: body.trim(),
         }),
@@ -132,18 +206,21 @@ export default function InsightActionModal({
     }
   }
 
+  const draftedBySource = contentSource ?? draft?.content_source;
+  const displayModelId = modelId ?? draft?.model_id;
+
   return (
     <div className="modal-backdrop" role="presentation" onClick={onClose}>
       <div
         ref={dialogRef}
-        className="modal panel"
+        className="modal panel modal-draft-outreach"
         role="dialog"
         aria-labelledby="action-draft-title"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="panel-head">
-          <h2 id="action-draft-title">{draft?.preview_label ?? t("customer.outreach.title")}</h2>
+          <h2 id="action-draft-title">{draft?.preview_label ?? previewLabel}</h2>
           <button type="button" className="link-btn" onClick={onClose}>
             {t("customer.outreach.cancel")}
           </button>
@@ -151,44 +228,37 @@ export default function InsightActionModal({
 
         <p className="muted small modal-disclaimer">{t("customer.outreach.disclaimer")}</p>
 
-        {loading && (
-          <>
-            <p className="muted">
-              {t("customer.outreach.loadingDraft", { brand: configuredBrand })}
-            </p>
-            {streamPreview && (
-              <div className="insights-stream-preview draft-stream-preview" aria-live="polite">
-                {streamPreview}
-              </div>
-            )}
-          </>
+        {streaming && (
+          <p className="muted small draft-stream-status">
+            {t("customer.outreach.loadingDraft", { brand: configuredBrand })}
+          </p>
         )}
         {error && <p className="error">{error}</p>}
 
-        {draft && !draft.actionable && (
+        {notActionable && (
           <p className={draft.bedrock_required || draft.generation_error ? "error" : "muted"}>
             {draft.message ?? t("customer.outreach.notActionable")}
           </p>
         )}
 
-        {draft?.actionable && (
+        {showForm && (
           <>
             <p className="muted small">
               {t("customer.outreach.triggeredBy")} <em>{recommendation}</em>
             </p>
-            {isLlmGeneratedSource(draft.content_source) && (
+            {isLlmGeneratedSource(draftedBySource) && (
               <p className="insights-meta">
                 <span className="source-badge source-bedrock">
                   {t("customer.outreach.draftedBy", {
                     brand:
-                      draft.content_source === "openai_compatible"
+                      draftedBySource === "openai_compatible"
                         ? llmBrandName(t, "openai_compatible")
                         : llmBrandName(t, "bedrock"),
                   })}
                 </span>
-                {draft.model_id && (
+                {displayModelId && (
                   <span className="muted small">
-                    {t("customer.insights.modelId", { id: draft.model_id })}
+                    {t("customer.insights.modelId", { id: displayModelId })}
                   </span>
                 )}
               </p>
@@ -196,27 +266,27 @@ export default function InsightActionModal({
             <div className="draft-meta">
               <div>
                 <span className="label">{t("customer.outreach.to")}</span>
-                <div>{draft.recipient_name}</div>
+                <div>{recipientName || "—"}</div>
               </div>
-              {draft.channel === "email" && (
+              {channel === "email" && (
                 <div>
                   <span className="label">{t("customer.outreach.email")}</span>
-                  <div>{maskEmail(draft.recipient_email)}</div>
+                  <div>{maskEmail(recipientEmail)}</div>
                 </div>
               )}
-              {(draft.channel === "sms" || draft.channel === "call") && (
+              {(channel === "sms" || channel === "call") && (
                 <div>
                   <span className="label">{t("customer.outreach.phone")}</span>
-                  <div>{maskPhone(draft.recipient_phone)}</div>
+                  <div>{maskPhone(recipientPhone)}</div>
                 </div>
               )}
               <div>
                 <span className="label">{t("customer.outreach.channel")}</span>
-                <div>{draft.channel}</div>
+                <div>{channel}</div>
               </div>
             </div>
 
-            {draft.channel === "email" && (
+            {channel === "email" && (
               <>
                 <label className="label" htmlFor="draft-subject">
                   {t("customer.outreach.subject")}
@@ -226,6 +296,8 @@ export default function InsightActionModal({
                   className="control control-full"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
+                  readOnly={streaming}
+                  aria-busy={streaming}
                 />
               </>
             )}
@@ -239,6 +311,9 @@ export default function InsightActionModal({
               rows={10}
               value={body}
               onChange={(e) => setBody(e.target.value)}
+              readOnly={streaming}
+              aria-busy={streaming}
+              placeholder={streaming ? t("customer.outreach.streaming") : undefined}
             />
 
             {sent ? (
@@ -247,13 +322,13 @@ export default function InsightActionModal({
               </p>
             ) : (
               <div className="modal-actions">
-                <button type="button" className="control control-btn" onClick={handleCopy}>
+                <button type="button" className="control control-btn" onClick={handleCopy} disabled={!body.trim()}>
                   {copied ? t("customer.outreach.copied") : t("customer.outreach.copy")}
                 </button>
                 <button
                   type="button"
                   className="btn"
-                  disabled={sending || !body.trim()}
+                  disabled={sending || !canSend}
                   onClick={handleSend}
                 >
                   {sending ? t("assistant.send.thinking") : t("customer.outreach.send")}

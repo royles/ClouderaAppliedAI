@@ -1536,6 +1536,19 @@ a.engagement-act-link {
   overflow: auto;
 }
 
+.modal-draft-outreach {
+  width: min(36rem, 96vw);
+  min-height: 28rem;
+}
+
+.modal-draft-outreach .draft-body-edit {
+  min-height: 12rem;
+}
+
+.draft-stream-status {
+  margin: 0 0 0.5rem;
+}
+
 .modal-actions {
   margin-top: 1rem;
 }

@@ -1,14 +1,14 @@
-"""Orchestrate insight generation, cache, Bedrock, and fallback."""
+"""Orchestrate insight generation (always fresh — no read-through cache)."""
 
 from __future__ import annotations
 
 import logging
 import sqlite3
+from datetime import datetime, timezone
 
 from customer360.llm.errors import LLMError
 from customer360.llm.router import invoke_text, is_llm_configured
 from customer360.llm_provider import get_active_provider
-from customer360.insights.cache import load_cached, save_cached
 from customer360.insights.context import load_customer_context
 from customer360.insights.fallback import generate_fallback
 from customer360.insights.parse import parse_insight_json
@@ -26,31 +26,22 @@ def _align_focus_with_churn(parsed: dict, churn_tier: str | None) -> dict:
     return parsed
 
 
+def _generated_at_stamp() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
 def get_customer_insights(
     conn: sqlite3.Connection,
     customer_id: int,
     *,
     refresh: bool = False,
 ) -> dict | None:
+    del refresh  # kept for API compatibility; insights are always regenerated
     ctx = load_customer_context(conn, customer_id)
     if ctx is None:
         return None
 
     llm_ready = is_llm_configured()
-
-    if not refresh:
-        cached = load_cached(conn, customer_id, ctx.context_hash)
-        if cached:
-            stale_fallback = llm_ready and cached.get("source") == "fallback"
-            if not stale_fallback:
-                cached["bedrock_configured"] = llm_ready
-                cached["cached"] = True
-                cached.setdefault("experience_note", "")
-                cached.setdefault("preamble", "")
-                cached.setdefault("guidance", "")
-                cached.setdefault("fallback_reason", None)
-                return cached
-
     parsed: dict
     source: str
     model_id: str | None = None
@@ -75,21 +66,6 @@ def get_customer_insights(
         parsed = generate_fallback(ctx.payload)
         source = "fallback"
 
-    generated_at = save_cached(
-        conn,
-        customer_id,
-        ctx.context_hash,
-        summary=parsed["summary"],
-        primary_focus=parsed["primary_focus"],
-        recommendations=parsed["recommendations"],
-        preamble=parsed.get("preamble", ""),
-        guidance=parsed.get("guidance", ""),
-        experience_note=parsed.get("experience_note", ""),
-        source=source,
-        model_id=model_id,
-        fallback_reason=fallback_reason,
-    )
-
     return {
         "preamble": parsed.get("preamble", ""),
         "summary": parsed["summary"],
@@ -99,7 +75,7 @@ def get_customer_insights(
         "experience_note": parsed.get("experience_note", ""),
         "source": source,
         "model_id": model_id,
-        "generated_at": generated_at,
+        "generated_at": _generated_at_stamp(),
         "bedrock_configured": llm_ready,
         "fallback_reason": fallback_reason,
         "cached": False,
