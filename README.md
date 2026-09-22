@@ -1,5 +1,21 @@
 # ClouderaAppliedAI
 
+## Get the latest code
+
+All Customer 360 work is on **`main`** (not the `cursor/*` feature branches).
+
+```bash
+git fetch origin
+git checkout main
+git pull origin main
+```
+
+If `git pull` says **Already up to date** but the UI looks old, you are usually on a
+feature branch or an old local `main`. Run `git branch --show-current` and
+`git log -1 --oneline`; you should see commit **`e4cdbaf`** or newer on `main`.
+Then restart the API and hard-refresh the browser (committed `frontend/dist` is served
+by the app).
+
 ## Insurance Customer 360
 
 Unified customer dashboard for Cloudera AI (CAI), backed by a DDS-aligned SQLite warehouse.
