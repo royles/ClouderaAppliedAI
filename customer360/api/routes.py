@@ -43,7 +43,12 @@ from customer360.api.schemas import (
     DataFreshnessResponse,
     ProductCatalogResponse,
     RetentionPlaybookResponse,
+    AgentAskRequest,
+    AgentAskResponse,
+    AgentStatusResponse,
 )
+from customer360.agent.config import agent_enabled
+from customer360.agent.router import answer_question
 from customer360.api.data_freshness import fetch_data_freshness
 from customer360.api.product_catalog import fetch_product_catalog
 from customer360.api.retention_playbook import fetch_retention_playbook
@@ -467,6 +472,22 @@ def products_catalog(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
 ) -> ProductCatalogResponse:
     return ProductCatalogResponse(**fetch_product_catalog(conn))
+
+
+@router.get("/agent/status", response_model=AgentStatusResponse)
+def agent_status() -> AgentStatusResponse:
+    return AgentStatusResponse(enabled=agent_enabled(), mode="rules")
+
+
+@router.post("/agent/ask", response_model=AgentAskResponse)
+def agent_ask(
+    body: AgentAskRequest,
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+) -> AgentAskResponse:
+    if not agent_enabled():
+        raise HTTPException(status_code=503, detail="Executive copilot is disabled.")
+    payload = answer_question(conn, message=body.message, segment=body.segment)
+    return AgentAskResponse(**payload)
 
 
 @router.get("/playbooks/retention", response_model=RetentionPlaybookResponse)

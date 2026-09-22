@@ -538,3 +538,29 @@ class RetentionPlaybookResponse(BaseModel):
     total: int = 0
     limit: int = 25
     offset: int = 0
+
+
+class AgentAction(BaseModel):
+    action_id: str
+    label: str
+    action_type: str = "navigate"
+    path: str | None = None
+    search: str | None = None
+    panel: str | None = None
+    segment: str | None = None
+
+
+class AgentAskRequest(BaseModel):
+    message: str
+    segment: str | None = None
+
+
+class AgentAskResponse(BaseModel):
+    answer: str
+    actions: list[AgentAction] = Field(default_factory=list)
+    citations: list[str] = Field(default_factory=list)
+
+
+class AgentStatusResponse(BaseModel):
+    enabled: bool
+    mode: str = "rules"

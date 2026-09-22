@@ -561,6 +561,35 @@ export const fetchRetentionPlaybook = (opts?: {
   return getJson<RetentionPlaybook>(`/api/playbooks/retention${qs ? `?${qs}` : ""}`);
 };
 
+export type AgentAction = {
+  action_id: string;
+  label: string;
+  action_type: string;
+  path?: string | null;
+  search?: string | null;
+  panel?: string | null;
+  segment?: string | null;
+};
+
+export type AgentAskResponse = {
+  answer: string;
+  actions: AgentAction[];
+  citations: string[];
+};
+
+export type AgentStatus = {
+  enabled: boolean;
+  mode: string;
+};
+
+export const fetchAgentStatus = () => getJson<AgentStatus>("/api/agent/status");
+
+export const askAgent = (body: { message: string; segment?: CustomerSegment | null }) =>
+  postJson<AgentAskResponse>("/api/agent/ask", {
+    message: body.message,
+    segment: body.segment ?? null,
+  });
+
 export const fetchCustomer = (id: number) =>
   getJson<CustomerDetail>(`/api/customers/${id}`);
 

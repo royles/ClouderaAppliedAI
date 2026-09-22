@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { formatPeriodLabel } from "./charts/analyticsChartUtils";
 import { useNavigate } from "react-router-dom";
 import {
@@ -18,7 +18,7 @@ import InvestmentReturnsChart from "./charts/InvestmentReturnsChart";
 import PremiumMomentumChart from "./charts/PremiumMomentumChart";
 import SavingsAumObjectiveChart from "./charts/SavingsAumObjectiveChart";
 import CohortVsBookBanner from "./CohortVsBookBanner";
-import RetentionPlaybookDrawer from "./RetentionPlaybookDrawer";
+import { useAgentCopilot } from "../agentCopilotContext";
 import PortfolioKpiCard from "./PortfolioKpiCard";
 import { formatShareOfBook } from "../cohortBaseline";
 
@@ -79,7 +79,7 @@ export default function PortfolioAnalyticsSection({
   chartInteractive = true,
 }: Props) {
   const navigate = useNavigate();
-  const [playbookOpen, setPlaybookOpen] = useState(false);
+  const { openRetentionPlaybook } = useAgentCopilot();
   const kpis = data?.kpis;
   const targets = data?.kpi_targets ?? {};
   const chartLoading = loading && !data;
@@ -188,8 +188,8 @@ export default function PortfolioAnalyticsSection({
         <PortfolioKpiCard
           label="Value at churn risk"
           value={formatMoneyIls(kpis?.value_at_risk_12m)}
-          actionHint="Open retention playbook →"
-          onClick={() => setPlaybookOpen(true)}
+          actionHint="Open retention queue in copilot →"
+          onClick={() => openRetentionPlaybook(segment, cohortLabel ?? null)}
           sub={
             kpis?.weighted_churn_probability != null
               ? `Σ customer value × lapse probability (tier-weighted when ML score missing)`
@@ -320,12 +320,6 @@ export default function PortfolioAnalyticsSection({
         <p className="muted small portfolio-methodology">{data.methodology_note}</p>
       )}
 
-      <RetentionPlaybookDrawer
-        open={playbookOpen}
-        onClose={() => setPlaybookOpen(false)}
-        segment={segment}
-        cohortLabel={cohortLabel}
-      />
     </div>
   );
 }

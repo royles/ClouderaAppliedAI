@@ -11,6 +11,9 @@ import {
   isProductsArea,
   PRODUCTS_BASE,
 } from "./appRoutes";
+import { AgentCopilotProvider, useAgentCopilot } from "./agentCopilotContext";
+import AgentCopilotSidebar from "./components/AgentCopilotSidebar";
+import AgentCopilotToggle from "./components/AgentCopilotToggle";
 import DataFreshnessStrip from "./components/DataFreshnessStrip";
 import ProductsPage from "./pages/ProductsPage";
 import AdminPage from "./pages/AdminPage";
@@ -108,7 +111,9 @@ function AppSideNav() {
   );
 }
 
-export default function App() {
+function AppLayout() {
+  const { open } = useAgentCopilot();
+
   return (
     <div className="layout">
       <header className="header">
@@ -116,8 +121,9 @@ export default function App() {
           Insurance Customer 360
         </Link>
         <span className="tag">Cloudera AI · Business &amp; customer views</span>
+        <AgentCopilotToggle />
       </header>
-      <div className="app-body">
+      <div className={`app-body${open ? " app-body-copilot-open" : ""}`}>
         <AppSideNav />
         <main className="main app-main">
           <DataFreshnessStrip />
@@ -133,7 +139,16 @@ export default function App() {
             <Route path="*" element={<Navigate to={BUSINESS_BASE} replace />} />
           </Routes>
         </main>
+        <AgentCopilotSidebar />
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AgentCopilotProvider>
+      <AppLayout />
+    </AgentCopilotProvider>
   );
 }
