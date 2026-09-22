@@ -3147,77 +3147,6 @@ a.engagement-act-link {
   color: var(--theme-text);
 }
 
-.cohort-compare-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.75rem 0 1rem;
-  flex-wrap: wrap;
-}
-
-.cohort-compare-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--theme-brand-900);
-}
-
-.cohort-compare-select {
-  min-width: 14rem;
-  padding: 0.35rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--theme-border-strong);
-  font-size: 0.88rem;
-}
-
-.cohort-comparison-panel {
-  margin-bottom: 1rem;
-  padding: 0.85rem 1rem;
-  background: var(--theme-surface-panel);
-  border: 1px solid #c5d9eb;
-  border-radius: 10px;
-}
-
-.cohort-comparison-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  margin-top: 0.65rem;
-}
-
-.cohort-comparison-col-head,
-.cohort-comparison-row {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr 1fr;
-  gap: 0.5rem;
-  align-items: baseline;
-  font-size: 0.85rem;
-}
-
-.cohort-comparison-col-head {
-  font-weight: 600;
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid #e6ebf0;
-}
-
-.cohort-comparison-primary-tag {
-  color: var(--theme-brand-500);
-  font-weight: 600;
-}
-
-.cohort-comparison-compare-tag {
-  color: #5a7a9a;
-  font-weight: 600;
-}
-
-.cohort-comparison-delta {
-  color: var(--theme-brand-900);
-  font-size: 0.8rem;
-}
-
-.cohort-comparison-metric {
-  color: var(--theme-text-muted);
-}
-
 .portfolio-kpi-action {
   cursor: pointer;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
@@ -3651,7 +3580,6 @@ a.engagement-act-link {
   transform: scaleX(-1);
 }
 
-[dir="rtl"] .cohort-comparison-delta,
 [dir="rtl"] .engagement-influence-score {
   direction: ltr;
   unicode-bidi: embed;

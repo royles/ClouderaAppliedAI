@@ -100,17 +100,6 @@
       "policyFoot": "{{active}} active · avg {{avg}} / customer",
       "allBookFoot": "{{policies}} policies · {{active}} active"
     },
-    "compare": {
-      "label": "Compare to",
-      "none": "No comparison",
-      "loading": "Loading comparison cohort…",
-      "panelTitle": "Cohort comparison",
-      "panelLede": "Side-by-side KPIs for the selected card vs a second cohort (charts above stay on the primary selection).",
-      "metric": "Metric",
-      "delta": "Delta",
-      "deltaVsCompare": "{{sign}}{{pct}}% vs compare",
-      "deltaPts": "{{pts}} pts"
-    },
     "cohort": {
       "filteredBadge": "Filtered cohort",
       "vsBookLead": "This slice is {{share}} of total customer value in the full book (reference below).",
@@ -150,12 +139,6 @@
         "ofObjective": "{{pct}}% of objective",
         "a11y": "{{status}} — {{detail}}"
       }
-    },
-    "compareRows": {
-      "activeCustomers": "Active customers",
-      "totalBookValue": "Total book value",
-      "valueAtChurnRisk": "Value at churn risk",
-      "retentionForecast": "12m retention (forecast)"
     },
     "vsBookStats": {
       "customers": "Customers",

@@ -100,17 +100,6 @@
       "policyFoot": "{{active}} פעילות · ממוצע {{avg}} / לקוח",
       "allBookFoot": "{{policies}} פוליסות · {{active}} פעילות"
     },
-    "compare": {
-      "label": "השווה ל",
-      "none": "ללא השוואה",
-      "loading": "טוען cohort להשוואה…",
-      "panelTitle": "השוואת cohort",
-      "panelLede": "KPIs זה לצד זה עבור הכרטיס שנבחר מול cohort שני (הגרפים למעלה נשארים על הבחירה הראשית).",
-      "metric": "מדד",
-      "delta": "הפרש",
-      "deltaVsCompare": "{{sign}}{{pct}}% מול השוואה",
-      "deltaPts": "{{pts}} נק'"
-    },
     "cohort": {
       "filteredBadge": "קohort מסונן",
       "vsBookLead": "פרוסה זו היא {{share}} מערך הלקוח הכולל בספר המלא (התייחסות למטה).",
@@ -150,12 +139,6 @@
         "ofObjective": "{{pct}}% מהיעד",
         "a11y": "{{status}} — {{detail}}"
       }
-    },
-    "compareRows": {
-      "activeCustomers": "לקוחות פעילים",
-      "totalBookValue": "ערך ספר כולל",
-      "valueAtChurnRisk": "ערך בסיכון נטישה",
-      "retentionForecast": "שימור 12 ח' (תחזית)"
     },
     "vsBookStats": {
       "customers": "לקוחות",

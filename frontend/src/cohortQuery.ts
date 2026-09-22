@@ -197,27 +197,13 @@ export function parseBusinessSegment(params: URLSearchParams): CustomerSegment {
   return parseCohortSearch(params).segment;
 }
 
-export function parseBusinessCompareSegment(
-  params: URLSearchParams,
-): CustomerSegment | null {
-  const raw = params.get("compare");
-  if (!raw || !VALID_SEGMENTS.has(raw)) return null;
-  const seg = raw as CustomerSegment;
-  return seg === "customers_all" ? null : seg;
-}
-
 export function patchBusinessSegment(
-  prev: URLSearchParams,
+  _prev: URLSearchParams,
   segment: CustomerSegment,
-  compare?: CustomerSegment | null,
 ): URLSearchParams {
   const next = new URLSearchParams();
   if (segment !== "customers_all") {
     next.set("segment", segment);
-  }
-  const compareSeg = compare === undefined ? parseBusinessCompareSegment(prev) : compare;
-  if (compareSeg && compareSeg !== "customers_all" && compareSeg !== segment) {
-    next.set("compare", compareSeg);
   }
   return next;
 }

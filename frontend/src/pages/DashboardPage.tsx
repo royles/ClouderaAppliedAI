@@ -11,13 +11,9 @@ import {
 } from "../api";
 import { BUSINESS_BASE } from "../appRoutes";
 import Breadcrumbs from "../components/Breadcrumbs";
-import CohortComparisonPanel, {
-  compareDomainLabel,
-} from "../components/CohortComparisonPanel";
 import DomainFilterGrid from "../components/DomainFilterGrid";
 import PortfolioAnalyticsSection from "../components/PortfolioAnalyticsSection";
 import {
-  parseBusinessCompareSegment,
   parseBusinessSegment,
   patchBusinessSegment,
 } from "../cohortQuery";
@@ -30,25 +26,12 @@ import {
 } from "../portfolioSegmentCache";
 import { useMobileFocus } from "../mobileUxContext";
 
-const COMPARE_OPTIONS: CustomerSegment[] = [
-  "customers_all",
-  "with_policies",
-  "with_foreclosures",
-  "with_investments",
-  "with_insurance_status",
-  "with_market_products",
-];
-
 export default function DashboardPage() {
   const { t } = useTranslation();
   const mobileFocus = useMobileFocus();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const segment = useMemo(() => parseBusinessSegment(searchParams), [searchParams]);
-  const compareSegment = useMemo(
-    () => parseBusinessCompareSegment(searchParams),
-    [searchParams],
-  );
 
   const [overview, setOverview] = useState<Overview | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,9 +39,7 @@ export default function DashboardPage() {
   const [portfolioAnalytics, setPortfolioAnalytics] = useState<PortfolioAnalytics | null>(
     null,
   );
-  const [compareAnalytics, setCompareAnalytics] = useState<PortfolioAnalytics | null>(null);
   const [portfolioLoading, setPortfolioLoading] = useState(true);
-  const [compareLoading, setCompareLoading] = useState(false);
   const portfolioCacheRef = useRef<PortfolioSegmentCache>(new Map());
   const prefetchStartedRef = useRef(false);
   const segmentRef = useRef(segment);
@@ -149,42 +130,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
-    if (!compareSegment || compareSegment === segment) {
-      setCompareAnalytics(null);
-      setCompareLoading(false);
-      return;
-    }
-
-    const cached = portfolioCacheRef.current.get(compareSegment);
-    if (cached && cached.segment === compareSegment) {
-      setCompareAnalytics(clonePortfolioAnalytics(cached));
-      setCompareLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    setCompareLoading(true);
-    void fetchPortfolioAnalytics(compareSegment)
-      .then((raw) => {
-        if (cancelled) return;
-        const data = clonePortfolioAnalytics(raw);
-        portfolioCacheRef.current.set(compareSegment, data);
-        setCompareAnalytics(data);
-      })
-      .catch(() => {
-        if (!cancelled) setCompareAnalytics(null);
-      })
-      .finally(() => {
-        if (!cancelled) setCompareLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [compareSegment, segment, overviewLoading, location.pathname]);
-
-  useEffect(() => {
-    if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
     if (prefetchStartedRef.current) return;
     prefetchStartedRef.current = true;
 
@@ -199,12 +144,6 @@ export default function DashboardPage() {
         if (segmentRef.current === active && cache.has(active)) {
           setPortfolioAnalytics(clonePortfolioAnalytics(cache.get(active)!));
           setPortfolioLoading(false);
-        }
-        const cmp = parseBusinessCompareSegment(
-          new URLSearchParams(window.location.search),
-        );
-        if (cmp && cache.has(cmp)) {
-          setCompareAnalytics(clonePortfolioAnalytics(cache.get(cmp)!));
         }
       } catch {
         /* segment effect falls back to single-segment fetch */
@@ -237,14 +176,6 @@ export default function DashboardPage() {
     setSearchParams((prev) => patchBusinessSegment(prev, next), { replace: true });
   };
 
-  const setCompare = (next: CustomerSegment | "") => {
-    const compare =
-      next === "" || next === "customers_all" || next === segment ? null : next;
-    setSearchParams((prev) => patchBusinessSegment(prev, segment, compare), {
-      replace: true,
-    });
-  };
-
   if (overviewLoading && !overview) {
     return (
       <>
@@ -262,11 +193,6 @@ export default function DashboardPage() {
   }
   if (error && !overview) return <p className="error">{error}</p>;
 
-  const primaryLabel = compareDomainLabel(overview, segment);
-  const compareLabel = compareSegment
-    ? compareDomainLabel(overview, compareSegment)
-    : null;
-
   return (
     <>
       {!mobileFocus && <Breadcrumbs items={[{ label: t("nav.business.title") }]} />}
@@ -278,43 +204,6 @@ export default function DashboardPage() {
           onSelect={setSegment}
           helperText={t("business.domainFilter.helperAnalytics")}
         />
-        )}
-        {!mobileFocus && (
-        <div className="cohort-compare-toolbar">
-          <label className="cohort-compare-label" htmlFor="cohort-compare-select">
-            {t("business.compare.label")}
-          </label>
-          <select
-            id="cohort-compare-select"
-            className="cohort-compare-select"
-            value={compareSegment ?? ""}
-            onChange={(e) => setCompare(e.target.value as CustomerSegment | "")}
-          >
-            <option value="">{t("business.compare.none")}</option>
-            {COMPARE_OPTIONS.filter((s) => s !== segment).map((s) => (
-              <option key={s} value={s}>
-                {compareDomainLabel(overview, s)}
-              </option>
-            ))}
-          </select>
-        </div>
-        )}
-        {!mobileFocus && compareSegment &&
-          compareSegment !== segment &&
-          compareAnalytics &&
-          portfolioAnalytics &&
-          !compareLoading && (
-            <CohortComparisonPanel
-              primaryLabel={primaryLabel}
-              compareLabel={compareLabel ?? compareSegment}
-              primary={portfolioAnalytics}
-              compare={compareAnalytics}
-              primarySegment={segment}
-              compareSegment={compareSegment}
-            />
-          )}
-        {!mobileFocus && compareLoading && compareSegment && (
-          <p className="muted small cohort-compare-loading">{t("business.compare.loading")}</p>
         )}
         <PortfolioAnalyticsSection
           data={

@@ -75,17 +75,6 @@ EN = {
       "policyFoot": "{{active}} active · avg {{avg}} / customer",
       "allBookFoot": "{{policies}} policies · {{active}} active"
     },
-    "compare": {
-      "label": "Compare to",
-      "none": "No comparison",
-      "loading": "Loading comparison cohort…",
-      "panelTitle": "Cohort comparison",
-      "panelLede": "Side-by-side KPIs for the selected card vs a second cohort (charts above stay on the primary selection).",
-      "metric": "Metric",
-      "delta": "Delta",
-      "deltaVsCompare": "{{sign}}{{pct}}% vs compare",
-      "deltaPts": "{{pts}} pts"
-    },
     "cohort": {
       "filteredBadge": "Filtered cohort",
       "vsBookLead": "This slice is {{share}} of total customer value in the full book (reference below).",
@@ -125,12 +114,6 @@ EN = {
         "ofObjective": "{{pct}}% of objective",
         "a11y": "{{status}} — {{detail}}"
       }
-    },
-    "compareRows": {
-      "activeCustomers": "Active customers",
-      "totalBookValue": "Total book value",
-      "valueAtChurnRisk": "Value at churn risk",
-      "retentionForecast": "12m retention (forecast)"
     },
     "vsBookStats": {
       "customers": "Customers",
@@ -341,17 +324,6 @@ HE_TR["business"] = {
     "policyFoot": "{{active}} פעילות · ממוצע {{avg}} / לקוח",
     "allBookFoot": "{{policies}} פוליסות · {{active}} פעילות"
   },
-  "compare": {
-    "label": "השווה ל",
-    "none": "ללא השוואה",
-    "loading": "טוען cohort להשוואה…",
-    "panelTitle": "השוואת cohort",
-    "panelLede": "KPIs זה לצד זה עבור הכרטיס שנבחר מול cohort שני (הגרפים למעלה נשארים על הבחירה הראשית).",
-    "metric": "מדד",
-    "delta": "הפרש",
-    "deltaVsCompare": "{{sign}}{{pct}}% מול השוואה",
-    "deltaPts": "{{pts}} נק'"
-  },
   "cohort": {
     "filteredBadge": "קohort מסונן",
     "vsBookLead": "פרוסה זו היא {{share}} מערך הלקוח הכולל בספר המלא (התייחסות למטה).",
@@ -391,12 +363,6 @@ HE_TR["business"] = {
       "ofObjective": "{{pct}}% מהיעד",
       "a11y": "{{status}} — {{detail}}"
     }
-  },
-  "compareRows": {
-    "activeCustomers": "לקוחות פעילים",
-    "totalBookValue": "ערך ספר כולל",
-    "valueAtChurnRisk": "ערך בסיכון נטישה",
-    "retentionForecast": "שימור 12 ח' (תחזית)"
   },
   "vsBookStats": {
     "customers": "לקוחות",
