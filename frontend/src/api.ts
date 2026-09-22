@@ -325,6 +325,8 @@ export type PortfolioKpis = {
   low_risk_customers?: number;
   high_risk_book_pct: number;
   book_growth_pct?: number | null;
+  avg_review_rating?: number | null;
+  review_count?: number;
 };
 
 export type ChurnForecastPoint = {

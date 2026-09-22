@@ -134,8 +134,12 @@
         "policyRecords": "Policy Records",
         "avgCustomerValue": "Avg Customer Value",
         "highRiskBookShare": "High-Risk Book Share",
-        "bookGrowthHistory": "Book Growth (History)"
-      }
+        "bookGrowthHistory": "Book Growth (History)",
+        "avgReviewScore": "Overall Review Score"
+      },
+      "reviewScoreValue": "{{avg}} / 5",
+      "reviewScoreSub": "{{count}} review ratings in this book",
+      "reviewScoreSubEmpty": "No review ratings in this cohort yet"
     },
     "kpi": {
       "objective": "Objective: {{target}}",

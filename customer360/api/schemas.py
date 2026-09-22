@@ -58,6 +58,8 @@ class PortfolioKpis(BaseModel):
     low_risk_customers: int = 0
     high_risk_book_pct: float = 0
     book_growth_pct: float | None = None
+    avg_review_rating: float | None = None
+    review_count: int = 0
 
 
 class KpiTargetProgress(BaseModel):

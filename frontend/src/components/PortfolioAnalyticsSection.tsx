@@ -21,6 +21,7 @@ import SavingsAumObjectiveChart from "./charts/SavingsAumObjectiveChart";
 import CohortVsBookBanner from "./CohortVsBookBanner";
 import { useAgentCopilot } from "../agentCopilotContext";
 import PortfolioKpiCard from "./PortfolioKpiCard";
+import ReviewStarRating from "./ReviewStarRating";
 import { formatShareOfBook } from "../cohortBaseline";
 import { portfolioChartScopeKey } from "../portfolioSegmentCache";
 
@@ -280,6 +281,31 @@ export default function PortfolioAnalyticsSection({
             progress("book_growth_pct")
               ? formatTargetLabel("book_growth_pct", progress("book_growth_pct")!)
               : null
+          }
+          loading={chartLoading}
+        />
+        <PortfolioKpiCard
+          label={t("business.portfolio.kpi.avgReviewScore")}
+          value={
+            kpis?.avg_review_rating != null
+              ? t("business.portfolio.reviewScoreValue", {
+                  avg: kpis.avg_review_rating.toFixed(1),
+                })
+              : emDash
+          }
+          sub={
+            kpis?.review_count
+              ? t("business.portfolio.reviewScoreSub", { count: kpis.review_count })
+              : t("business.portfolio.reviewScoreSubEmpty")
+          }
+          footer={
+            kpis?.avg_review_rating != null ? (
+              <ReviewStarRating
+                average={kpis.avg_review_rating}
+                reviewCount={kpis.review_count}
+                compact
+              />
+            ) : undefined
           }
           loading={chartLoading}
         />

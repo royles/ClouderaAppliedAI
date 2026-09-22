@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { KpiTargetProgress } from "../api";
 import KpiThermometer from "./KpiThermometer";
@@ -6,6 +7,7 @@ type Props = {
   label: string;
   value: string;
   sub?: string;
+  footer?: ReactNode;
   progress?: KpiTargetProgress | null;
   targetLabel?: string | null;
   loading?: boolean;
@@ -17,6 +19,7 @@ export default function PortfolioKpiCard({
   label,
   value,
   sub,
+  footer,
   progress,
   targetLabel,
   loading,
@@ -54,6 +57,7 @@ export default function PortfolioKpiCard({
         <span className="muted small kpi-action-hint">{actionHint}</span>
       ) : null}
       {sub ? <span className="muted small kpi-sub">{sub}</span> : null}
+      {footer && !loading ? <div className="portfolio-kpi-footer">{footer}</div> : null}
       {progress && !loading ? (
         <div className="portfolio-kpi-progress-row">
           {targetLabel ? (

@@ -2093,6 +2093,10 @@ a.engagement-act-link {
   min-height: 5.25rem;
 }
 
+.portfolio-kpi-footer {
+  margin-top: 0.35rem;
+}
+
 .portfolio-kpi-progress-row {
   display: flex;
   flex-direction: row;

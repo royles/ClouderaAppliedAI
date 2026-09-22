@@ -134,8 +134,12 @@
         "policyRecords": "רשומות פוליסה",
         "avgCustomerValue": "ערך לקוח ממוצע",
         "highRiskBookShare": "נתח ספר בסיכון גבוה",
-        "bookGrowthHistory": "צמיחת ספר (היסטוריה)"
-      }
+        "bookGrowthHistory": "צמיחת ספר (היסטוריה)",
+        "avgReviewScore": "ציון ביקורות כולל"
+      },
+      "reviewScoreValue": "{{avg}} / 5",
+      "reviewScoreSub": "{{count}} דירוגי ביקורת בספר זה",
+      "reviewScoreSubEmpty": "אין עדיין דירוגי ביקורת בקבוצה זו"
     },
     "kpi": {
       "objective": "יעד: {{target}}",
