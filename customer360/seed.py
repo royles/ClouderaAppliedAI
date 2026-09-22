@@ -86,6 +86,19 @@ POLICY_STATUS = POLICY_STATUS_ACTIVE + POLICY_STATUS_INACTIVE
 # Portfolio mix: ~72% engaged, ~20% stable/watch, ~8% at-risk (industry-like spread).
 SEGMENT_WEIGHTS = ("engaged", 0.72), ("stable", 0.20), ("at_risk", 0.08)
 
+# Book shape: skew customers toward investments, coverage, or mixed (demo chart variation).
+PRODUCT_MIX_WEIGHTS = (
+    ("balanced", 0.40),
+    ("investment_focus", 0.22),
+    ("insurance_focus", 0.22),
+    ("pension_only", 0.08),
+    ("property_only", 0.08),
+)
+
+INVESTMENT_POLICY_TYPES = (401, 402, 403)
+LIFE_HEALTH_POLICY_TYPES = (101, 102, 201)
+PROPERTY_POLICY_TYPE = 301
+
 
 def _assign_engagement_segment() -> str:
     roll = RNG.random()
@@ -95,6 +108,76 @@ def _assign_engagement_segment() -> str:
         if roll <= cumulative:
             return name
     return "engaged"
+
+
+def _assign_product_mix() -> str:
+    roll = RNG.random()
+    cumulative = 0.0
+    for name, weight in PRODUCT_MIX_WEIGHTS:
+        cumulative += weight
+        if roll <= cumulative:
+            return name
+    return "balanced"
+
+
+def build_decorrelated_macro_series(
+    months: list[date],
+    rng: random.Random | None = None,
+) -> tuple[list[float], list[float]]:
+    """
+    Monthly return shocks for investment AUM vs insurance/coverage snapshots.
+    Weakly correlated so book charts and objective trends diverge over time.
+    Each value is a fractional month-over-month change (e.g. 0.012 = +1.2%).
+    """
+    r = rng or RNG
+    inv_drift = r.uniform(-0.0015, 0.0035)
+    ins_drift = r.uniform(-0.0012, 0.0030)
+    inv_returns: list[float] = []
+    ins_returns: list[float] = []
+    for _ in months:
+        inv_shock = r.gauss(0, 0.011)
+        ins_shock = r.gauss(0, 0.011)
+        inv_returns.append(inv_drift + inv_shock)
+        # ~30% of months insurance moves opposite the investment book shock (demo chart contrast).
+        if r.random() < 0.30:
+            ins_returns.append(ins_drift - inv_shock * 0.55 + ins_shock)
+        else:
+            ins_returns.append(ins_drift + ins_shock * 0.35 + ins_shock)
+    return inv_returns, ins_returns
+
+
+def _policy_types_for_mix(product_mix: str, n_policies: int) -> list[int]:
+    """Pick policy type codes so cohorts (investments vs insurance status) overlap less."""
+    if product_mix == "property_only":
+        return [PROPERTY_POLICY_TYPE] * max(1, min(n_policies, 2))
+    if product_mix == "pension_only":
+        count = max(1, min(n_policies, 3))
+        return [RNG.choice(INVESTMENT_POLICY_TYPES) for _ in range(count)]
+    if product_mix == "investment_focus":
+        types: list[int] = [
+            RNG.choice(INVESTMENT_POLICY_TYPES)
+            for _ in range(max(1, n_policies - 1))
+        ]
+        if n_policies > len(types):
+            types.append(RNG.choice([101, 401, 402]))
+        return types[:n_policies]
+    if product_mix == "insurance_focus":
+        pool = list(LIFE_HEALTH_POLICY_TYPES) + [PROPERTY_POLICY_TYPE]
+        types = [RNG.choice(pool) for _ in range(max(1, n_policies))]
+        if n_policies >= 2 and PROPERTY_POLICY_TYPE not in types and RNG.random() < 0.45:
+            types[-1] = PROPERTY_POLICY_TYPE
+        return types[:n_policies]
+    # balanced — varied book
+    types = []
+    for _ in range(n_policies):
+        roll = RNG.random()
+        if roll < 0.35:
+            types.append(RNG.choice(INVESTMENT_POLICY_TYPES))
+        elif roll < 0.75:
+            types.append(RNG.choice(LIFE_HEALTH_POLICY_TYPES))
+        else:
+            types.append(PROPERTY_POLICY_TYPE)
+    return types
 
 
 def _customer_rows_for_db(customers: list[dict]) -> list[dict]:
@@ -223,10 +306,14 @@ def build_customers(n: int = DEFAULT_SEED_CUSTOMERS) -> list[dict]:
                 now - timedelta(days=RNG.randint(95, 320)) if registered else None
             )
 
+        product_mix = _assign_product_mix()
         key = f"CK-{cid}"
         rows.append(
             {
                 "_segment": segment,
+                "_product_mix": product_mix,
+                "_investment_affinity": round(RNG.uniform(0.35, 1.15), 4),
+                "_coverage_affinity": round(RNG.uniform(0.35, 1.15), 4),
                 "CUSTOMER_KEY": key,
                 "CUSTOMER_ID": cid,
                 "CUSTOMER_ID_CHAR": str(cid),
@@ -304,11 +391,20 @@ def build_policies(customers: list[dict]) -> list[dict]:
         else:
             n_policies = RNG.randint(1, 2)
 
+        product_mix = cust.get("_product_mix", "balanced")
+        if product_mix == "property_only":
+            n_policies = max(1, min(n_policies, 2))
+        elif product_mix == "pension_only":
+            n_policies = max(1, min(n_policies, 3))
+        type_codes = _policy_types_for_mix(product_mix, n_policies)
+        type_by_code = {code: desc for code, desc in POLICY_TYPES}
+
         has_active = False
         prev_start: date | None = None
         for policy_idx in range(n_policies):
             policy_seq += 1
-            ptype_code, ptype_desc = RNG.choice(POLICY_TYPES)
+            ptype_code = type_codes[policy_idx] if policy_idx < len(type_codes) else type_codes[-1]
+            ptype_desc = type_by_code.get(ptype_code, POLICY_TYPES[0][1])
             mng = {101: 1, 102: 1, 201: 1, 301: 9, 401: 7, 402: 8, 403: 8}[ptype_code]
             allow_inactive = policy_idx > 0 or segment != "engaged"
             status_code, status_desc, is_active = _pick_policy_status(
@@ -469,11 +565,36 @@ def build_foreclosures(
     return fc_rows, asset_rows
 
 
-def build_policy_investment_tracks(policies: list[dict], months: list[date]) -> list[dict]:
+def build_policy_investment_tracks(
+    policies: list[dict],
+    months: list[date],
+    *,
+    investment_macro: list[float] | None = None,
+    customers_by_id: dict[int, dict] | None = None,
+) -> list[dict]:
     rows: list[dict] = []
     invest_policies = [p for p in policies if p["MNG_COMPANY_CODE"] in (1, 7, 8) and p["IS_ACTIVE"]]
+    macro = investment_macro or [1.0] * len(months)
+    month_index = {m: i for i, m in enumerate(months)}
 
     for pol in invest_policies:
+        cust = None
+        if customers_by_id is not None:
+            try:
+                cust = customers_by_id.get(int(pol["CUSTOMER_ID"]))
+            except (TypeError, ValueError):
+                cust = None
+        product_mix = (cust or {}).get("_product_mix", "balanced")
+        inv_affinity = float((cust or {}).get("_investment_affinity", 1.0))
+
+        # Insurance-heavy customers often carry life policies without rich investment history.
+        if pol["POLICY_TYPE_CODE"] in LIFE_HEALTH_POLICY_TYPES and product_mix == "insurance_focus":
+            if RNG.random() < 0.62:
+                continue
+        if product_mix == "insurance_focus" and pol["POLICY_TYPE_CODE"] in INVESTMENT_POLICY_TYPES:
+            if RNG.random() < 0.35:
+                continue
+
         fund_choices = [f for f in FUNDS if f[0] == pol["MNG_COMPANY_CODE"]]
         if not fund_choices:
             fund_choices = FUNDS[:2]
@@ -481,20 +602,24 @@ def build_policy_investment_tracks(policies: list[dict], months: list[date]) -> 
         policy_key = int("".join(c for c in pol["POLICY_KEY"] if c.isdigit())[-8:])
 
         pstart = parse_policy_start(pol)
-        rewards = RNG.uniform(15_000, 45_000)
-        comp = RNG.uniform(5_000, 25_000)
-        months_live = 0
+        scale = inv_affinity * RNG.uniform(0.65, 1.35)
+        if product_mix == "investment_focus" or product_mix == "pension_only":
+            scale *= RNG.uniform(1.1, 1.8)
+        rewards = RNG.uniform(15_000, 45_000) * scale
+        comp = RNG.uniform(5_000, 25_000) * scale
+        policy_vol = RNG.uniform(0.004, 0.022)
 
         for snap in months:
             if not snapshot_on_or_after_policy_start(pstart, snap):
                 continue
-            months_live += 1
-            growth = 1 + RNG.uniform(-0.015, 0.04)
-            rewards *= growth
-            comp *= 1 + RNG.uniform(-0.01, 0.028)
+            idx = month_index.get(snap, 0)
+            macro_ret = macro[idx] if idx < len(macro) else 0.0
+            idio = 1.0 + RNG.uniform(-policy_vol, policy_vol + 0.012)
+            rewards *= (1.0 + macro_ret) * idio
+            comp *= (1.0 + macro_ret * 0.85) * (1.0 + RNG.uniform(-policy_vol, policy_vol + 0.01))
             total = rewards + comp
-            ytd_r = round(RNG.uniform(-5000, 25000), 2)
-            ytd_t = round(ytd_r + RNG.uniform(-3000, 15000), 2)
+            ytd_r = round(rewards * RNG.uniform(-0.08, 0.22), 2)
+            ytd_t = round(ytd_r + comp * RNG.uniform(-0.05, 0.12), 2)
 
             for track_id, (_, fund_id, _) in enumerate(tracks, start=1):
                 split = 1 / len(tracks)
@@ -550,20 +675,56 @@ def build_market_tracks(months: list[date]) -> list[dict]:
     return rows
 
 
-def build_policy_status_snapshots(policies: list[dict], months: list[date]) -> list[dict]:
+def build_policy_status_snapshots(
+    policies: list[dict],
+    months: list[date],
+    *,
+    insurance_macro: list[float] | None = None,
+    customers_by_id: dict[int, dict] | None = None,
+) -> list[dict]:
     rows: list[dict] = []
-    life_health = [p for p in policies if p["POLICY_TYPE_CODE"] in (101, 102, 201)]
+    life_health = [p for p in policies if p["POLICY_TYPE_CODE"] in LIFE_HEALTH_POLICY_TYPES]
+    macro = insurance_macro or [1.0] * len(months)
+    month_index = {m: i for i, m in enumerate(months)}
 
     for pol in life_health:
-        base_sum = RNG.uniform(200_000, 2_500_000)
+        cust = None
+        if customers_by_id is not None:
+            try:
+                cust = customers_by_id.get(int(pol["CUSTOMER_ID"]))
+            except (TypeError, ValueError):
+                cust = None
+        product_mix = (cust or {}).get("_product_mix", "balanced")
+        cov_affinity = float((cust or {}).get("_coverage_affinity", 1.0))
+        mix_scale = 1.0
+        if product_mix == "insurance_focus":
+            mix_scale = RNG.uniform(1.15, 1.75)
+        elif product_mix in ("investment_focus", "pension_only"):
+            mix_scale = RNG.uniform(0.55, 0.95)
+        elif product_mix == "property_only":
+            continue
+
+        base_sum = RNG.uniform(200_000, 2_500_000) * cov_affinity * mix_scale
+        sum_insured = base_sum
+        savings_balance = base_sum * RNG.uniform(0.12, 0.28)
+        surrender_value = base_sum * RNG.uniform(0.06, 0.18)
+        premium = float(pol["BRUTO_MONTHLY_PREMIUM"] or 0)
+        premium_drift = RNG.uniform(-0.012, 0.018)
+        cov_vol = RNG.uniform(0.003, 0.016)
+
         pstart = parse_policy_start(pol)
         for snap in months:
             if not snapshot_on_or_after_policy_start(pstart, snap):
                 continue
+            idx = month_index.get(snap, 0)
+            macro_ret = macro[idx] if idx < len(macro) else 0.0
+            ins_idio = 1.0 + RNG.uniform(-cov_vol, cov_vol + 0.008)
+            sum_insured *= (1.0 + macro_ret * 0.35) * ins_idio
+            savings_balance *= (1.0 + macro_ret * 0.55) * (1.0 + RNG.uniform(-cov_vol, cov_vol + 0.01))
+            surrender_value *= (1.0 + macro_ret * 0.45) * (1.0 + RNG.uniform(-cov_vol, cov_vol))
+            premium = max(50.0, premium * (1.0 + premium_drift + RNG.uniform(-0.01, 0.012)))
+
             snap_d = last_day_of_month(snap.year, snap.month)
-            premium = pol["BRUTO_MONTHLY_PREMIUM"] or 0
-            surrender = round(base_sum * RNG.uniform(0.05, 0.35), 2)
-            savings = round(base_sum * RNG.uniform(0.1, 0.5), 2)
             rows.append(
                 {
                     "COMPANY_CODE": pol["COMPANY_CODE"],
@@ -572,15 +733,15 @@ def build_policy_status_snapshots(policies: list[dict], months: list[date]) -> l
                     "POLICY_NUM": pol["POLICY_NUM"],
                     "POLICY_STATUS_CODE": pol["POLICY_STATUS_CODE"],
                     "POLICY_STATUS_DESC": pol["POLICY_STATUS_DESC"],
-                    "SUM_INSURED_AMOUNT": round(base_sum, 2),
+                    "SUM_INSURED_AMOUNT": round(sum_insured, 2),
                     "MONTHLY_PREMIUM": round(premium, 2),
-                    "DEATH_BENEFIT_AMOUNT": round(base_sum * RNG.uniform(0.8, 1.0), 2),
-                    "SURRENDER_VALUE": surrender,
-                    "PAID_UP_VALUE": round(surrender * 0.9, 2),
-                    "SAVINGS_BALANCE": savings,
+                    "DEATH_BENEFIT_AMOUNT": round(sum_insured * RNG.uniform(0.88, 1.0), 2),
+                    "SURRENDER_VALUE": round(surrender_value, 2),
+                    "PAID_UP_VALUE": round(surrender_value * 0.9, 2),
+                    "SAVINGS_BALANCE": round(savings_balance, 2),
                     "PREMIUM_MANAGEMENT_FEE": round(premium * 0.02, 2),
-                    "SAVINGS_MANAGEMENT_FEE": round(savings * 0.004, 2),
-                    "EMPLOYER_BENEFIT_AMOUNT": round(savings * 0.25, 2),
+                    "SAVINGS_MANAGEMENT_FEE": round(savings_balance * 0.004, 2),
+                    "EMPLOYER_BENEFIT_AMOUNT": round(savings_balance * 0.25, 2),
                 }
             )
     return rows
@@ -631,9 +792,23 @@ def init_database(
     policies = build_policies(customers)
     print("Building foreclosures, investments, coverage snapshots…", flush=True)
     foreclosures, fc_assets = build_foreclosures(customers, policies)
-    pit = build_policy_investment_tracks(policies, months)
+    investment_macro, insurance_macro = build_decorrelated_macro_series(months)
+    customers_by_id = {
+        int(c["CUSTOMER_ID"]): c for c in customers if c.get("CURRENT_IND") == 1
+    }
+    pit = build_policy_investment_tracks(
+        policies,
+        months,
+        investment_macro=investment_macro,
+        customers_by_id=customers_by_id,
+    )
     market = build_market_tracks(months)
-    policy_status = build_policy_status_snapshots(policies, months)
+    policy_status = build_policy_status_snapshots(
+        policies,
+        months,
+        insurance_macro=insurance_macro,
+        customers_by_id=customers_by_id,
+    )
     print("Building interaction events…", flush=True)
     interactions = build_interaction_events(customers, policies, foreclosures, rng=RNG)
 

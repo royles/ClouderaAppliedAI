@@ -36,3 +36,16 @@ def test_kpis_differs_for_foreclosures(conn: sqlite3.Connection) -> None:
 def test_payload_segment_field(conn: sqlite3.Connection) -> None:
     fc = fetch_portfolio_analytics(conn, segment="with_foreclosures")
     assert fc["segment"] == "with_foreclosures"
+
+
+def test_investments_vs_insurance_status_cohorts_differ(conn: sqlite3.Connection) -> None:
+    inv = fetch_portfolio_analytics(conn, segment="with_investments")
+    ins = fetch_portfolio_analytics(conn, segment="with_insurance_status")
+    inv_k = inv["kpis"]
+    ins_k = ins["kpis"]
+    assert inv_k["active_customers"] != ins_k["active_customers"] or (
+        inv_k["total_book_value"] != ins_k["total_book_value"]
+    )
+    inv_pts = fetch_value_history(conn, segment="with_investments")
+    ins_pts = fetch_value_history(conn, segment="with_insurance_status")
+    assert inv_pts[-1]["total_value"] != ins_pts[-1]["total_value"]
