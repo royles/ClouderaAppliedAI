@@ -2301,6 +2301,24 @@ a.engagement-act-link {
   font-size: var(--chart-font-caption);
 }
 
+.analytics-bar-fill {
+  opacity: 0.88;
+  transition: opacity 0.12s ease;
+}
+
+.analytics-bar-fill-active {
+  opacity: 1;
+}
+
+.legend-bar-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 10px;
+  border-radius: 2px;
+  margin-inline-end: 0.35rem;
+  vertical-align: middle;
+}
+
 .analytics-chart-svg {
   max-height: 11.75rem;
   overflow: visible;

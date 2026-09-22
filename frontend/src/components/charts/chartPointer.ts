@@ -26,6 +26,33 @@ export function indexFromSvgX(
   return Math.max(0, Math.min(pointCount - 1, Math.round(raw)));
 }
 
+/** Map x to bar index when each period occupies an equal slot across the plot width. */
+export function indexFromBarChartX(
+  x: number,
+  pointCount: number,
+  width: number,
+  padX: number,
+): number {
+  if (pointCount <= 0) return 0;
+  if (pointCount === 1) return 0;
+  const plotWidth = width - padX * 2;
+  const slot = plotWidth / pointCount;
+  const raw = (x - padX) / slot;
+  return Math.max(0, Math.min(pointCount - 1, Math.floor(raw)));
+}
+
+export function xForBarCenter(
+  index: number,
+  pointCount: number,
+  width: number,
+  padX: number,
+): number {
+  if (pointCount <= 0) return padX;
+  const plotWidth = width - padX * 2;
+  const slot = plotWidth / pointCount;
+  return padX + slot * index + slot / 2;
+}
+
 export function svgPointFromClient(svg: SVGSVGElement, clientX: number, clientY: number) {
   const pt = svg.createSVGPoint();
   pt.x = clientX;

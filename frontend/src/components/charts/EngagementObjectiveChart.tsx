@@ -1,6 +1,7 @@
+import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { EngagementTrendPoint } from "../../api";
-import AnalyticsLineChart from "./AnalyticsLineChart";
+import AnalyticsBarChart from "./AnalyticsBarChart";
 import { formatTooltipCount } from "./analyticsChartUtils";
 
 type Props = {
@@ -10,38 +11,37 @@ type Props = {
 
 export default function EngagementObjectiveChart({ series, loading }: Props) {
   const { t } = useTranslation();
-  const points = series.map((p) => ({
-    period: p.period,
-    kind: "actual" as const,
-    tooltipLines: [
-      `${formatTooltipCount(p.interaction_events)} all interactions`,
-      `${formatTooltipCount(p.digital_touchpoints)} digital touchpoints`,
-    ],
-  }));
+
+  const points = useMemo(
+    () =>
+      series
+        .filter((p) => p.avg_review_rating != null && !Number.isNaN(p.avg_review_rating))
+        .map((p) => ({
+          period: p.period,
+          value: p.avg_review_rating as number,
+          tooltipLines: [
+            t("charts.engagementObjective.tooltipAvg", {
+              avg: (p.avg_review_rating as number).toFixed(2),
+            }),
+            t("charts.engagementObjective.tooltipCount", {
+              count: formatTooltipCount(p.review_events),
+            }),
+          ],
+        })),
+    [series, t],
+  );
 
   return (
-    <AnalyticsLineChart
+    <AnalyticsBarChart
       title={t("charts.engagementObjective.title")}
       subtitle={t("charts.engagementObjective.subtitle")}
       points={points}
+      visualKey="obj-engagement"
       loading={loading}
-      interactive={false}
-      valueFormat="count"
-      series={[
-        {
-          id: "interactions",
-          visualKey: "obj-engagement",
-          label: "All interactions",
-          values: series.map((p) => p.interaction_events),
-        },
-        {
-          id: "digital",
-          visualKey: "obj-digital",
-          label: "Digital touchpoints",
-          values: series.map((p) => p.digital_touchpoints),
-        },
-      ]}
       emptyMessage={t("charts.engagementObjective.empty")}
+      yMin={0}
+      yMax={5}
+      legendLabel={t("charts.engagementObjective.legend")}
     />
   );
 }

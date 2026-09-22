@@ -211,9 +211,12 @@
       "empty": "No savings snapshot history for the active book yet."
     },
     "engagementObjective": {
-      "title": "Customer Engagement",
-      "subtitle": "Digital & service touchpoints — customer at the center pillar.",
-      "empty": "No interaction history for the active book yet."
+      "title": "Customer Reviews",
+      "subtitle": "Monthly average review score (1–5 stars) for the selected book or cohort.",
+      "empty": "No review ratings for the active book yet.",
+      "legend": "Average review score",
+      "tooltipAvg": "Average: {{avg}} / 5",
+      "tooltipCount": "{{count}} reviews"
     },
     "customerValue": {
       "title": "Customer Value",
