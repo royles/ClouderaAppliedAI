@@ -23,7 +23,7 @@ export default function CopilotRail() {
       {showDesktopToggle && (
         <button
           type="button"
-          className={`header-copilot-btn copilot-toggle${open ? " copilot-toggle-docked" : ""}`}
+          className="header-copilot-btn copilot-toggle"
           onClick={toggleOpen}
           aria-pressed={open}
           aria-label={

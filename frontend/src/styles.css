@@ -277,15 +277,16 @@ body,
   z-index: 1100;
 }
 
-.copilot-rail.is-open .copilot-toggle.copilot-toggle-docked {
-  color: #0f3d5e;
-  border-color: #c5d4e0;
-  background: #fff;
+/* Same look open or closed — header navy, not inverted on press */
+.copilot-toggle.header-copilot-btn {
+  background: rgba(15, 61, 94, 0.92);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
 }
 
-.copilot-rail.is-open .copilot-toggle.copilot-toggle-docked:hover,
-.copilot-rail.is-open .copilot-toggle.copilot-toggle-docked.is-active {
-  background: #eef4f9;
+.copilot-toggle.header-copilot-btn:hover,
+.copilot-toggle.header-copilot-btn[aria-pressed="true"] {
+  background: #0f3d5e;
 }
 
 .header-copilot-btn {
