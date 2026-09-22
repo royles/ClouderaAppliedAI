@@ -26,9 +26,26 @@ INVESTMENT_TRACK_COUNT_SQL = """
 """.strip()
 
 
+def _ensure_engagement_avg_review_column(conn: sqlite3.Connection) -> None:
+    row = conn.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_BOOK_ENGAGEMENT_TREND'"
+    ).fetchone()
+    if not row:
+        return
+    cols = {
+        r[1]
+        for r in conn.execute("PRAGMA table_info(APP_BOOK_ENGAGEMENT_TREND)").fetchall()
+    }
+    if "AVG_REVIEW_RATING" not in cols:
+        conn.execute(
+            "ALTER TABLE APP_BOOK_ENGAGEMENT_TREND ADD COLUMN AVG_REVIEW_RATING REAL"
+        )
+
+
 def ensure_metrics_schema(conn: sqlite3.Connection) -> None:
     if METRICS_SCHEMA.is_file():
         conn.executescript(METRICS_SCHEMA.read_text(encoding="utf-8"))
+        _ensure_engagement_avg_review_column(conn)
         conn.commit()
 
 

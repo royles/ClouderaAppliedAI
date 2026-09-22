@@ -107,6 +107,7 @@ class EngagementTrendPoint(BaseModel):
     interaction_events: int = 0
     digital_touchpoints: int = 0
     review_events: int = 0
+    avg_review_rating: float | None = None
 
 
 class PortfolioAnalyticsResponse(BaseModel):

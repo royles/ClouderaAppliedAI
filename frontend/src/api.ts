@@ -372,6 +372,7 @@ export type EngagementTrendPoint = {
   interaction_events: number;
   digital_touchpoints: number;
   review_events: number;
+  avg_review_rating?: number | null;
 };
 
 export type PortfolioAnalytics = {

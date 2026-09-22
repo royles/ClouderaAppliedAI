@@ -25,6 +25,9 @@ def book_objectives_materialized(conn: sqlite3.Connection) -> bool:
 
 def load_book_objective_trends(conn: sqlite3.Connection) -> dict | None:
     """Read precomputed trends; returns None when tables are empty."""
+    from customer360.metrics_refresh import ensure_metrics_schema
+
+    ensure_metrics_schema(conn)
     if not book_objectives_materialized(conn):
         return None
 
@@ -44,7 +47,12 @@ def load_book_objective_trends(conn: sqlite3.Connection) -> dict | None:
     ).fetchall()
     engagement = conn.execute(
         f"""
-        SELECT PERIOD, INTERACTION_EVENTS, DIGITAL_TOUCHPOINTS, REVIEW_EVENTS
+        SELECT
+            PERIOD,
+            INTERACTION_EVENTS,
+            DIGITAL_TOUCHPOINTS,
+            REVIEW_EVENTS,
+            AVG_REVIEW_RATING
         FROM {_ENGAGEMENT_TABLE}
         ORDER BY PERIOD ASC
         """
@@ -75,6 +83,11 @@ def load_book_objective_trends(conn: sqlite3.Connection) -> dict | None:
                 "interaction_events": int(row["INTERACTION_EVENTS"] or 0),
                 "digital_touchpoints": int(row["DIGITAL_TOUCHPOINTS"] or 0),
                 "review_events": int(row["REVIEW_EVENTS"] or 0),
+                "avg_review_rating": (
+                    float(row["AVG_REVIEW_RATING"])
+                    if row["AVG_REVIEW_RATING"] is not None
+                    else None
+                ),
             }
             for row in engagement
         ],
@@ -133,8 +146,13 @@ def refresh_book_objective_trends(conn: sqlite3.Connection) -> dict[str, int]:
     conn.executemany(
         f"""
         INSERT INTO {_ENGAGEMENT_TABLE} (
-            PERIOD, INTERACTION_EVENTS, DIGITAL_TOUCHPOINTS, REVIEW_EVENTS, REFRESHED_AT
-        ) VALUES (?, ?, ?, ?, ?)
+            PERIOD,
+            INTERACTION_EVENTS,
+            DIGITAL_TOUCHPOINTS,
+            REVIEW_EVENTS,
+            AVG_REVIEW_RATING,
+            REFRESHED_AT
+        ) VALUES (?, ?, ?, ?, ?, ?)
         """,
         [
             (
@@ -142,6 +160,7 @@ def refresh_book_objective_trends(conn: sqlite3.Connection) -> dict[str, int]:
                 row["interaction_events"],
                 row["digital_touchpoints"],
                 row["review_events"],
+                row.get("avg_review_rating"),
                 refreshed_at,
             )
             for row in engagement

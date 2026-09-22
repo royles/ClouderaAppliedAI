@@ -200,7 +200,16 @@ def fetch_engagement_trend(
                 CASE WHEN e.EVENT_TYPE IN ('WEB_SEARCH', 'REVIEW', 'AGENT_QUESTION')
                 THEN 1 ELSE 0 END
             ) AS digital_touchpoints,
-            SUM(CASE WHEN e.EVENT_TYPE = 'REVIEW' THEN 1 ELSE 0 END) AS review_events
+            SUM(CASE WHEN e.EVENT_TYPE = 'REVIEW' THEN 1 ELSE 0 END) AS review_events,
+            ROUND(
+                AVG(
+                    CASE
+                        WHEN e.EVENT_TYPE = 'REVIEW' AND e.RATING IS NOT NULL
+                        THEN e.RATING
+                    END
+                ),
+                2,
+            ) AS avg_review_rating
         FROM APP_CUSTOMER_INTERACTION_EVENTS e
         INNER JOIN scoped sc ON sc.CUSTOMER_ID = e.CUSTOMER_ID
         GROUP BY substr(e.EVENT_TS, 1, 7)
@@ -208,15 +217,19 @@ def fetch_engagement_trend(
         """,
         params,
     ).fetchall()
-    return [
-        {
-            "period": f"{row['period']}-01",
-            "interaction_events": int(row["interaction_events"] or 0),
-            "digital_touchpoints": int(row["digital_touchpoints"] or 0),
-            "review_events": int(row["review_events"] or 0),
-        }
-        for row in rows
-    ]
+    out: list[dict] = []
+    for row in rows:
+        avg = row["avg_review_rating"]
+        out.append(
+            {
+                "period": f"{row['period']}-01",
+                "interaction_events": int(row["interaction_events"] or 0),
+                "digital_touchpoints": int(row["digital_touchpoints"] or 0),
+                "review_events": int(row["review_events"] or 0),
+                "avg_review_rating": float(avg) if avg is not None else None,
+            }
+        )
+    return out
 
 
 def fetch_objective_trends(
