@@ -567,6 +567,11 @@ class AgentAskRequest(BaseModel):
     list_context: AgentCustomerListContext | None = None
 
 
+class AgentToolInfo(BaseModel):
+    name: str
+    description: str
+
+
 class AgentAskResponse(BaseModel):
     answer: str
     actions: list[AgentAction] = Field(default_factory=list)
@@ -574,6 +579,7 @@ class AgentAskResponse(BaseModel):
     source: str = "rules"
     model_id: str | None = None
     query_preview: str | None = None
+    tools_used: list[str] = Field(default_factory=list)
 
 
 class AgentStatusResponse(BaseModel):

@@ -1,37 +1,25 @@
-"""Bedrock-backed executive copilot with JSON validation."""
+"""Bedrock-backed executive copilot with tool use + JSON validation."""
 
 from __future__ import annotations
 
-import json
 import logging
-import re
 
 from customer360.agent.actions import actions_from_model_ids
+from customer360.agent.bedrock_tool_loop import invoke_copilot_with_tools, parse_final_json
 from customer360.agent.list_filters import (
     CustomerListFilters,
     filters_from_model_payload,
     merge_filters,
-    parse_customer_list_intent,
 )
 from customer360.agent.prompt import build_system_prompt, build_user_prompt
+from customer360.agent.tools import ToolContext
 from customer360.bedrock.client import BedrockError, invoke_text, is_bedrock_configured
 
 logger = logging.getLogger(__name__)
 
 
 def _parse_agent_json(text: str) -> dict:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = re.sub(r"^```(?:json)?\s*", "", stripped)
-        stripped = re.sub(r"\s*```$", "", stripped)
-    try:
-        data = json.loads(stripped)
-    except json.JSONDecodeError as exc:
-        match = re.search(r"\{[\s\S]*\}", stripped)
-        if not match:
-            raise ValueError("Model did not return JSON") from exc
-        data = json.loads(match.group(0))
-
+    data = parse_final_json(text)
     answer = str(data.get("answer", "")).strip()
     if not answer:
         raise ValueError("Missing answer in copilot JSON")
@@ -49,37 +37,20 @@ def _parse_agent_json(text: str) -> dict:
     }
 
 
-def answer_with_bedrock(
+def _build_payload(
+    parsed: dict,
     *,
-    message: str,
     segment: str,
-    snippets: list[str],
-    list_intent: CustomerListFilters | None = None,
-    list_context: dict | None = None,
+    list_intent: CustomerListFilters | None,
+    model_id: str,
+    source: str,
+    tools_used: list[str] | None = None,
 ) -> dict:
-    """
-    Returns payload with answer, actions, citations, source, model_id.
-    Raises BedrockError or ValueError on failure.
-    """
-    if not is_bedrock_configured():
-        raise BedrockError("Bedrock is not configured", status_code=503)
-
-    raw, model_id = invoke_text(
-        system_prompt=build_system_prompt(),
-        user_prompt=build_user_prompt(
-            message=message,
-            segment=segment,
-            snippets=snippets,
-            list_context=list_context,
-        ),
-    )
-    parsed = _parse_agent_json(raw)
     merged_list = merge_filters(
         list_intent,
         parsed.get("customer_list"),
         default_segment=segment,
     )
-    parsed["_merged_list"] = merged_list
     action_ids = parsed["action_ids"]
     if merged_list and not any(
         i in action_ids for i in ("customer", "customer_top_value", "customer_churn")
@@ -99,11 +70,76 @@ def answer_with_bedrock(
             open_retention_playbook=False,
         )
 
+    citations = [source, *parsed["action_ids"][:4]]
+    if tools_used:
+        citations = ["tools", *tools_used[:8], *citations]
+
     return {
         "answer": parsed["answer"],
         "actions": actions,
-        "citations": ["bedrock", *parsed["action_ids"][:4]],
-        "source": "bedrock",
+        "citations": citations,
+        "source": source,
         "model_id": model_id,
         "_merged_list": merged_list,
+        "tools_used": tools_used or [],
     }
+
+
+def answer_with_bedrock(
+    *,
+    conn,
+    message: str,
+    segment: str,
+    snippets: list[str],
+    list_intent: CustomerListFilters | None = None,
+    list_context: dict | None = None,
+) -> dict:
+    """
+    Returns payload with answer, actions, citations, source, model_id.
+    Raises BedrockError or ValueError on failure.
+    """
+    if not is_bedrock_configured():
+        raise BedrockError("Bedrock is not configured", status_code=503)
+
+    user_prompt = build_user_prompt(
+        message=message,
+        segment=segment,
+        snippets=snippets,
+        list_context=list_context,
+    )
+    tool_ctx = ToolContext(
+        conn=conn,
+        default_segment=segment,
+        list_context=list_context,
+    )
+
+    try:
+        raw, model_id, tools_used = invoke_copilot_with_tools(
+            user_prompt=user_prompt,
+            ctx=tool_ctx,
+        )
+        parsed = _parse_agent_json(raw)
+        parsed["customer_list"] = parsed.get("customer_list") or None
+        return _build_payload(
+            parsed,
+            segment=segment,
+            list_intent=list_intent,
+            model_id=model_id,
+            source="bedrock_tools" if tools_used else "bedrock",
+            tools_used=tools_used,
+        )
+    except (BedrockError, ValueError) as tool_exc:
+        logger.info("Bedrock tool path unavailable, using single-shot JSON: %s", tool_exc)
+
+    raw, model_id = invoke_text(
+        system_prompt=build_system_prompt(),
+        user_prompt=user_prompt,
+    )
+    parsed = _parse_agent_json(raw)
+    return _build_payload(
+        parsed,
+        segment=segment,
+        list_intent=list_intent,
+        model_id=model_id,
+        source="bedrock",
+    )

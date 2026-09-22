@@ -60,6 +60,7 @@ def answer_question(
     if is_bedrock_configured() and (message or "").strip():
         try:
             payload = answer_with_bedrock(
+                conn=conn,
                 message=message.strip(),
                 segment=seg,
                 snippets=ctx["snippets"],

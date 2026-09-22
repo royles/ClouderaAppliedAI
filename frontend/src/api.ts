@@ -586,6 +586,11 @@ export type AgentCustomerListContext = {
   q?: string | null;
 };
 
+export type AgentToolInfo = {
+  name: string;
+  description: string;
+};
+
 export type AgentAskResponse = {
   answer: string;
   actions: AgentAction[];
@@ -593,7 +598,10 @@ export type AgentAskResponse = {
   source: string;
   model_id?: string | null;
   query_preview?: string | null;
+  tools_used?: string[];
 };
+
+export const fetchAgentTools = () => getJson<AgentToolInfo[]>("/api/agent/tools");
 
 export type AgentStatus = {
   enabled: boolean;

@@ -46,9 +46,12 @@ from customer360.api.schemas import (
     AgentAskRequest,
     AgentAskResponse,
     AgentStatusResponse,
+    AgentToolInfo,
 )
+import customer360.agent.tools  # noqa: F401 — register copilot tool handlers
 from customer360.agent.config import agent_enabled
 from customer360.agent.service import answer_question
+from customer360.agent.tools import bedrock_tool_definitions
 from customer360.api.data_freshness import fetch_data_freshness
 from customer360.api.product_catalog import fetch_product_catalog
 from customer360.api.retention_playbook import fetch_retention_playbook
@@ -453,12 +456,22 @@ def products_catalog(
 
 @router.get("/agent/status", response_model=AgentStatusResponse)
 def agent_status() -> AgentStatusResponse:
-    mode = "bedrock" if is_bedrock_configured() else "rules"
+    mode = "bedrock_tools" if is_bedrock_configured() else "rules"
     return AgentStatusResponse(
         enabled=agent_enabled(),
         mode=mode,
         bedrock_configured=is_bedrock_configured(),
     )
+
+
+@router.get("/agent/tools", response_model=list[AgentToolInfo])
+def agent_tools_catalog() -> list[AgentToolInfo]:
+    if not agent_enabled():
+        raise HTTPException(status_code=503, detail="Executive copilot is disabled.")
+    return [
+        AgentToolInfo(name=spec["name"], description=spec["description"])
+        for spec in bedrock_tool_definitions()
+    ]
 
 
 @router.post("/agent/ask", response_model=AgentAskResponse)
@@ -471,15 +484,12 @@ def agent_ask(
     resolved_list_context = (
         body.list_context.model_dump(exclude_none=True) if body.list_context else None
     )
-    try:
-        payload = answer_question(
-            conn,
-            message=body.message,
-            segment=body.segment,
-            list_context=resolved_list_context,
-        )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    payload = answer_question(
+        conn,
+        message=body.message,
+        segment=body.segment,
+        list_context=resolved_list_context,
+    )
     return AgentAskResponse(**payload)
 
 
