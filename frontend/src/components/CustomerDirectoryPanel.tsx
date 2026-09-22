@@ -41,7 +41,7 @@ export default function CustomerDirectoryPanel({
     () => parseCohortSearch(searchParams),
     [searchParams],
   );
-  const { sortBy, sortOrder, page, pageSize, view, asOf, metric, policyTypeCode } =
+  const { sortBy, sortOrder, page, pageSize, view, asOf, metric, policyTypeCode, city } =
     urlState;
   const effectiveSegment = segment;
 
@@ -103,6 +103,7 @@ export default function CustomerDirectoryPanel({
           asOf,
           metric: asOf ? (metric ?? "total") : null,
           policyTypeCode,
+          city,
         });
         if (cancelled || requestId !== customersRequestRef.current) return;
         setCustomers(result.customers);
@@ -135,6 +136,7 @@ export default function CustomerDirectoryPanel({
     asOf,
     metric,
     policyTypeCode,
+    city,
   ]);
 
   const clearChartFilter = () => {
@@ -215,6 +217,21 @@ export default function CustomerDirectoryPanel({
               {chartMetricLabel(metric ?? "total")})
               <button type="button" className="link-btn" onClick={clearChartFilter}>
                 Clear date filter
+              </button>
+            </p>
+          ) : city ? (
+            <p className="filter-banner">
+              City: <strong>{city}</strong>
+              <button
+                type="button"
+                className="link-btn"
+                onClick={() =>
+                  setSearchParams((prev) => patchCohortParams(prev, { city: null, page: 1 }), {
+                    replace: true,
+                  })
+                }
+              >
+                Clear city filter
               </button>
             </p>
           ) : policyTypeCode != null ? (

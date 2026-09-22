@@ -7,6 +7,7 @@ from dataclasses import dataclass, replace
 from typing import Any
 from urllib.parse import urlencode
 
+from customer360.api.customer_list import KNOWN_CITIES, normalize_city_name
 from customer360.api.segments import normalize_segment
 
 VALID_SORT_BY = frozenset(
@@ -26,6 +27,7 @@ class CustomerListFilters:
     view: str | None = None
     metric: str | None = None
     q: str | None = None
+    city: str | None = None
 
     def normalized(self, *, default_segment: str) -> CustomerListFilters:
         seg = normalize_segment(self.segment or default_segment)
@@ -38,6 +40,7 @@ class CustomerListFilters:
         view = self.view if self.view in ("grid", "table") else None
         metric = self.metric if self.metric in ("total", "investment", "coverage", "at_risk") else None
         q = (self.q or "").strip() or None
+        city = normalize_city_name(self.city)
         return replace(
             self,
             segment=seg,
@@ -48,6 +51,7 @@ class CustomerListFilters:
             view=view,
             metric=metric,
             q=q,
+            city=city,
         )
 
 
@@ -84,6 +88,8 @@ def to_query_string(filters: CustomerListFilters, *, default_segment: str) -> st
         params["view"] = "table"
     if f.metric:
         params["metric"] = f.metric
+    if f.city:
+        params["city"] = f.city
     return urlencode(params)
 
 
@@ -97,9 +103,48 @@ def action_label(filters: CustomerListFilters) -> str:
         "investment_count": "investments",
     }
     sort_label = sort_labels.get(f.sort_by, f.sort_by.replace("_", " "))
+    city_part = f" in {f.city}" if f.city else ""
     if f.page_size != DEFAULT_PAGE_SIZE and f.page == 1:
-        return f"Top {f.page_size} by {sort_label}"
+        return f"Top {f.page_size} by {sort_label}{city_part}"
+    if f.city:
+        return f"Customers in {f.city} · {sort_label}"
     return f"Customer list · {sort_label} ({f.sort_order})"
+
+
+def extract_city_from_text(message: str) -> str | None:
+    text = (message or "").lower()
+    for alias in sorted(KNOWN_CITIES.keys(), key=len, reverse=True):
+        if alias in text:
+            return KNOWN_CITIES[alias]
+    return None
+
+
+def parse_refinement_intent(message: str) -> CustomerListFilters | None:
+    """Follow-up filters (city, narrow cohort) without a full list request."""
+    text = (message or "").lower()
+    if not text.strip():
+        return None
+
+    city = extract_city_from_text(message)
+    refinement_cues = (
+        "filter",
+        "only",
+        "those",
+        "narrow",
+        "restrict",
+        "live in",
+        "living in",
+        "who live",
+        "residents",
+        "located",
+        "based in",
+    )
+    has_cue = any(c in text for c in refinement_cues)
+    if city and (has_cue or "city" in text or "live" in text):
+        return CustomerListFilters(city=city)
+    if city and len(text.split()) <= 6:
+        return CustomerListFilters(city=city)
+    return None
 
 
 def parse_customer_list_intent(message: str) -> CustomerListFilters | None:
@@ -118,6 +163,8 @@ def parse_customer_list_intent(message: str) -> CustomerListFilters | None:
         "highest",
         "lowest",
         "who",
+        "filter",
+        "live",
     )
     if not any(c in text for c in list_cues):
         return None
@@ -168,6 +215,7 @@ def parse_customer_list_intent(message: str) -> CustomerListFilters | None:
 
     page_size = clamp_page_size(n) if n else DEFAULT_PAGE_SIZE
     view = "table" if n and n <= 50 else None
+    city = extract_city_from_text(message)
 
     return CustomerListFilters(
         sort_by=sort_by,
@@ -175,6 +223,7 @@ def parse_customer_list_intent(message: str) -> CustomerListFilters | None:
         page_size=page_size,
         page=1,
         view=view,
+        city=city,
     )
 
 
@@ -201,6 +250,7 @@ def filters_from_model_payload(raw: Any) -> CustomerListFilters | None:
     view = str(raw.get("view") or "").strip().lower() or None
     metric = str(raw.get("metric") or "").strip().lower() or None
     q = str(raw.get("q") or "").strip() or None
+    city = normalize_city_name(str(raw.get("city") or "").strip() or None)
     return CustomerListFilters(
         segment=segment,
         sort_by=sort_by,
@@ -210,6 +260,28 @@ def filters_from_model_payload(raw: Any) -> CustomerListFilters | None:
         view=view if view in ("grid", "table") else ("table" if page_size <= 25 else None),
         metric=metric,
         q=q,
+        city=city,
+    )
+
+
+def filters_from_list_context(raw: Any) -> CustomerListFilters | None:
+    if not raw or not isinstance(raw, dict):
+        return None
+    return filters_from_model_payload(raw)
+
+
+def _refinement_only_patch(p: CustomerListFilters) -> bool:
+    """City-only (or similar) follow-up — do not reset sort/page from defaults."""
+    return (
+        p.city is not None
+        and p.sort_by == "churn_risk"
+        and p.sort_order == "desc"
+        and p.page_size == DEFAULT_PAGE_SIZE
+        and p.page == 1
+        and p.view is None
+        and p.metric is None
+        and not p.q
+        and p.segment is None
     )
 
 
@@ -223,17 +295,21 @@ def merge_filters(
             continue
         if base is None:
             base = p
-        else:
-            base = CustomerListFilters(
-                segment=p.segment or base.segment,
-                sort_by=p.sort_by or base.sort_by,
-                sort_order=p.sort_order or base.sort_order,
-                page_size=p.page_size if p.page_size != DEFAULT_PAGE_SIZE else base.page_size,
-                page=p.page if p.page != 1 else base.page,
-                view=p.view or base.view,
-                metric=p.metric or base.metric,
-                q=p.q or base.q,
-            )
+            continue
+        if _refinement_only_patch(p):
+            base = replace(base, city=p.city or base.city)
+            continue
+        base = CustomerListFilters(
+            segment=p.segment or base.segment,
+            sort_by=p.sort_by if p.sort_by != "churn_risk" else base.sort_by,
+            sort_order=p.sort_order if p.sort_order != "desc" else base.sort_order,
+            page_size=p.page_size if p.page_size != DEFAULT_PAGE_SIZE else base.page_size,
+            page=p.page if p.page != 1 else base.page,
+            view=p.view or base.view,
+            metric=p.metric or base.metric,
+            q=p.q or base.q,
+            city=p.city or base.city,
+        )
     if base is None:
         return None
     return base.normalized(default_segment=default_segment)

@@ -47,6 +47,7 @@ export type CohortQueryState = {
   asOf: string | null;
   metric: ChartValueMetric | null;
   policyTypeCode: number | null;
+  city: string | null;
 };
 
 export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
@@ -79,6 +80,9 @@ export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
   const policyParsed = policyRaw ? Number.parseInt(policyRaw, 10) : Number.NaN;
   const policyTypeCode = Number.isFinite(policyParsed) ? policyParsed : null;
 
+  const cityRaw = params.get("city")?.trim();
+  const city = cityRaw ? cityRaw : null;
+
   return {
     segment,
     q: params.get("q") ?? "",
@@ -90,6 +94,7 @@ export function parseCohortSearch(params: URLSearchParams): CohortQueryState {
     asOf,
     metric,
     policyTypeCode,
+    city,
   };
 }
 
@@ -119,6 +124,9 @@ export function cohortSearchString(state: Partial<CohortQueryState>): string {
   if (state.policyTypeCode != null) {
     params.set("policy_type", String(state.policyTypeCode));
   }
+  if (state.city?.trim()) {
+    params.set("city", state.city.trim());
+  }
   const qs = params.toString();
   return qs ? `?${qs}` : "";
 }
@@ -136,6 +144,7 @@ export function patchCohortParams(
     asOf: string | null;
     metric: ChartValueMetric | null;
     policyTypeCode: number | null;
+    city: string | null;
   }>,
 ): URLSearchParams {
   const next = new URLSearchParams(prev);
@@ -165,6 +174,7 @@ export function patchCohortParams(
     const code = patch.policyTypeCode;
     apply("policy_type", code == null ? null : String(code));
   }
+  if ("city" in patch) apply("city", patch.city ?? null);
   return next;
 }
 

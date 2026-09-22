@@ -464,6 +464,7 @@ export const fetchCustomers = (options?: {
   asOf?: string | null;
   metric?: string | null;
   policyTypeCode?: number | null;
+  city?: string | null;
 }) => {
   const params = new URLSearchParams();
   if (options?.q?.trim()) params.set("q", options.q.trim());
@@ -482,6 +483,9 @@ export const fetchCustomers = (options?: {
   if (options?.metric) params.set("metric", options.metric);
   if (options?.policyTypeCode != null) {
     params.set("policy_type_code", String(options.policyTypeCode));
+  }
+  if (options?.city?.trim()) {
+    params.set("city", options.city.trim());
   }
   const qs = params.toString();
   return getJson<CustomerList>(`/api/customers${qs ? `?${qs}` : ""}`);
@@ -571,12 +575,24 @@ export type AgentAction = {
   segment?: string | null;
 };
 
+export type AgentCustomerListContext = {
+  segment?: string | null;
+  sort_by?: string | null;
+  sort_order?: string | null;
+  page_size?: number | null;
+  page?: number | null;
+  view?: string | null;
+  city?: string | null;
+  q?: string | null;
+};
+
 export type AgentAskResponse = {
   answer: string;
   actions: AgentAction[];
   citations: string[];
   source: string;
   model_id?: string | null;
+  query_preview?: string | null;
 };
 
 export type AgentStatus = {
@@ -587,10 +603,15 @@ export type AgentStatus = {
 
 export const fetchAgentStatus = () => getJson<AgentStatus>("/api/agent/status");
 
-export const askAgent = (body: { message: string; segment?: CustomerSegment | null }) =>
+export const askAgent = (body: {
+  message: string;
+  segment?: CustomerSegment | null;
+  list_context?: AgentCustomerListContext | null;
+}) =>
   postJson<AgentAskResponse>("/api/agent/ask", {
     message: body.message,
     segment: body.segment ?? null,
+    list_context: body.list_context ?? null,
   });
 
 export const fetchCustomer = (id: number) =>

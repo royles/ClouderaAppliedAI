@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 
 from customer360.agent.list_filters import CustomerListFilters
-from customer360.api.segments import SEGMENT_WHERE, normalize_segment
+from customer360.api.customer_list import customer_list_where
 from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
 from customer360.api.value_history import CUSTOMER_VALUE_SQL
 from customer360.metrics_refresh import customer_metrics_populated
@@ -20,8 +20,6 @@ def top_customers_snippet(
 ) -> str | None:
     f = filters.normalized(default_segment=default_segment)
     limit = max(1, min(int(limit), f.page_size, 15))
-    seg = normalize_segment(f.segment or default_segment)
-    segment_sql = SEGMENT_WHERE[seg]
     sort_by = normalize_sort_by(f.sort_by)
     sort_order = normalize_sort_order(f.sort_order, sort_by=sort_by)
 
@@ -29,10 +27,8 @@ def top_customers_snippet(
         "SELECT 1 FROM sqlite_master WHERE type='table' AND name='APP_CUSTOMER_CHURN_SCORES'"
     ).fetchone()
     churn_join = ""
-    churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"
     if churn_ready:
         churn_join = "LEFT JOIN APP_CUSTOMER_CHURN_SCORES ch ON ch.CUSTOMER_ID = c.CUSTOMER_ID"
-        churn_cols = "ch.CHURN_PROBABILITY AS churn_probability, ch.CHURN_RISK_TIER AS churn_risk_tier"
 
     if customer_metrics_populated(conn):
         value_sql = "m.CUSTOMER_VALUE"
@@ -41,6 +37,12 @@ def top_customers_snippet(
         value_sql = f"ROUND({CUSTOMER_VALUE_SQL}, 2)"
         metrics_join = ""
 
+    where_sql, params = customer_list_where(
+        f.segment,
+        f.q,
+        policy_type_code=None,
+        city=f.city,
+    )
     order_sql = order_clause(
         sort_by,
         sort_order,
@@ -51,16 +53,16 @@ def top_customers_snippet(
         f"""
         SELECT
             c.CUSTOMER_NAME AS customer_name,
-            {value_sql} AS customer_value,
-            {churn_cols}
+            c.CITY_NAME AS city_name,
+            {value_sql} AS customer_value
         FROM DWH_DIM_CUSTOMERS_UNIQUE c
         {metrics_join}
         {churn_join}
-        WHERE c.CURRENT_IND = 1 AND ({segment_sql})
+        WHERE {where_sql}
         ORDER BY {order_sql}
         LIMIT ?
         """,
-        (limit,),
+        [*params, limit],
     ).fetchall()
 
     if not rows:
@@ -70,5 +72,10 @@ def top_customers_snippet(
     for i, r in enumerate(rows, start=1):
         name = str(r["customer_name"] or "Customer")
         val = float(r["customer_value"] or 0)
-        lines.append(f"{i}. {name} (₪{val:,.0f})")
-    return "Top customers in this view: " + "; ".join(lines[:limit]) + "."
+        city = str(r["city_name"] or "")
+        suffix = f", {city}" if city else ""
+        lines.append(f"{i}. {name}{suffix} (₪{val:,.0f})")
+    prefix = "Top customers"
+    if f.city:
+        prefix += f" in {f.city}"
+    return prefix + ": " + "; ".join(lines[:limit]) + "."

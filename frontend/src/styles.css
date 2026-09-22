@@ -331,6 +331,19 @@ body,
   color: #0f6db8;
 }
 
+.agent-copilot-sql {
+  margin: 0.45rem 0 0;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.65rem;
+  line-height: 1.35;
+  background: #1a2332;
+  color: #dce6ef;
+  border-radius: 6px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .agent-copilot-turn-text {
   margin: 0;
   font-size: 0.86rem;

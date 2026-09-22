@@ -1,5 +1,7 @@
-import { FormEvent, KeyboardEvent, useCallback, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, KeyboardEvent, useCallback, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { isCustomerArea } from "../appRoutes";
+import { parseCohortSearch } from "../cohortQuery";
 import { AgentAction, askAgent } from "../api";
 import {
   CopilotPanel,
@@ -45,6 +47,22 @@ function ActionButton({
 
 export default function AgentCopilotSidebar() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const listContext = useMemo(() => {
+    if (!isCustomerArea(location.pathname)) return null;
+    const state = parseCohortSearch(new URLSearchParams(location.search));
+    return {
+      segment: state.segment,
+      sort_by: state.sortBy,
+      sort_order: state.sortOrder,
+      page_size: state.pageSize,
+      page: state.page,
+      view: state.view,
+      city: state.city,
+      q: state.q || null,
+    };
+  }, [location.pathname, location.search]);
+
   const {
     bedrockConfigured,
     open,
@@ -86,7 +104,11 @@ export default function AgentCopilotSidebar() {
       appendTurn({ id: newTurnId(), role: "user", text: trimmed });
       setSending(true);
       try {
-        const res = await askAgent({ message: trimmed, segment: askSegment });
+        const res = await askAgent({
+          message: trimmed,
+          segment: askSegment,
+          list_context: listContext,
+        });
         appendTurn({
           id: newTurnId(),
           role: "assistant",
@@ -94,6 +116,7 @@ export default function AgentCopilotSidebar() {
           actions: res.actions,
           source: res.source,
           modelId: res.model_id ?? null,
+          queryPreview: res.query_preview ?? null,
         });
         requestAnimationFrame(() => {
           historyRef.current?.scrollTo({ top: historyRef.current.scrollHeight, behavior: "smooth" });
@@ -111,7 +134,7 @@ export default function AgentCopilotSidebar() {
         setSending(false);
       }
     },
-    [appendTurn, askSegment, sending],
+    [appendTurn, askSegment, listContext, sending],
   );
 
   const submit = useCallback(
@@ -204,6 +227,9 @@ export default function AgentCopilotSidebar() {
                   )}
                 </span>
                 <p className="agent-copilot-turn-text">{turn.text}</p>
+                {turn.queryPreview && (
+                  <pre className="agent-copilot-sql">{turn.queryPreview}</pre>
+                )}
                 {turn.actions && turn.actions.length > 0 && (
                   <div className="agent-copilot-actions">
                     {turn.actions.map((action) => (

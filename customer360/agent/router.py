@@ -51,7 +51,7 @@ def answer_question_rules(
     *,
     message: str,
     segment: str | None = None,
-    list_intent: CustomerListFilters | None = None,
+    merged_list: CustomerListFilters | None = None,
     extra_snippets: list[str] | None = None,
 ) -> dict:
     text = (message or "").strip()
@@ -72,25 +72,29 @@ def answer_question_rules(
     ctx = gather_context(conn, message=text, segment=seg)
     snippets = list(extra_snippets or ctx["snippets"])
 
-    if list_intent:
+    if merged_list:
+        fl = merged_list
         entry_id = (
             "customer_top_value"
-            if list_intent.sort_by == "customer_value"
+            if fl.sort_by == "customer_value"
             else "customer_churn"
-            if list_intent.sort_by == "churn_risk"
+            if fl.sort_by == "churn_risk"
             else "customer"
         )
-        answer = (
-            f"Opening the customer list sorted by {list_intent.sort_by.replace('_', ' ')} "
-            f"({list_intent.sort_order}), showing {list_intent.page_size} per page."
-        )
+        parts = [
+            f"sorted by {fl.sort_by.replace('_', ' ')} ({fl.sort_order})",
+            f"{fl.page_size} per page",
+        ]
+        if fl.city:
+            parts.insert(0, f"city = {fl.city}")
+        answer = "Opening the customer list: " + ", ".join(parts) + "."
         if snippets:
             answer = _join_snippets(snippets) + " " + answer
         return {
             "answer": answer,
             "actions": [
                 action_customer_list(
-                    list_intent,
+                    fl,
                     default_segment=seg,
                     entry_id=entry_id,
                 ),

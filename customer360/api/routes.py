@@ -68,6 +68,7 @@ from customer360.interactions.summary import load_interaction_bundle
 from customer360.bedrock.config import get_bedrock_settings
 from customer360.bedrock.client import is_bedrock_configured
 from customer360.insights.service import get_customer_insights
+from customer360.api.customer_list import customer_list_where as _customer_list_where
 from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE, normalize_segment
 from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
 from customer360.metrics_refresh import customer_metrics_populated
@@ -360,30 +361,6 @@ _INVESTMENT_COUNT_SELECT = """
 """.strip()
 
 
-def _customer_list_where(
-    seg: str,
-    q: str | None,
-    policy_type_code: int | None = None,
-) -> tuple[str, list[object]]:
-    segment_sql = SEGMENT_WHERE[seg]
-    where = f"c.CURRENT_IND = 1 AND ({segment_sql})"
-    params: list[object] = []
-    if q and q.strip():
-        where += " AND (c.CUSTOMER_NAME LIKE ? OR CAST(c.CUSTOMER_ID AS TEXT) LIKE ?)"
-        like = f"%{q.strip()}%"
-        params.extend([like, like])
-    if policy_type_code is not None:
-        where += """
-            AND EXISTS (
-                SELECT 1 FROM DWH_DIM_ALL_POLICY p
-                WHERE p.CUSTOMER_ID = CAST(c.CUSTOMER_ID AS TEXT)
-                  AND p.POLICY_TYPE_CODE = ?
-            )
-        """
-        params.append(int(policy_type_code))
-    return where, params
-
-
 def _data_source_response() -> DataSourceConfigResponse:
     cfg = load_data_source_config()
     summary = active_backend_summary(cfg)
@@ -491,7 +468,15 @@ def agent_ask(
 ) -> AgentAskResponse:
     if not agent_enabled():
         raise HTTPException(status_code=503, detail="Executive copilot is disabled.")
-    payload = answer_question(conn, message=body.message, segment=body.segment)
+    list_ctx = (
+        body.list_context.model_dump(exclude_none=True) if body.list_context else None
+    )
+    payload = answer_question(
+        conn,
+        message=body.message,
+        segment=body.segment,
+        list_context=list_ctx,
+    )
     return AgentAskResponse(**payload)
 
 
@@ -537,10 +522,14 @@ def list_customers(
         None,
         description="Filter to customers holding this policy product type code",
     ),
+    city: str | None = Query(
+        None,
+        description="Filter to customers in this city (matches DWH_DIM_CUSTOMERS_UNIQUE.CITY_NAME)",
+    ),
 ) -> CustomerListResponse:
     limit = min(max(1, limit), MAX_CUSTOMER_PAGE_SIZE)
     seg = normalize_segment(segment)
-    where_sql, params = _customer_list_where(seg, q, policy_type_code)
+    where_sql, params = _customer_list_where(seg, q, policy_type_code, city)
 
     churn_join = ""
     churn_cols = "NULL AS churn_probability, NULL AS churn_risk_tier"

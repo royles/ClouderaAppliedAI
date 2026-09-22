@@ -550,9 +550,21 @@ class AgentAction(BaseModel):
     segment: str | None = None
 
 
+class AgentCustomerListContext(BaseModel):
+    segment: str | None = None
+    sort_by: str | None = None
+    sort_order: str | None = None
+    page_size: int | None = None
+    page: int | None = None
+    view: str | None = None
+    city: str | None = None
+    q: str | None = None
+
+
 class AgentAskRequest(BaseModel):
     message: str
     segment: str | None = None
+    list_context: AgentCustomerListContext | None = None
 
 
 class AgentAskResponse(BaseModel):
@@ -561,6 +573,7 @@ class AgentAskResponse(BaseModel):
     citations: list[str] = Field(default_factory=list)
     source: str = "rules"
     model_id: str | None = None
+    query_preview: str | None = None
 
 
 class AgentStatusResponse(BaseModel):

@@ -55,6 +55,7 @@ def answer_with_bedrock(
     segment: str,
     snippets: list[str],
     list_intent: CustomerListFilters | None = None,
+    list_context: dict | None = None,
 ) -> dict:
     """
     Returns payload with answer, actions, citations, source, model_id.
@@ -65,7 +66,12 @@ def answer_with_bedrock(
 
     raw, model_id = invoke_text(
         system_prompt=build_system_prompt(),
-        user_prompt=build_user_prompt(message=message, segment=segment, snippets=snippets),
+        user_prompt=build_user_prompt(
+            message=message,
+            segment=segment,
+            snippets=snippets,
+            list_context=list_context,
+        ),
     )
     parsed = _parse_agent_json(raw)
     merged_list = merge_filters(
@@ -73,6 +79,7 @@ def answer_with_bedrock(
         parsed.get("customer_list"),
         default_segment=segment,
     )
+    parsed["_merged_list"] = merged_list
     action_ids = parsed["action_ids"]
     if merged_list and not any(
         i in action_ids for i in ("customer", "customer_top_value", "customer_churn")
@@ -98,4 +105,5 @@ def answer_with_bedrock(
         "citations": ["bedrock", *parsed["action_ids"][:4]],
         "source": "bedrock",
         "model_id": model_id,
+        "_merged_list": merged_list,
     }
