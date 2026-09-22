@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterator
 from typing import Any
 
 from customer360.bedrock.config import effective_bedrock_settings, get_bedrock_settings
@@ -184,4 +185,66 @@ def invoke_text(*, system_prompt: str, user_prompt: str) -> tuple[str, str]:
         raise BedrockError(f"Bedrock error ({error_code}): {error_msg}", status_code=status) from exc
     except BotoCoreError as exc:
         logger.error("BotoCoreError: %s", exc)
+        raise BedrockError(f"AWS connection error: {exc}", status_code=502) from exc
+
+
+def stream_text(*, system_prompt: str, user_prompt: str) -> Iterator[str]:
+    """Stream Anthropic text deltas from Bedrock invoke_model_with_response_stream."""
+    try:
+        from botocore.exceptions import BotoCoreError, ClientError
+    except ImportError as exc:
+        raise BedrockError("boto3 is not installed", status_code=503) from exc
+
+    settings = effective_bedrock_settings()
+    catalog_model = settings.model_id
+    ui_region = settings.bedrock_region
+    inference_model = resolve_inference_model_id(catalog_model, ui_region)
+    body = _format_anthropic_body(
+        user_text=user_prompt,
+        system_prompt=system_prompt,
+        max_tokens=settings.max_tokens,
+        temperature=settings.temperature,
+        model_id=catalog_model,
+    )
+
+    def _consume_stream(model_id: str) -> Iterator[str]:
+        session, client_region = _build_session()
+        client = session.client("bedrock-runtime", region_name=client_region)
+        response = client.invoke_model_with_response_stream(
+            modelId=model_id,
+            body=json.dumps(body),
+            contentType="application/json",
+            accept="application/json",
+        )
+        for event in response.get("body", ()):
+            raw = event.get("chunk", {}).get("bytes")
+            if not raw:
+                continue
+            try:
+                payload = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if payload.get("type") == "content_block_delta":
+                delta = payload.get("delta") or {}
+                text = delta.get("text")
+                if text:
+                    yield str(text)
+
+    try:
+        yield from _consume_stream(inference_model)
+    except ClientError as first_exc:
+        error_code = first_exc.response.get("Error", {}).get("Code", "Unknown")
+        if (
+            error_code == "ValidationException"
+            and inference_model != catalog_model
+            and ui_region in GEO_SCOPES
+        ):
+            yield from _consume_stream(catalog_model)
+        else:
+            error_msg = first_exc.response.get("Error", {}).get("Message", str(first_exc))
+            raise BedrockError(
+                f"Bedrock error ({error_code}): {error_msg}",
+                status_code=502,
+            ) from first_exc
+    except BotoCoreError as exc:
         raise BedrockError(f"AWS connection error: {exc}", status_code=502) from exc

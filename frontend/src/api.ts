@@ -126,6 +126,7 @@ export type InteractionSummary = {
 };
 
 import { apiUrl } from "./apiBase";
+import { getSseStream, postSseStream, type SseHandlers } from "./sseStream";
 
 async function getJson<T>(path: string, timeoutMs = 30_000): Promise<T> {
   const controller = new AbortController();
@@ -690,6 +691,52 @@ export const askAgent = (body: {
     list_context: body.list_context ?? null,
     locale: body.locale ?? null,
   });
+
+export type { SseHandlers };
+
+export const askAgentStream = (
+  body: {
+    message: string;
+    segment?: CustomerSegment | null;
+    list_context?: AgentCustomerListContext | null;
+    locale?: string | null;
+  },
+  handlers: SseHandlers<AgentAskResponse>,
+) =>
+  postSseStream<AgentAskResponse>("/api/agent/ask/stream", {
+    message: body.message,
+    segment: body.segment ?? null,
+    list_context: body.list_context ?? null,
+    locale: body.locale ?? null,
+  }, handlers);
+
+export const fetchCustomerInsightsStream = (
+  id: number,
+  handlers: SseHandlers<CustomerInsights>,
+  options?: { refresh?: boolean },
+) => {
+  const params = new URLSearchParams();
+  if (options?.refresh) params.set("refresh", "true");
+  const qs = params.toString();
+  return getSseStream<CustomerInsights>(
+    `/api/customers/${id}/insights/stream${qs ? `?${qs}` : ""}`,
+    handlers,
+  );
+};
+
+export const draftInsightActionStream = (
+  customerId: number,
+  payload: { recommendation: string; source?: "recommendation" | "experience_note" },
+  handlers: SseHandlers<ActionDraft>,
+) =>
+  postSseStream<ActionDraft>(
+    `/api/customers/${customerId}/insights/action-draft/stream`,
+    {
+      recommendation: payload.recommendation,
+      source: payload.source ?? "recommendation",
+    },
+    handlers,
+  );
 
 export const fetchCustomer = (id: number) =>
   getJson<CustomerDetail>(`/api/customers/${id}`);

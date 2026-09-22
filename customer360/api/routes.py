@@ -7,6 +7,7 @@ import sqlite3
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 from customer360.api.deps import get_db
 from customer360.api.schemas import (
@@ -86,7 +87,14 @@ from customer360.llm_provider import (
     provider_label,
     save_llm_config,
 )
+from customer360.insights.action_meta import experience_note_actionable, insight_action_meta
 from customer360.insights.service import get_customer_insights
+from customer360.api.llm_stream_handlers import (
+    stream_action_draft_events,
+    stream_agent_ask_events,
+    stream_insights_events,
+)
+from customer360.api.sse import SSE_HEADERS
 from customer360.api.customer_list import customer_list_where as _customer_list_where
 from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE, normalize_segment
 from customer360.api.sorting import normalize_sort_by, normalize_sort_order, order_clause
@@ -619,6 +627,29 @@ def agent_ask(
     return AgentAskResponse(**payload)
 
 
+@router.post("/agent/ask/stream")
+def agent_ask_stream(
+    body: AgentAskRequest,
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+) -> StreamingResponse:
+    if not agent_enabled():
+        raise HTTPException(status_code=503, detail="Executive assistant is disabled.")
+    resolved_list_context = (
+        body.list_context.model_dump(exclude_none=True) if body.list_context else None
+    )
+    return StreamingResponse(
+        stream_agent_ask_events(
+            conn,
+            message=body.message,
+            segment=body.segment,
+            list_context=resolved_list_context,
+            locale=body.locale,
+        ),
+        media_type="text/event-stream",
+        headers=SSE_HEADERS,
+    )
+
+
 @router.get("/playbooks/retention", response_model=RetentionPlaybookResponse)
 def retention_playbook(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
@@ -888,20 +919,6 @@ def customer_value_history(
     return ValueHistoryResponse(points=points, customer_id=customer_id)
 
 
-def _insight_action_meta(text: str) -> dict:
-    kind = classify_recommendation(text)
-    return {"text": text, "actionable": kind is not None, "action_kind": kind}
-
-
-def _experience_note_actionable(note: str) -> bool:
-    if not note.strip():
-        return False
-    if classify_recommendation(note):
-        return True
-    lowered = note.lower()
-    return any(token in lowered for token in ("email", "call", "message", "sms", "callback"))
-
-
 @router.get("/customers/{customer_id}/insights", response_model=CustomerInsightsResponse)
 def customer_insights(
     customer_id: int,
@@ -912,11 +929,24 @@ def customer_insights(
     if result is None:
         raise HTTPException(status_code=404, detail="Customer not found")
     result["recommendation_actions"] = [
-        _insight_action_meta(text) for text in result.get("recommendations", [])
+        insight_action_meta(text) for text in result.get("recommendations", [])
     ]
     note = result.get("experience_note") or ""
-    result["experience_note_actionable"] = _experience_note_actionable(note)
+    result["experience_note_actionable"] = experience_note_actionable(note)
     return CustomerInsightsResponse(**result)
+
+
+@router.get("/customers/{customer_id}/insights/stream")
+def customer_insights_stream(
+    customer_id: int,
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+    refresh: bool = Query(False, description="Bypass cache and regenerate insights"),
+) -> StreamingResponse:
+    return StreamingResponse(
+        stream_insights_events(conn, customer_id, refresh=refresh),
+        media_type="text/event-stream",
+        headers=SSE_HEADERS,
+    )
 
 
 @router.post(
@@ -938,6 +968,24 @@ def insight_action_draft(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return InsightActionDraftResponse(**draft)
+
+
+@router.post("/customers/{customer_id}/insights/action-draft/stream")
+def insight_action_draft_stream(
+    customer_id: int,
+    payload: InsightActionDraftRequest,
+    conn: Annotated[sqlite3.Connection, Depends(get_db)],
+) -> StreamingResponse:
+    return StreamingResponse(
+        stream_action_draft_events(
+            conn,
+            customer_id,
+            recommendation=payload.recommendation.strip(),
+            source=payload.source,
+        ),
+        media_type="text/event-stream",
+        headers=SSE_HEADERS,
+    )
 
 
 @router.post(

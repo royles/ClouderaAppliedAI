@@ -3,7 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { isCustomerArea } from "../appRoutes";
 import { parseCohortSearch } from "../cohortQuery";
-import { AgentAction, askAgent } from "../api";
+import { AgentAction, askAgentStream } from "../api";
+import { partialJsonStringField } from "../jsonStreamPreview";
 import {
   CopilotPanel,
   newTurnId,
@@ -93,6 +94,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
     setPanel,
     turns,
     appendTurn,
+    updateTurn,
     askSegment,
     playbookSegment,
     setPlaybookSegment,
@@ -135,38 +137,63 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
       setDraft("");
       appendTurn({ id: newTurnId(), role: "user", text: trimmed });
       setSending(true);
+      const assistantId = newTurnId();
+      appendTurn({
+        id: assistantId,
+        role: "assistant",
+        text: "",
+        source: "streaming",
+      });
       try {
-        const res = await askAgent({
-          message: trimmed,
-          segment: askSegment,
-          list_context: listContext,
-          locale: apiLocale,
-        });
-        appendTurn({
-          id: newTurnId(),
-          role: "assistant",
-          text: res.answer,
-          actions: res.actions,
-          source: res.source,
-          modelId: res.model_id ?? null,
-        });
-        requestAnimationFrame(() => {
-          historyRef.current?.scrollTo({ top: historyRef.current.scrollHeight, behavior: "smooth" });
-        });
+        await askAgentStream(
+          {
+            message: trimmed,
+            segment: askSegment,
+            list_context: listContext,
+            locale: apiLocale,
+          },
+          {
+            onDelta: (_piece, buffer) => {
+              const preview =
+                partialJsonStringField(buffer, "answer") ||
+                t("assistant.send.thinking");
+              updateTurn(assistantId, { text: preview });
+              requestAnimationFrame(() => {
+                historyRef.current?.scrollTo({
+                  top: historyRef.current.scrollHeight,
+                  behavior: "smooth",
+                });
+              });
+            },
+            onDone: (res) => {
+              updateTurn(assistantId, {
+                text: res.answer,
+                actions: res.actions,
+                source: res.source,
+                modelId: res.model_id ?? null,
+              });
+              requestAnimationFrame(() => {
+                historyRef.current?.scrollTo({
+                  top: historyRef.current.scrollHeight,
+                  behavior: "smooth",
+                });
+              });
+            },
+          },
+        );
       } catch (err) {
-        appendTurn({
-          id: newTurnId(),
-          role: "assistant",
+        updateTurn(assistantId, {
           text:
             err instanceof Error
               ? err.message
               : t("errors.assistantUnreachable"),
+          source: "rules",
         });
       } finally {
         setSending(false);
       }
     },
-    [appendTurn, askSegment, listContext, sending, apiLocale, t],
+    [appendTurn, updateTurn, askSegment, listContext, sending, apiLocale, t],
   );
 
   const submit = useCallback(

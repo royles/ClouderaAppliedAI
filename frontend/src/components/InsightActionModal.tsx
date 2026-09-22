@@ -4,11 +4,12 @@ import {
   ActionDraft,
   BedrockStatus,
   SimulateSendResult,
-  draftInsightAction,
+  draftInsightActionStream,
   fetchBedrockStatus,
   simulateInsightSend,
 } from "../api";
 import { isLlmGeneratedSource, llmBrandName, resolveLlmProvider } from "../llmBrand";
+import { partialJsonStringField } from "../jsonStreamPreview";
 import { maskEmail, maskPhone } from "../pii";
 
 type Props = {
@@ -33,6 +34,7 @@ export default function InsightActionModal({
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState<SimulateSendResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [streamPreview, setStreamPreview] = useState("");
   const [llmStatus, setLlmStatus] = useState<BedrockStatus | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -57,12 +59,28 @@ export default function InsightActionModal({
     let cancelled = false;
     (async () => {
       try {
-        const next = await draftInsightAction(customerId, { recommendation, source });
-        if (cancelled) return;
-        setDraft(next);
-        setBody(next.body ?? "");
-        setSubject(next.subject ?? "");
-        setError(null);
+        await draftInsightActionStream(
+          customerId,
+          { recommendation, source },
+          {
+            onDelta: (_piece, buffer) => {
+              if (cancelled) return;
+              const preview =
+                partialJsonStringField(buffer, "body") ||
+                partialJsonStringField(buffer, "subject") ||
+                t("customer.outreach.streaming");
+              setStreamPreview(preview);
+            },
+            onDone: (next) => {
+              if (cancelled) return;
+              setDraft(next);
+              setBody(next.body ?? "");
+              setSubject(next.subject ?? "");
+              setStreamPreview("");
+              setError(null);
+            },
+          },
+        );
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : t("customer.outreach.draftError"));
@@ -134,9 +152,16 @@ export default function InsightActionModal({
         <p className="muted small modal-disclaimer">{t("customer.outreach.disclaimer")}</p>
 
         {loading && (
-          <p className="muted">
-            {t("customer.outreach.loadingDraft", { brand: configuredBrand })}
-          </p>
+          <>
+            <p className="muted">
+              {t("customer.outreach.loadingDraft", { brand: configuredBrand })}
+            </p>
+            {streamPreview && (
+              <div className="insights-stream-preview draft-stream-preview" aria-live="polite">
+                {streamPreview}
+              </div>
+            )}
+          </>
         )}
         {error && <p className="error">{error}</p>}
 

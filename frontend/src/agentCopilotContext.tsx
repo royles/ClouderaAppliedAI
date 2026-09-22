@@ -36,6 +36,7 @@ type AgentCopilotContextValue = {
   setPanel: (panel: CopilotPanel) => void;
   turns: CopilotTurn[];
   appendTurn: (turn: CopilotTurn) => void;
+  updateTurn: (id: string, patch: Partial<CopilotTurn>) => void;
   askSegment: CustomerSegment;
   playbookSegment: CustomerSegment;
   setPlaybookSegment: (segment: CustomerSegment) => void;
@@ -106,6 +107,10 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
     setTurns((prev) => [...prev, turn]);
   }, []);
 
+  const updateTurn = useCallback((id: string, patch: Partial<CopilotTurn>) => {
+    setTurns((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  }, []);
+
   const toggleOpen = useCallback(() => setOpen((v) => !v), []);
 
   const value = useMemo(
@@ -121,6 +126,7 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
       setPanel,
       turns,
       appendTurn,
+      updateTurn,
       askSegment,
       playbookSegment,
       setPlaybookSegment,
@@ -137,6 +143,7 @@ export function AgentCopilotProvider({ children }: { children: ReactNode }) {
       panel,
       turns,
       appendTurn,
+      updateTurn,
       askSegment,
       playbookSegment,
       playbookCohortLabel,

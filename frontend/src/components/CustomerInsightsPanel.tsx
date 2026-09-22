@@ -6,7 +6,9 @@ import {
   CustomerInsights,
   fetchBedrockStatus,
   fetchCustomerInsights,
+  fetchCustomerInsightsStream,
 } from "../api";
+import { partialJsonStringField } from "../jsonStreamPreview";
 import InsightActionModal from "./InsightActionModal";
 import {
   isLlmGeneratedSource,
@@ -96,57 +98,70 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [openAction, setOpenAction] = useState<OpenAction | null>(null);
+  const [streamPreview, setStreamPreview] = useState("");
 
-  useEffect(() => {
-    let cancelled = false;
-    fetchBedrockStatus()
-      .then((status) => {
-        if (!cancelled) setBedrockStatus(status);
-      })
-      .catch(() => {
-        if (!cancelled) setBedrockStatus(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const load = useCallback(
-    async (refresh: boolean) => {
+  const loadInsights = useCallback(
+    async (refresh: boolean, configured: boolean) => {
       setError(null);
+      setStreamPreview("");
       if (refresh) setRefreshing(true);
       else setLoading(true);
+
+      const finish = () => {
+        setLoading(false);
+        setRefreshing(false);
+        setStreamPreview("");
+      };
+
       try {
-        setInsights(await fetchCustomerInsights(customerId, { refresh }));
+        if (configured) {
+          await fetchCustomerInsightsStream(
+            customerId,
+            {
+              onDelta: (_piece, buffer) => {
+                const preview =
+                  partialJsonStringField(buffer, "guidance") ||
+                  partialJsonStringField(buffer, "summary") ||
+                  partialJsonStringField(buffer, "preamble") ||
+                  t("customer.insights.streamPreview");
+                setStreamPreview(preview);
+              },
+              onDone: (data) => setInsights(data),
+            },
+            { refresh },
+          );
+        } else {
+          setInsights(await fetchCustomerInsights(customerId, { refresh }));
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : t("customer.insights.loadError"));
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        finish();
       }
     },
-    [customerId],
+    [customerId, t],
+  );
+
+  const load = useCallback(
+    (refresh: boolean) => loadInsights(refresh, Boolean(bedrockStatus?.configured)),
+    [bedrockStatus?.configured, loadInsights],
   );
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      try {
-        const data = await fetchCustomerInsights(customerId);
-        if (!cancelled) setInsights(data);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : t("customer.insights.loadError"));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    void fetchBedrockStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setBedrockStatus(status);
+        return loadInsights(false, status.configured);
+      })
+      .catch(() => {
+        if (!cancelled) void loadInsights(false, false);
+      });
     return () => {
       cancelled = true;
     };
-  }, [customerId]);
+  }, [customerId, loadInsights]);
 
   const focusLabel =
     insights?.primary_focus === "retention"
@@ -179,12 +194,17 @@ export default function CustomerInsightsPanel({ customerId, churnTier }: Props) 
           </div>
         </div>
 
-        {loading && !insights && (
+        {(loading || refreshing) && !insights && (
           <p className="muted">
             {bedrockStatus?.configured
               ? t("customer.insights.loadingLlm", { brand: configuredBrand })
               : t("customer.insights.loadingLocal")}
           </p>
+        )}
+        {(loading || refreshing) && streamPreview && (
+          <div className="insights-stream-preview" aria-live="polite">
+            {streamPreview}
+          </div>
         )}
         {error && <p className="error">{error}</p>}
 

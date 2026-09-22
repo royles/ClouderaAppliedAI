@@ -1399,6 +1399,24 @@ a.engagement-act-link {
   margin-bottom: 0;
 }
 
+.insights-stream-preview {
+  margin: 0.75rem 0 1rem;
+  padding: 0.75rem 0.9rem;
+  max-width: 52rem;
+  border-radius: 8px;
+  border: 1px dashed var(--theme-border-strong);
+  background: var(--theme-brand-50);
+  line-height: 1.55;
+  font-size: 0.92rem;
+  color: var(--theme-text-muted);
+  white-space: pre-wrap;
+}
+
+.draft-stream-preview {
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
 .insights-subhead {
   font-size: 1rem;
   font-weight: 600;
