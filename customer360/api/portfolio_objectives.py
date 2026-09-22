@@ -174,6 +174,26 @@ def fetch_premium_momentum_trend(
     ]
 
 
+def engagement_trend_needs_avg_refresh(trends: list[dict] | None) -> bool:
+    """Cached portfolio/objective rows may predate monthly avg_review_rating."""
+    if not trends:
+        return True
+    if not any(int(p.get("review_events") or 0) > 0 for p in trends):
+        return False
+    return not any(p.get("avg_review_rating") is not None for p in trends)
+
+
+def ensure_engagement_review_averages(
+    conn: sqlite3.Connection,
+    trends: list[dict] | None,
+    *,
+    segment: str | None,
+) -> list[dict]:
+    if not engagement_trend_needs_avg_refresh(trends):
+        return list(trends or [])
+    return fetch_engagement_trend(conn, segment=segment)
+
+
 def fetch_engagement_trend(
     conn: sqlite3.Connection,
     *,
@@ -247,6 +267,11 @@ def fetch_objective_trends(
         if cached is not None:
             out = dict(cached)
             out["objectives_note"] = objectives_note_for_segment(seg)
+            out["engagement_trend"] = ensure_engagement_review_averages(
+                conn,
+                out.get("engagement_trend"),
+                segment=seg,
+            )
             return out
     return {
         "objectives_note": objectives_note_for_segment(seg),
