@@ -771,9 +771,12 @@
       "assistant": "עוזר"
     },
     "source": {
-      "bedrockTools": "· {{brand}} + כלים",
-      "bedrock": "· {{brand}}",
-      "rules": "· כללים"
+      "streaming": "מרכיב עם {{brand}}…",
+      "privateAi": "PrivateAI",
+      "bedrockTools": "Amazon Bedrock · כלים",
+      "bedrock": "Amazon Bedrock",
+      "rules": "כללים מובנים",
+      "rulesFallback": "כללים מובנים ({{brand}} לא הגיב)"
     },
     "input": {
       "label": "שאל את Customer 360",

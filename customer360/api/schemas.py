@@ -634,6 +634,7 @@ class AgentAskResponse(BaseModel):
     actions: list[AgentAction] = Field(default_factory=list)
     citations: list[str] = Field(default_factory=list)
     source: str = "rules"
+    llm_provider: str | None = None
     model_id: str | None = None
     tools_used: list[str] = Field(default_factory=list)
 

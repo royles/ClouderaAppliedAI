@@ -756,8 +756,8 @@
       "desktop": "Ask about the book; links change the main view or open the retention queue."
     },
     "poweredBy": {
-      "configured": "Powered by {{brand}} when configured.",
-      "rules": "Using rule-based routing until an LLM provider is configured."
+      "configured": "Active LLM backend: {{brand}}.",
+      "rules": "No LLM configured — using built-in rules only."
     },
     "tabs": {
       "conversation": "Conversation",
@@ -771,9 +771,12 @@
       "assistant": "Assistant"
     },
     "source": {
-      "bedrockTools": "· {{brand}} + tools",
-      "bedrock": "· {{brand}}",
-      "rules": "· Rules"
+      "streaming": "Composing with {{brand}}…",
+      "privateAi": "PrivateAI",
+      "bedrockTools": "Amazon Bedrock · tools",
+      "bedrock": "Amazon Bedrock",
+      "rules": "Built-in rules",
+      "rulesFallback": "Built-in rules ({{brand}} did not respond)"
     },
     "input": {
       "label": "Ask Customer 360",

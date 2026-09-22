@@ -13,7 +13,7 @@ import {
 import { withCopilotFocus } from "../copilotNavigation";
 import { useMobileUx } from "../mobileUxContext";
 import RetentionPlaybookPanel from "./RetentionPlaybookPanel";
-import { llmBrandName } from "../llmBrand";
+import { assistantSourceLabel, llmBrandName } from "../llmBrand";
 
 function actionHref(action: AgentAction): string {
   const path = action.path ?? "/business";
@@ -171,6 +171,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
                 actions: res.actions,
                 source: res.source,
                 modelId: res.model_id ?? null,
+                responseLlmProvider: res.llm_provider ?? null,
               });
               requestAnimationFrame(() => {
                 historyRef.current?.scrollTo({
@@ -227,7 +228,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           <p className="muted small">
             {phoneHome ? t("assistant.lede.phone") : t("assistant.lede.desktop")}{" "}
             {!phoneHome &&
-              (bedrockConfigured
+              (llmProvider !== "none"
                 ? t("assistant.poweredBy.configured", { brand: activeBrand })
                 : t("assistant.poweredBy.rules"))}
           </p>
@@ -274,12 +275,19 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
                 <span className="agent-copilot-turn-label">
                   {turn.role === "user" ? t("assistant.turn.user") : t("assistant.turn.assistant")}
                   {turn.role === "assistant" && turn.source && (
-                    <span className="agent-copilot-source">
-                      {turn.source === "bedrock_tools"
-                        ? t("assistant.source.bedrockTools", { brand: activeBrand })
-                        : turn.source === "bedrock" || turn.source === "openai_compatible"
-                          ? t("assistant.source.bedrock", { brand: activeBrand })
-                          : t("assistant.source.rules")}
+                    <span
+                      className={`agent-copilot-source${
+                        turn.source === "rules" || turn.source === "rules_fallback"
+                          ? " agent-copilot-source-rules"
+                          : " agent-copilot-source-llm"
+                      }`}
+                    >
+                      {assistantSourceLabel(
+                        t,
+                        turn.source,
+                        llmProvider,
+                        turn.responseLlmProvider,
+                      )}
                     </span>
                   )}
                 </span>

@@ -17,6 +17,7 @@ from customer360.agent.list_filters import (
 )
 from customer360.agent.query_builder import count_matching_customers
 from customer360.agent.router import answer_question_rules
+from customer360.agent.payload_meta import attach_agent_llm_meta
 from customer360.llm.router import is_llm_configured
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ def answer_question(
                 locale=locale,
             )
             payload.pop("_merged_list", None)
-            return payload
+            return attach_agent_llm_meta(payload, llm_attempted=True)
         except Exception as exc:
             logger.warning("Bedrock copilot failed, using rules: %s", exc, exc_info=True)
 
@@ -73,6 +74,6 @@ def answer_question(
         merged_list=merged,
         extra_snippets=ctx["snippets"],
     )
-    payload["source"] = "rules"
     payload["model_id"] = None
-    return payload
+    attempted = is_llm_configured() and bool((message or "").strip())
+    return attach_agent_llm_meta(payload, llm_attempted=attempted)

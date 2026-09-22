@@ -21,5 +21,42 @@ export function llmBrandName(t: TFunction, provider: LlmProviderKind): string {
 }
 
 export function isLlmGeneratedSource(source: string | null | undefined): boolean {
-  return source === "bedrock" || source === "openai_compatible";
+  return source === "bedrock" || source === "openai_compatible" || source === "bedrock_tools";
+}
+
+/** Badge text under each assistant turn (PrivateAI, Bedrock, rules, streaming). */
+export function assistantSourceLabel(
+  t: TFunction,
+  source: string | null | undefined,
+  llmProvider: LlmProviderKind,
+  responseProvider?: string | null,
+): string | null {
+  const providerFromApi = resolveLlmProvider({
+    provider: responseProvider ?? undefined,
+    configured: true,
+  });
+  const brand = llmBrandName(
+    t,
+    providerFromApi !== "none" ? providerFromApi : llmProvider,
+  );
+
+  if (source === "streaming") {
+    return t("assistant.source.streaming", { brand });
+  }
+  if (source === "openai_compatible") {
+    return t("assistant.source.privateAi");
+  }
+  if (source === "bedrock_tools") {
+    return t("assistant.source.bedrockTools");
+  }
+  if (source === "bedrock") {
+    return t("assistant.source.bedrock");
+  }
+  if (source === "rules_fallback") {
+    return t("assistant.source.rulesFallback", { brand });
+  }
+  if (source === "rules") {
+    return t("assistant.source.rules");
+  }
+  return null;
 }

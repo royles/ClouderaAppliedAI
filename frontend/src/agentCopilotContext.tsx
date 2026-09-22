@@ -22,6 +22,8 @@ export type CopilotTurn = {
   actions?: AgentAction[];
   source?: string | null;
   modelId?: string | null;
+  /** LLM provider from API (`bedrock` / `openai_compatible`) for source badges */
+  responseLlmProvider?: string | null;
 };
 
 type AgentCopilotContextValue = {

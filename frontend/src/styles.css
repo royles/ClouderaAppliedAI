@@ -394,7 +394,10 @@ body,
 }
 
 .agent-copilot-turn-label {
-  display: block;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.68rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -404,10 +407,25 @@ body,
 }
 
 .agent-copilot-source {
-  font-weight: 500;
+  padding: 0.1rem 0.45rem;
   text-transform: none;
-  letter-spacing: 0;
-  color: var(--theme-brand-500);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  vertical-align: middle;
+}
+
+.agent-copilot-source-llm {
+  color: var(--theme-brand-900);
+  background: var(--theme-brand-50);
+  border: 1px solid var(--theme-brand-200);
+}
+
+.agent-copilot-source-rules {
+  color: #5a4a3a;
+  background: #f5f0e8;
+  border: 1px solid #e0d5c4;
 }
 
 .agent-copilot-sql {

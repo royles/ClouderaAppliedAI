@@ -21,6 +21,7 @@ from customer360.agent.router import answer_question_rules
 from customer360.llm.errors import LLMError
 from customer360.llm.router import is_llm_configured, stream_text_chunks
 from customer360.llm_provider import get_active_provider
+from customer360.agent.payload_meta import attach_agent_llm_meta
 from customer360.bedrock.config import effective_bedrock_settings
 
 logger = logging.getLogger(__name__)
@@ -83,9 +84,7 @@ def stream_agent_answer(
             merged_list=merged,
             extra_snippets=ctx["snippets"],
         )
-        payload["source"] = "rules"
-        payload["model_id"] = None
-        yield ("done", payload)
+        yield ("done", attach_agent_llm_meta(payload, llm_attempted=False))
         return
 
     user_prompt = build_user_prompt(
@@ -115,9 +114,8 @@ def stream_agent_answer(
             merged_list=merged,
             extra_snippets=ctx["snippets"],
         )
-        payload["source"] = "rules"
         payload["model_id"] = None
-        yield ("done", payload)
+        yield ("done", attach_agent_llm_meta(payload, llm_attempted=True))
         return
 
     raw = "".join(buffer)
@@ -140,7 +138,7 @@ def stream_agent_answer(
             source=source,
         )
         payload.pop("_merged_list", None)
-        yield ("done", payload)
+        yield ("done", attach_agent_llm_meta(payload, llm_attempted=True))
     except Exception as exc:
         logger.warning("Agent stream JSON parse failed: %s", exc)
         payload = answer_question_rules(
@@ -150,6 +148,5 @@ def stream_agent_answer(
             merged_list=merged,
             extra_snippets=ctx["snippets"],
         )
-        payload["source"] = "rules"
         payload["model_id"] = None
-        yield ("done", payload)
+        yield ("done", attach_agent_llm_meta(payload, llm_attempted=True))

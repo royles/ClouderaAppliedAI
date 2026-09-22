@@ -663,6 +663,7 @@ export type AgentAskResponse = {
   actions: AgentAction[];
   citations: string[];
   source: string;
+  llm_provider?: string | null;
   model_id?: string | null;
   tools_used?: string[];
 };
