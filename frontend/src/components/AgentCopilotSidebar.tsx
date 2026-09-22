@@ -156,7 +156,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           text:
             err instanceof Error
               ? err.message
-              : t("errors.copilotUnreachable"),
+              : t("errors.assistantUnreachable"),
         });
       } finally {
         setSending(false);
@@ -187,17 +187,17 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
   return (
     <aside
       className={`agent-copilot-sidebar${phoneHome ? " agent-copilot-sidebar-phone-home" : ""}`}
-      aria-label={t("copilot.title")}
+      aria-label={t("assistant.title")}
     >
       <header className="agent-copilot-head">
         <div>
-          <h2 className="agent-copilot-title">{t("copilot.title")}</h2>
+          <h2 className="agent-copilot-title">{t("assistant.title")}</h2>
           <p className="muted small">
-            {phoneHome ? t("copilot.lede.phone") : t("copilot.lede.desktop")}{" "}
+            {phoneHome ? t("assistant.lede.phone") : t("assistant.lede.desktop")}{" "}
             {!phoneHome &&
               (bedrockConfigured
-                ? t("copilot.poweredBy.bedrock")
-                : t("copilot.poweredBy.rules"))}
+                ? t("assistant.poweredBy.bedrock")
+                : t("assistant.poweredBy.rules"))}
           </p>
         </div>
       </header>
@@ -210,7 +210,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           className={`agent-copilot-tab${panel === "ask" ? " is-active" : ""}`}
           onClick={() => setTab("ask")}
         >
-          {t("copilot.tabs.conversation")}
+          {t("assistant.tabs.conversation")}
         </button>
         <button
           type="button"
@@ -222,7 +222,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
             setTab("retention_playbook");
           }}
         >
-          {t("copilot.tabs.retention")}
+          {t("assistant.tabs.retention")}
         </button>
       </div>
 
@@ -231,7 +231,7 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           <div ref={historyRef} className="agent-copilot-history">
             {turns.length === 0 && (
               <p className="muted small agent-copilot-empty">
-                {t("copilot.empty.hint")}
+                {t("assistant.empty.hint")}
               </p>
             )}
             {turns.map((turn) => (
@@ -240,14 +240,14 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
                 className={`agent-copilot-turn agent-copilot-turn-${turn.role}`}
               >
                 <span className="agent-copilot-turn-label">
-                  {turn.role === "user" ? t("copilot.turn.user") : t("copilot.turn.assistant")}
+                  {turn.role === "user" ? t("assistant.turn.user") : t("assistant.turn.assistant")}
                   {turn.role === "assistant" && turn.source && (
                     <span className="agent-copilot-source">
                       {turn.source === "bedrock_tools"
-                        ? t("copilot.source.bedrockTools")
+                        ? t("assistant.source.bedrockTools")
                         : turn.source === "bedrock"
-                          ? t("copilot.source.bedrock")
-                          : t("copilot.source.rules")}
+                          ? t("assistant.source.bedrock")
+                          : t("assistant.source.rules")}
                     </span>
                   )}
                 </span>
@@ -270,20 +270,20 @@ export default function AgentCopilotSidebar({ phoneHome = false }: Props) {
           </div>
           <form className="agent-copilot-form" onSubmit={submit}>
             <label className="visually-hidden" htmlFor="agent-copilot-input">
-              {t("copilot.input.label")}
+              {t("assistant.input.label")}
             </label>
             <textarea
               id="agent-copilot-input"
               className="agent-copilot-input"
               rows={3}
-              placeholder={t("copilot.input.placeholder")}
+              placeholder={t("assistant.input.placeholder")}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onInputKeyDown}
               disabled={sending}
             />
             <button type="submit" className="agent-copilot-send" disabled={sending || !draft.trim()}>
-              {sending ? t("copilot.send.thinking") : t("copilot.send.submit")}
+              {sending ? t("assistant.send.thinking") : t("assistant.send.submit")}
             </button>
           </form>
         </>

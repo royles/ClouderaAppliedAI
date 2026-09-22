@@ -13,7 +13,7 @@ from customer360.api.segments import OVERVIEW_DOMAINS, SEGMENT_WHERE
 
 @register_tool(
     "list_app_navigation_catalog",
-    description="Major app areas the copilot can open (ids, titles, paths, and phrase hints).",
+    description="Major app areas the assistant can open (ids, titles, paths, and phrase hints).",
     input_schema={"type": "object", "properties": {}, "additionalProperties": False},
 )
 def list_app_navigation_catalog(_ctx: ToolContext, _input: dict[str, Any]) -> dict[str, Any]:

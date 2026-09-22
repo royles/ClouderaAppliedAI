@@ -64,12 +64,12 @@
     "customersLoadFailed": "Failed to load customers",
     "invalidCustomerId": "Invalid customer ID",
     "customerNotFound": "Customer not found",
-    "copilotUnreachable": "Could not reach the copilot. Check that the API is running.",
     "boundary": {
       "title": "Something went wrong",
       "hint": "Try a hard refresh. If this persists, restart the application and confirm frontend/dist matches the running API version.",
       "reload": "Reload page"
-    }
+    },
+    "assistantUnreachable": "Could not reach the assistant. Check that the API is running."
   },
   "cohort": {
     "fullBook": "Full book",
@@ -123,7 +123,7 @@
       "valueAtRiskSub": "Σ customer value × lapse probability (tier-weighted when ML score missing)",
       "policyRecordsSub": "{{active}} active · avg {{avg}} / customer",
       "highRiskShareSub": "{{count}} high-risk customers",
-      "retentionQueueHint": "Open retention queue in copilot →",
+      "retentionQueueHint": "Open retention queue in assistant →",
       "kpi": {
         "totalBookValue": "Total book value",
         "retentionForecast": "12m retention (forecast)",
@@ -159,7 +159,6 @@
     "historyMonths": "{{first}} – {{last}} ({{count}} months)"
   },
   "mobile": {
-    "backToCopilot": "← Copilot",
     "focusTitle": {
       "business": "Business KPIs",
       "customers": "Customers",
@@ -168,59 +167,8 @@
       "engagement": "Engagement",
       "admin": "Admin",
       "details": "Details"
-    }
-  },
-  "copilot": {
-    "title": "Executive copilot",
-    "shortTitle": "Copilot",
-    "lede": {
-      "phone": "Ask about the book, then open a link to focus that page on your phone.",
-      "desktop": "Ask about the book; links change the main view or open the retention queue."
     },
-    "poweredBy": {
-      "bedrock": "Powered by Amazon Bedrock with tool use when configured.",
-      "rules": "Using rule-based routing until Bedrock is configured."
-    },
-    "tabs": {
-      "conversation": "Conversation",
-      "retention": "Retention queue"
-    },
-    "empty": {
-      "hint": "Try: “Show the product heatmap” or “Who is at highest churn risk?”"
-    },
-    "turn": {
-      "user": "You",
-      "assistant": "Copilot"
-    },
-    "source": {
-      "bedrockTools": "· Bedrock + tools",
-      "bedrock": "· Bedrock",
-      "rules": "· Rules"
-    },
-    "input": {
-      "label": "Ask Customer 360",
-      "placeholder": "Ask about KPIs, customers, products… (Enter to send)"
-    },
-    "send": {
-      "thinking": "Thinking…",
-      "submit": "Ask"
-    },
-    "a11y": {
-      "toggleClose": "Close executive copilot",
-      "toggleOpen": "Open executive copilot"
-    },
-    "toggleTitle": {
-      "close": "Close copilot",
-      "open": "Open copilot"
-    },
-    "retention": {
-      "showing": "Showing {{shown}} of {{total}} at-risk customers",
-      "atRiskBook": "At risk {{atRisk}} · Book {{book}}",
-      "openList": "Open full list in customer hub →",
-      "loadingQueue": "Loading queue…",
-      "emptyCohort": "No scored at-risk customers in this cohort yet.",
-      "lede": "Prioritized by value at churn risk (next best action per customer)."
-    }
+    "backToAssistant": "← Assistant"
   },
   "charts": {
     "common": {
@@ -734,6 +682,58 @@
       "rowsSuffix": "rows",
       "notCreated": "not created",
       "noColumns": "No columns (table missing in DB)"
+    }
+  },
+  "assistant": {
+    "title": "Executive assistant",
+    "shortTitle": "Assistant",
+    "lede": {
+      "phone": "Ask about the book, then open a link to focus that page on your phone.",
+      "desktop": "Ask about the book; links change the main view or open the retention queue."
+    },
+    "poweredBy": {
+      "bedrock": "Powered by Amazon Bedrock with tool use when configured.",
+      "rules": "Using rule-based routing until Bedrock is configured."
+    },
+    "tabs": {
+      "conversation": "Conversation",
+      "retention": "Retention queue"
+    },
+    "empty": {
+      "hint": "Try: “Show the product heatmap” or “Who is at highest churn risk?”"
+    },
+    "turn": {
+      "user": "You",
+      "assistant": "Assistant"
+    },
+    "source": {
+      "bedrockTools": "· Bedrock + tools",
+      "bedrock": "· Bedrock",
+      "rules": "· Rules"
+    },
+    "input": {
+      "label": "Ask Customer 360",
+      "placeholder": "Ask about KPIs, customers, products… (Enter to send)"
+    },
+    "send": {
+      "thinking": "Thinking…",
+      "submit": "Ask"
+    },
+    "a11y": {
+      "toggleClose": "Close executive assistant",
+      "toggleOpen": "Open executive assistant"
+    },
+    "toggleTitle": {
+      "close": "Close assistant",
+      "open": "Open assistant"
+    },
+    "retention": {
+      "showing": "Showing {{shown}} of {{total}} at-risk customers",
+      "atRiskBook": "At risk {{atRisk}} · Book {{book}}",
+      "openList": "Open full list in customer hub →",
+      "loadingQueue": "Loading queue…",
+      "emptyCohort": "No scored at-risk customers in this cohort yet.",
+      "lede": "Prioritized by value at churn risk (next best action per customer)."
     }
   }
 }

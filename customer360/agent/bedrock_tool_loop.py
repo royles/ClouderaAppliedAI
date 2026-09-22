@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 MAX_TOOL_TURNS = 6
 
-COPILOT_SYSTEM = """You are the executive copilot for Insurance Customer 360.
+COPILOT_SYSTEM = """You are the executive assistant for Insurance Customer 360.
 Use tools to fetch live book data before answering when the question involves counts, KPIs, rankings, filters,
 freshness, retention playbook, engagement, cohort comparison, benchmarks, or navigation.
 Do not invent numbers.

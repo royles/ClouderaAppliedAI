@@ -203,7 +203,7 @@ export default function InsightActionModal({
                   disabled={sending || !body.trim()}
                   onClick={handleSend}
                 >
-                  {sending ? t("copilot.send.thinking") : t("customer.outreach.send")}
+                  {sending ? t("assistant.send.thinking") : t("customer.outreach.send")}
                 </button>
               </div>
             )}

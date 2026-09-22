@@ -477,7 +477,7 @@ def agent_status() -> AgentStatusResponse:
 @router.get("/agent/tools", response_model=list[AgentToolInfo])
 def agent_tools_catalog() -> list[AgentToolInfo]:
     if not agent_enabled():
-        raise HTTPException(status_code=503, detail="Executive copilot is disabled.")
+        raise HTTPException(status_code=503, detail="Executive assistant is disabled.")
     return [
         AgentToolInfo(name=spec["name"], description=spec["description"])
         for spec in bedrock_tool_definitions()
@@ -490,7 +490,7 @@ def agent_ask(
     conn: Annotated[sqlite3.Connection, Depends(get_db)],
 ) -> AgentAskResponse:
     if not agent_enabled():
-        raise HTTPException(status_code=503, detail="Executive copilot is disabled.")
+        raise HTTPException(status_code=503, detail="Executive assistant is disabled.")
     resolved_list_context = (
         body.list_context.model_dump(exclude_none=True) if body.list_context else None
     )

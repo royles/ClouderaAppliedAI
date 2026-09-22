@@ -64,12 +64,12 @@
     "customersLoadFailed": "טעינת הלקוחות נכשלה",
     "invalidCustomerId": "מזהה לקוח לא תקין",
     "customerNotFound": "הלקוח לא נמצא",
-    "copilotUnreachable": "לא ניתן להגיע ל-copilot. ודא שה-API פועל.",
     "boundary": {
       "title": "משהו השתבש",
       "hint": "נסה רענון מלא. אם הבעיה נמשכת, הפעל מחדש את האפליקציה וודא ש-frontend/dist תואם לגרסת ה-API.",
       "reload": "טען מחדש"
-    }
+    },
+    "assistantUnreachable": "לא ניתן להגיע לעוזר. ודא שה-API פועל."
   },
   "cohort": {
     "fullBook": "ספר מלא",
@@ -123,7 +123,7 @@
       "valueAtRiskSub": "Σ ערך לקוח × הסתברות lapse (משקל tier כשאין ציון ML)",
       "policyRecordsSub": "{{active}} פעילות · ממוצע {{avg}} / לקוח",
       "highRiskShareSub": "{{count}} לקוחות בסיכון גבוה",
-      "retentionQueueHint": "פתח תור retention ב-copilot →",
+      "retentionQueueHint": "פתח תור retention בעוזר →",
       "kpi": {
         "totalBookValue": "ערך ספר כולל",
         "retentionForecast": "שימור 12 ח' (תחזית)",
@@ -159,7 +159,6 @@
     "historyMonths": "{{first}} – {{last}} ({{count}} חודשים)"
   },
   "mobile": {
-    "backToCopilot": "← Copilot",
     "focusTitle": {
       "business": "KPIs עסק",
       "customers": "לקוחות",
@@ -168,59 +167,8 @@
       "engagement": "מעורבות",
       "admin": "ניהול",
       "details": "פרטים"
-    }
-  },
-  "copilot": {
-    "title": "Copilot מנהלים",
-    "shortTitle": "Copilot",
-    "lede": {
-      "phone": "שאל על הספר, ואז פתח קישור להתמקדות בעמוד בטלפון.",
-      "desktop": "שאל על הספר; קישורים משנים את התצוגה הראשית או פותחים תור retention."
     },
-    "poweredBy": {
-      "bedrock": "מופעל על ידי Amazon Bedrock עם כלים כשמוגדר.",
-      "rules": "ניתוב מבוסס כללים עד ש-Bedrock מוגדר."
-    },
-    "tabs": {
-      "conversation": "שיחה",
-      "retention": "תור retention"
-    },
-    "empty": {
-      "hint": "נסה: \"הצג את מפת החום של המוצרים\" או \"מי בסיכון נטישה הגבוה ביותר?\""
-    },
-    "turn": {
-      "user": "אתה",
-      "assistant": "Copilot"
-    },
-    "source": {
-      "bedrockTools": "· Bedrock + כלים",
-      "bedrock": "· Bedrock",
-      "rules": "· כללים"
-    },
-    "input": {
-      "label": "שאל את Customer 360",
-      "placeholder": "שאל על KPIs, לקוחות, מוצרים… (Enter לשליחה)"
-    },
-    "send": {
-      "thinking": "חושב…",
-      "submit": "שאל"
-    },
-    "a11y": {
-      "toggleClose": "סגור copilot מנהלים",
-      "toggleOpen": "פתח copilot מנהלים"
-    },
-    "toggleTitle": {
-      "close": "סגור copilot",
-      "open": "פתח copilot"
-    },
-    "retention": {
-      "showing": "מציג {{shown}} מתוך {{total}} לקוחות בסיכון",
-      "atRiskBook": "בסיכון {{atRisk}} · ספר {{book}}",
-      "openList": "פתח רשימה מלאה במרכז הלקוח →",
-      "loadingQueue": "טוען תור…",
-      "emptyCohort": "אין עדיין לקוחות בסיכון עם ציון ב-cohort זה.",
-      "lede": "מדורג לפי ערך בסיכון נטישה (פעולה מומלצת לכל לקוח)."
-    }
+    "backToAssistant": "← עוזר"
   },
   "charts": {
     "common": {
@@ -734,6 +682,58 @@
       "rowsSuffix": "שורות",
       "notCreated": "לא נוצר",
       "noColumns": "אין עמודות (טבלה חסרה ב-DB)"
+    }
+  },
+  "assistant": {
+    "title": "עוזר מנהלים",
+    "shortTitle": "עוזר",
+    "lede": {
+      "phone": "שאל על הספר, ואז פתח קישור להתמקדות בעמוד בטלפון.",
+      "desktop": "שאל על הספר; קישורים משנים את התצוגה הראשית או פותחים תור retention."
+    },
+    "poweredBy": {
+      "bedrock": "מופעל על ידי Amazon Bedrock עם כלים כשמוגדר.",
+      "rules": "ניתוב מבוסס כללים עד ש-Bedrock מוגדר."
+    },
+    "tabs": {
+      "conversation": "שיחה",
+      "retention": "תור retention"
+    },
+    "empty": {
+      "hint": "נסה: \"הצג את מפת החום של המוצרים\" או \"מי בסיכון נטישה הגבוה ביותר?\""
+    },
+    "turn": {
+      "user": "אתה",
+      "assistant": "עוזר"
+    },
+    "source": {
+      "bedrockTools": "· Bedrock + כלים",
+      "bedrock": "· Bedrock",
+      "rules": "· כללים"
+    },
+    "input": {
+      "label": "שאל את Customer 360",
+      "placeholder": "שאל על KPIs, לקוחות, מוצרים… (Enter לשליחה)"
+    },
+    "send": {
+      "thinking": "חושב…",
+      "submit": "שאל"
+    },
+    "a11y": {
+      "toggleClose": "סגור עוזר מנהלים",
+      "toggleOpen": "פתח עוזר מנהלים"
+    },
+    "toggleTitle": {
+      "close": "סגור עוזר",
+      "open": "פתח עוזר"
+    },
+    "retention": {
+      "showing": "מציג {{shown}} מתוך {{total}} לקוחות בסיכון",
+      "atRiskBook": "בסיכון {{atRisk}} · ספר {{book}}",
+      "openList": "פתח רשימה מלאה במרכז הלקוח →",
+      "loadingQueue": "טוען תור…",
+      "emptyCohort": "אין עדיין לקוחות בסיכון עם ציון ב-cohort זה.",
+      "lede": "מדורג לפי ערך בסיכון נטישה (פעולה מומלצת לכל לקוח)."
     }
   }
 }

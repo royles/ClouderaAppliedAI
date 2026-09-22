@@ -269,7 +269,7 @@ body,
   min-height: 0;
 }
 
-/* Copilot toggle: fixed on the outer right, below header — does not move with the rail */
+/* Assistant toggle: fixed on the outer right, below header — does not move with the rail */
 .copilot-toggle {
   position: fixed;
   top: calc(var(--app-header-size) + 0.65rem);

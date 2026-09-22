@@ -29,7 +29,7 @@ export default function MobileFocusBar() {
   return (
     <header className="mobile-focus-bar">
       <button type="button" className="mobile-focus-back" onClick={returnToMobileCopilot}>
-        {t("mobile.backToCopilot")}
+        {t("mobile.backToAssistant")}
       </button>
       <span className="mobile-focus-title">{title}</span>
     </header>

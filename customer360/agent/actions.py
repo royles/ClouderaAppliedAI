@@ -68,7 +68,7 @@ def action_playbook(segment: str) -> dict:
         params["segment"] = segment
     return {
         "action_id": "retention_playbook_panel",
-        "label": "Show retention playbook in copilot",
+        "label": "Show retention playbook in assistant",
         "action_type": "open_panel",
         "path": entry.path,
         "search": urlencode(params) if params else None,

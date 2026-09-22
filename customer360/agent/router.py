@@ -123,7 +123,7 @@ def answer_question_rules(
     ):
         answer = (
             "The retention playbook lists at-risk customers for your cohort with suggested actions. "
-            "Open it here in the copilot or go to The business for full KPI context."
+            "Open it here in the assistant or go to The business for full KPI context."
         )
         if snippets:
             answer = _join_snippets(snippets) + " " + answer
@@ -147,7 +147,7 @@ def answer_question_rules(
     if snippets:
         answer = _join_snippets(snippets) + " " + answer
     else:
-        answer = answer + " Use the link below to open that view (the copilot stays open)."
+        answer = answer + " Use the link below to open that view (the assistant stays open)."
 
     actions: list[dict] = []
     list_filters = None

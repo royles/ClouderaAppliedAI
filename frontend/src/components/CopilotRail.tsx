@@ -27,9 +27,9 @@ export default function CopilotRail() {
           onClick={toggleOpen}
           aria-pressed={open}
           aria-label={
-            open ? t("copilot.a11y.toggleClose") : t("copilot.a11y.toggleOpen")
+            open ? t("assistant.a11y.toggleClose") : t("assistant.a11y.toggleOpen")
           }
-          title={open ? t("copilot.toggleTitle.close") : t("copilot.toggleTitle.open")}
+          title={open ? t("assistant.toggleTitle.close") : t("assistant.toggleTitle.open")}
         >
           <CopilotPanelIcon />
         </button>

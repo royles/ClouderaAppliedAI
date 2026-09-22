@@ -59,17 +59,17 @@ export default function RetentionPlaybookPanel({
       {!compact && (
         <p className="muted small">
           {cohortLabel ? `${cohortLabel} · ` : ""}
-          {t("copilot.retention.lede")}
+          {t("assistant.retention.lede")}
         </p>
       )}
-      {loading && <p className="muted small">{t("copilot.retention.loadingQueue")}</p>}
+      {loading && <p className="muted small">{t("assistant.retention.loadingQueue")}</p>}
       {!loading && data && data.items.length === 0 && (
-        <p className="muted small">{t("copilot.retention.emptyCohort")}</p>
+        <p className="muted small">{t("assistant.retention.emptyCohort")}</p>
       )}
       {!loading && data && data.items.length > 0 && (
         <>
           <p className="muted small playbook-queue-meta">
-            {t("copilot.retention.showing", {
+            {t("assistant.retention.showing", {
               shown: data.items.length,
               total: data.total.toLocaleString(),
             })}
@@ -85,7 +85,7 @@ export default function RetentionPlaybookPanel({
                   <div className="playbook-queue-meta-row">
                     <ChurnBadge tier={item.churn_risk_tier} probability={item.churn_probability} />
                     <span className="muted small">
-                      {t("copilot.retention.atRiskBook", {
+                      {t("assistant.retention.atRiskBook", {
                         atRisk: formatMoneyIls(item.value_at_risk),
                         book: formatMoneyIls(item.customer_value),
                       })}
@@ -98,7 +98,7 @@ export default function RetentionPlaybookPanel({
             ))}
           </ol>
           <Link to={listHref} className="playbook-view-all">
-            {t("copilot.retention.openList")}
+            {t("assistant.retention.openList")}
           </Link>
         </>
       )}
