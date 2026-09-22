@@ -127,8 +127,15 @@ export type InteractionSummary = {
 
 import { apiUrl } from "./apiBase";
 
-async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(apiUrl(path));
+async function getJson<T>(path: string, timeoutMs = 30_000): Promise<T> {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(apiUrl(path), { signal: controller.signal });
+  } finally {
+    window.clearTimeout(timer);
+  }
   const text = await res.text();
   if (!res.ok) {
     throw new Error(text || res.statusText);
@@ -288,7 +295,7 @@ export const testDataSourceConnection = (config?: Record<string, unknown>) =>
   });
 
 export const fetchLlmProviderConfig = () =>
-  getJson<LlmProviderConfig>("/api/admin/llm");
+  getJson<LlmProviderConfig>("/api/admin/llm", 15_000);
 
 export const updateLlmProviderConfig = (payload: Record<string, unknown>) =>
   putJson<LlmProviderConfig>("/api/admin/llm", payload);

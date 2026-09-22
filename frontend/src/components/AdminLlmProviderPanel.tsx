@@ -6,6 +6,7 @@ import {
   testLlmProvider,
   updateLlmProviderConfig,
 } from "../api";
+import i18n from "../i18n";
 
 type ProviderChoice = "bedrock" | "openai_compatible";
 
@@ -79,17 +80,25 @@ export default function AdminLlmProviderPanel() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const cfg = await fetchLlmProviderConfig();
       setMeta(cfg);
       setForm(configToForm(cfg));
-      setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("admin.llm.loadError"));
+      const message =
+        e instanceof Error && e.name === "AbortError"
+          ? i18n.t("admin.llm.loadTimeout")
+          : e instanceof Error
+            ? e.message
+            : i18n.t("admin.llm.loadError");
+      setError(message);
+      setForm(null);
+      setMeta(null);
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -133,7 +142,13 @@ export default function AdminLlmProviderPanel() {
   };
 
   if (loading) {
-    return <p className="muted small">{t("admin.llm.loading")}</p>;
+    return (
+      <div className="admin-llm-form" aria-busy="true">
+        <p className="muted small">{t("admin.llm.loading")}</p>
+        <div className="skeleton skeleton-title" style={{ maxWidth: "28rem" }} />
+        <div className="skeleton skeleton-stat" style={{ maxWidth: "20rem", marginTop: "0.75rem" }} />
+      </div>
+    );
   }
 
   if (!form) {
