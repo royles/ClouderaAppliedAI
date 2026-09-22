@@ -22,7 +22,9 @@ import {
   patchBusinessSegment,
 } from "../cohortQuery";
 import {
+  clonePortfolioAnalytics,
   PORTFOLIO_PREFETCH_SEGMENTS,
+  portfolioAnalyticsMatchesSegment,
   PortfolioSegmentCache,
   prefetchPortfolioAnalytics,
 } from "../portfolioSegmentCache";
@@ -103,7 +105,7 @@ export default function DashboardPage() {
   const applySegmentFromCache = useCallback((seg: CustomerSegment) => {
     const cached = portfolioCacheRef.current.get(seg);
     if (cached && cached.segment === seg) {
-      setPortfolioAnalytics({ ...cached, value_points: [...cached.value_points] });
+      setPortfolioAnalytics(clonePortfolioAnalytics(cached));
       setPortfolioLoading(false);
       syncBookBaselineFromCache();
       return true;
@@ -116,10 +118,13 @@ export default function DashboardPage() {
     if (applySegmentFromCache(segment)) return;
 
     let cancelled = false;
+    setPortfolioAnalytics((prev) =>
+      portfolioAnalyticsMatchesSegment(prev, segment) ? prev : null,
+    );
     setPortfolioLoading(true);
     void (async () => {
       try {
-        const data = await fetchPortfolioAnalytics(segment);
+        const data = clonePortfolioAnalytics(await fetchPortfolioAnalytics(segment));
         if (cancelled) return;
         portfolioCacheRef.current.set(segment, data);
         syncBookBaselineFromCache();
@@ -152,7 +157,7 @@ export default function DashboardPage() {
 
     const cached = portfolioCacheRef.current.get(compareSegment);
     if (cached && cached.segment === compareSegment) {
-      setCompareAnalytics(cached);
+      setCompareAnalytics(clonePortfolioAnalytics(cached));
       setCompareLoading(false);
       return;
     }
@@ -160,8 +165,9 @@ export default function DashboardPage() {
     let cancelled = false;
     setCompareLoading(true);
     void fetchPortfolioAnalytics(compareSegment)
-      .then((data) => {
+      .then((raw) => {
         if (cancelled) return;
+        const data = clonePortfolioAnalytics(raw);
         portfolioCacheRef.current.set(compareSegment, data);
         setCompareAnalytics(data);
       })
@@ -185,18 +191,20 @@ export default function DashboardPage() {
     void (async () => {
       try {
         const cache = await prefetchPortfolioAnalytics(PORTFOLIO_PREFETCH_SEGMENTS);
-        portfolioCacheRef.current = cache;
+        for (const [seg, payload] of cache) {
+          portfolioCacheRef.current.set(seg, payload);
+        }
         syncBookBaselineFromCache();
         const active = segmentRef.current;
-        if (cache.has(active)) {
-          setPortfolioAnalytics(cache.get(active)!);
+        if (segmentRef.current === active && cache.has(active)) {
+          setPortfolioAnalytics(clonePortfolioAnalytics(cache.get(active)!));
           setPortfolioLoading(false);
         }
         const cmp = parseBusinessCompareSegment(
           new URLSearchParams(window.location.search),
         );
         if (cmp && cache.has(cmp)) {
-          setCompareAnalytics(cache.get(cmp)!);
+          setCompareAnalytics(clonePortfolioAnalytics(cache.get(cmp)!));
         }
       } catch {
         /* segment effect falls back to single-segment fetch */
@@ -208,8 +216,9 @@ export default function DashboardPage() {
     if (location.pathname !== BUSINESS_BASE || overviewLoading) return;
     if (portfolioCacheRef.current.has("customers_all")) return;
     let cancelled = false;
-    void fetchPortfolioAnalytics("customers_all").then((data) => {
+    void fetchPortfolioAnalytics("customers_all").then((raw) => {
       if (cancelled) return;
+      const data = clonePortfolioAnalytics(raw);
       portfolioCacheRef.current.set("customers_all", data);
       setBookBaseline(data);
     });
@@ -220,6 +229,9 @@ export default function DashboardPage() {
 
   const setSegment = (next: CustomerSegment) => {
     if (!applySegmentFromCache(next)) {
+      setPortfolioAnalytics((prev) =>
+        portfolioAnalyticsMatchesSegment(prev, next) ? prev : null,
+      );
       setPortfolioLoading(true);
     }
     setSearchParams((prev) => patchBusinessSegment(prev, next), { replace: true });
@@ -305,10 +317,14 @@ export default function DashboardPage() {
           <p className="muted small cohort-compare-loading">{t("business.compare.loading")}</p>
         )}
         <PortfolioAnalyticsSection
-          data={portfolioAnalytics}
+          data={
+            portfolioAnalyticsMatchesSegment(portfolioAnalytics, segment)
+              ? portfolioAnalytics
+              : null
+          }
           bookBaseline={bookBaseline}
-          loading={portfolioLoading && !portfolioAnalytics}
-          refreshing={portfolioLoading && portfolioAnalytics != null}
+          loading={portfolioLoading || !portfolioAnalyticsMatchesSegment(portfolioAnalytics, segment)}
+          refreshing={false}
           cohortLabel={activeDomain?.domain ?? null}
           segment={segment}
           minimal={mobileFocus}

@@ -249,7 +249,9 @@ def portfolio_analytics(
             (seg,),
         ).fetchone()
         if cached and cached[0]:
-            return _portfolio_analytics_response(json.loads(cached[0]), conn=conn)
+            payload = json.loads(cached[0])
+            if normalize_segment(payload.get("segment")) == seg:
+                return _portfolio_analytics_response(payload, conn=conn)
     data = fetch_portfolio_analytics(conn, segment=seg)
     if cache_table:
         _persist_portfolio_analytics_cache(conn, seg, data)

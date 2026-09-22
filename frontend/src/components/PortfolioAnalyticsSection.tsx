@@ -23,6 +23,7 @@ import { useAgentCopilot } from "../agentCopilotContext";
 import PortfolioKpiCard from "./PortfolioKpiCard";
 import { formatShareOfBook } from "../cohortBaseline";
 import { formatNumber } from "../localeFormat";
+import { portfolioChartScopeKey } from "../portfolioSegmentCache";
 
 type Props = {
   data: PortfolioAnalytics | null;
@@ -97,7 +98,8 @@ export default function PortfolioAnalyticsSection({
   const { openRetentionPlaybook } = useAgentCopilot();
   const kpis = data?.kpis;
   const targets = data?.kpi_targets ?? {};
-  const chartLoading = loading && !data;
+  const dataSynced = data != null && data.segment === segment;
+  const chartLoading = loading || !dataSynced;
 
   const goToCustomerList = useCallback(
     (metric: ChartValueMetric) =>
@@ -132,7 +134,7 @@ export default function PortfolioAnalyticsSection({
     return t("business.historyMonths", { first, last, count: pts.length });
   }, [data?.value_points, t]);
 
-  const chartScopeKey = `${segment}:${data?.segment ?? "none"}:${data?.value_points?.length ?? 0}:${data?.value_points?.[0]?.period ?? ""}`;
+  const chartScopeKey = portfolioChartScopeKey(segment, data);
   const showBookCompare = cohortScoped && bookBaseline != null && data != null;
   const baselineHistory = showBookCompare ? bookBaseline.value_points : undefined;
   const baselineChurn = showBookCompare ? bookBaseline.churn_forecast : undefined;
@@ -190,7 +192,7 @@ export default function PortfolioAnalyticsSection({
               ? formatTargetLabel("total_book_value", progress("total_book_value")!)
               : null
           }
-          loading={loading}
+          loading={chartLoading}
         />
         <PortfolioKpiCard
           label={t("business.portfolio.kpi.retentionForecast")}
@@ -205,7 +207,7 @@ export default function PortfolioAnalyticsSection({
                 )
               : null
           }
-          loading={loading}
+          loading={chartLoading}
         />
         <PortfolioKpiCard
           label={t("business.portfolio.kpi.valueAtChurnRisk")}
@@ -223,7 +225,7 @@ export default function PortfolioAnalyticsSection({
               ? formatTargetLabel("value_at_risk_12m", progress("value_at_risk_12m")!)
               : null
           }
-          loading={loading}
+          loading={chartLoading}
         />
         <PortfolioKpiCard
           label={t("business.portfolio.kpi.activeCustomers")}
@@ -234,7 +236,7 @@ export default function PortfolioAnalyticsSection({
               ? formatTargetLabel("active_customers", progress("active_customers")!)
               : null
           }
-          loading={loading}
+          loading={chartLoading}
         />
         <PortfolioKpiCard
           label={t("business.portfolio.kpi.policyRecords")}
@@ -243,7 +245,7 @@ export default function PortfolioAnalyticsSection({
             active: formatNumber(kpis?.active_policies ?? 0),
             avg: (kpis?.avg_policies_per_customer ?? 0).toFixed(1),
           })}
-          loading={loading}
+          loading={chartLoading}
         />
         <PortfolioKpiCard
           label={t("business.portfolio.kpi.avgCustomerValue")}
@@ -254,7 +256,7 @@ export default function PortfolioAnalyticsSection({
               ? formatTargetLabel("avg_customer_value", progress("avg_customer_value")!)
               : null
           }
-          loading={loading}
+          loading={chartLoading}
         />
         <PortfolioKpiCard
           label={t("business.portfolio.kpi.highRiskBookShare")}
@@ -270,7 +272,7 @@ export default function PortfolioAnalyticsSection({
               ? formatTargetLabel("high_risk_book_pct", progress("high_risk_book_pct")!)
               : null
           }
-          loading={loading}
+          loading={chartLoading}
         />
         <PortfolioKpiCard
           label={t("business.portfolio.kpi.bookGrowthHistory")}
@@ -285,7 +287,7 @@ export default function PortfolioAnalyticsSection({
               ? formatTargetLabel("book_growth_pct", progress("book_growth_pct")!)
               : null
           }
-          loading={loading}
+          loading={chartLoading}
         />
       </div>
 
@@ -294,6 +296,7 @@ export default function PortfolioAnalyticsSection({
         className={`portfolio-charts-grid${refreshing ? " portfolio-charts-refreshing" : ""}`}
       >
         <BookValueChart
+          key={`book-${chartScopeKey}`}
           history={data?.value_points ?? []}
           baselineHistory={baselineHistory}
           loading={chartLoading}
@@ -301,6 +304,7 @@ export default function PortfolioAnalyticsSection({
           onPeriodSelect={goToCustomerList("total")}
         />
         <InvestmentReturnsChart
+          key={`returns-${chartScopeKey}`}
           series={data?.investment_returns ?? []}
           baselineSeries={baselineInvestments}
           loading={chartLoading}
@@ -308,6 +312,7 @@ export default function PortfolioAnalyticsSection({
           onPeriodSelect={goToCustomerList("investment")}
         />
         <ChurnHorizonChart
+          key={`churn-${chartScopeKey}`}
           series={data?.churn_forecast ?? []}
           baselineSeries={baselineChurn}
           loading={chartLoading}
@@ -330,14 +335,17 @@ export default function PortfolioAnalyticsSection({
         className={`portfolio-charts-grid portfolio-objectives-grid${refreshing ? " portfolio-charts-refreshing" : ""}`}
       >
         <SavingsAumObjectiveChart
+          key={`aum-${chartScopeKey}`}
           series={data?.savings_aum_trend ?? []}
           loading={chartLoading}
         />
         <PremiumMomentumChart
+          key={`premium-${chartScopeKey}`}
           series={data?.premium_momentum_trend ?? []}
           loading={chartLoading}
         />
         <EngagementObjectiveChart
+          key={`engagement-${chartScopeKey}`}
           series={data?.engagement_trend ?? []}
           loading={chartLoading}
         />
