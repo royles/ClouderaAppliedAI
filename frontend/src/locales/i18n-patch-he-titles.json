@@ -1,0 +1,479 @@
+{
+  "app": {
+    "brand": {
+      "tagline": "Cloudera AI · תצוגות עסק ולקוח"
+    },
+    "a11y": {
+      "applicationAreas": "אזורי יישום",
+      "administrationNav": "ניהול"
+    },
+    "dataFreshness": {
+      "label": "רעננות נתונים",
+      "metricsCache": "מטמון מדדים",
+      "portfolioCache": "מטמון תיק",
+      "churnScores": "ציוני נטישה"
+    }
+  },
+  "nav": {
+    "business": {
+      "title": "העסק"
+    },
+    "customer": {
+      "title": "הלקוח"
+    },
+    "admin": {
+      "title": "נתונים וניהול"
+    }
+  },
+  "errors": {
+    "boundary": {
+      "title": "משהו השתבש",
+      "reload": "טען מחדש את העמוד"
+    }
+  },
+  "cohort": {
+    "fullBook": "ספר מלא",
+    "filteredCohort": "Cohort מסונן",
+    "fullActiveBook": "ספר לקוחות פעיל מלא",
+    "segments": {
+      "customers_all": "כל הלקוחות",
+      "with_policies": "עם פוליסות",
+      "with_foreclosures": "עם עיקולים",
+      "with_investments": "עם השקעות",
+      "with_insurance_status": "עם סטטוס ביטוח",
+      "with_market_products": "עם מוצרי שוק"
+    }
+  },
+  "business": {
+    "cohort": {
+      "filteredBadge": "Cohort מסונן"
+    },
+    "portfolio": {
+      "sectionGrowth": "צמיחת ספר ותחזית נטישה",
+      "objectivesTitle": "מגמות יעדים אסטרטגיים",
+      "kpi": {
+        "totalBookValue": "ערך ספר כולל",
+        "retentionForecast": "שימור 12 ח' (תחזית)",
+        "valueAtChurnRisk": "ערך בסיכון נטישה",
+        "activeCustomers": "לקוחות פעילים",
+        "policyRecords": "רשומות פוליסה",
+        "avgCustomerValue": "ערך לקוח ממוצע",
+        "highRiskBookShare": "נתח ספר בסיכון גבוה",
+        "bookGrowthHistory": "צמיחת ספר (היסטוריה)"
+      }
+    },
+    "vsBookStats": {
+      "totalBookValue": "ערך ספר כולל",
+      "policyRecords": "רשומות פוליסה",
+      "avgCustomerValue": "ערך לקוח ממוצע"
+    }
+  },
+  "mobile": {
+    "focusTitle": {
+      "customerProfile": "פרופיל לקוח"
+    }
+  },
+  "charts": {
+    "bookValue": {
+      "title": "ערך ספר",
+      "coverageSavings": "כיסוי וחיסכון",
+      "totalBook": "ספר כולל",
+      "cohortTotalBook": "ספר Cohort כולל",
+      "fullBookRef": "ספר מלא (התייחסות)"
+    },
+    "churnHorizon": {
+      "title": "אופק נטישה"
+    },
+    "investmentReturns": {
+      "title": "תשואות השקעה"
+    },
+    "premiumMomentum": {
+      "title": "פוליסות פעילות ופרמיה"
+    },
+    "savingsAum": {
+      "title": "חיסכון לטווח ארוך (AUM)"
+    },
+    "engagementObjective": {
+      "title": "מעורבות לקוחות"
+    },
+    "customerValue": {
+      "title": "ערך לקוח",
+      "latestTotal": "סה\"כ אחרון",
+      "vsStart": "מול התחלה",
+      "lapseHigh": "חיזוי Lapse בדרגת HIGH",
+      "legendActual": "ערך כולל בפועל",
+      "legendProjected": "חזוי (כללי tier)",
+      "legendInvestmentAcc": "צבירת השקעות",
+      "legendCoverageSavings": "כיסוי וחיסכון (סטטוס פוליסה)"
+    }
+  },
+  "customer": {
+    "recent": {
+      "title": "נצפו לאחרונה"
+    },
+    "homeLink": "דף הבית של הלקוח",
+    "back": {
+      "engagement": "← חזרה למעורבות",
+      "list": "← חזרה ללקוחות",
+      "business": "← חזרה לעסק"
+    },
+    "link": {
+      "engagementHub": "חזרה למרכז המעורבות",
+      "list": "חזרה לרשימת הלקוחות",
+      "businessPortfolio": "תיק בעמוד העסק"
+    },
+    "churn": {
+      "notScored": "לא נצוק",
+      "likelihoodTitle": "סבירות נטישה {{pct}}"
+    },
+    "profile": {
+      "birthDate": "תאריך לידה",
+      "maritalStatus": "מצב משפחתי",
+      "lastInteraction": "אינטראקציה אחרונה"
+    },
+    "engagementHint": {
+      "prefix": "הוצע ממרכז המעורבות:"
+    },
+    "foreclosures": {
+      "title": "עיקולים ושעבודים"
+    },
+    "interactions": {
+      "title": "ציר זמן אינטראקציות",
+      "eventType": {
+        "agentQuestion": "שאלת סוכן",
+        "webSearch": "חיפוש ברשת"
+      },
+      "signal": {
+        "helpSearch": "חיפוש עזרה",
+        "productSearch": "חיפוש מוצר"
+      }
+    },
+    "investments": {
+      "title": "צילומי השקעה אחרונים",
+      "policyFilter": "מסנן פוליסה:"
+    },
+    "directory": {
+      "titleCompact": "לקוחות תואמים",
+      "sort": {
+        "label": "דירוג לפי",
+        "options": {
+          "name": "שם (א–ת)",
+          "policy_count": "מספר פוליסות",
+          "investment_count": "מסלולי השקעה"
+        },
+        "order": {
+          "valueDesc": "ערך גבוה ראשון ↓",
+          "valueAsc": "ערך נמוך ראשון ↑",
+          "riskDesc": "סיכון גבוה ראשון ↓",
+          "riskAsc": "סיכון נמוך ראשון ↑",
+          "defaultDesc": "הגבוה ראשון ↓",
+          "defaultAsc": "הנמוך ראשון ↑"
+        }
+      },
+      "view": {
+        "grid": "כרטיסים"
+      },
+      "pagination": {
+        "perPage": "לעמוד",
+        "pageOf": "עמוד {{page}} מתוך {{pages}}"
+      }
+    },
+    "table": {
+      "columns": {
+        "lastLogin": "כניסה אחרונה"
+      }
+    },
+    "card": {
+      "value": "ערך לקוח",
+      "lastLogin": "כניסה אחרונה",
+      "churnScored": "ציון נטישה",
+      "a11ySummary": "סיכום לקוח"
+    },
+    "insights": {
+      "title": "תובנות AI והפעולה המומלצת הבאה",
+      "refresh": "רענון תובנות",
+      "focusChurn": "מיקוד נטישה",
+      "focusUpsell": "מיקוד צמיחה / Upsell",
+      "localAdvisor": "יועץ מקומי",
+      "cachedCopy": "עותק במטמון",
+      "recommendedActions": "פעולות מומלצות",
+      "guidanceHeading": "הנחיה מותאמת אישית",
+      "outreachHeading": "פנייה מוצעת",
+      "bestNextTouch": "מגע הבא מומלץ",
+      "focusRetention": "מיקוד שימור",
+      "localOnlyBedrock": "מציגים את היועץ המקומי. הגדר AWS ו-CUSTOMER360_BEDROCK_* או ספק LLM בנתונים וניהול.",
+      "localOnlyPrivateAi": "מציגים את היועץ המקומי. הגדר PrivateAI בנתונים וניהול → הגדרות → ספק LLM.",
+      "localOnlyGeneric": "מציגים את היועץ המקומי. הגדר ספק LLM בנתונים וניהול → הגדרות → ספק LLM.",
+      "envHintPrivateAi": "להפעלת טקסט מ-{{brand}}, השלם את הגדרות ספק ה-LLM בנתונים וניהול."
+    },
+    "outreach": {
+      "title": "טיוטת פנייה",
+      "send": "שליחה (מדומה)",
+      "copy": "העתק גוף ההודעה",
+      "previewEmail": "טיוטת אימייל ({{brand}})",
+      "previewSms": "טיוטת SMS ({{brand}})",
+      "previewCall": "תסריט שיחה ({{brand}})"
+    },
+    "tabs": {
+      "policies": "פוליסות",
+      "foreclosures": "עיקולים",
+      "investments": "השקעות",
+      "interactions": "אינטראקציות"
+    },
+    "policies": {
+      "title": "פוליסות",
+      "columns": {
+        "number": "מספר",
+        "type": "סוג",
+        "status": "סטטוס",
+        "active": "פעיל",
+        "monthlyPremium": "פרמיה חודשית"
+      }
+    },
+    "valueChart": {
+      "legendActualFull": "ערך לקוח כולל (בפועל)"
+    }
+  },
+  "engagement": {
+    "title": "מעורבות ונקודות מגע",
+    "summary": {
+      "touchpoints90": {
+        "label": "נקודות מגע (90 יום)"
+      },
+      "digital90": {
+        "label": "דיגיטל וסוכן"
+      },
+      "reviews90": {
+        "label": "ביקורות (90 יום)"
+      },
+      "openAgent": {
+        "label": "שאלות סוכן פתוחות"
+      }
+    },
+    "list": {
+      "title": "רשימת עדיפות השפעה",
+      "titleMobile": "פנייה מובילה"
+    },
+    "a11y": {
+      "influenceTitle": "סבירות להשפיע"
+    },
+    "action": {
+      "recommendedLabel": "הצעד המומלץ הבא",
+      "viewTouchpoints": "צפה בנקודות מגע"
+    },
+    "actions": {
+      "resolve_agent_question": {
+        "title": "סגירת שאלת סוכן פתוחה"
+      },
+      "retention_call": {
+        "title": "שיחת שימור (ערוץ חם)"
+      },
+      "reengagement_outreach": {
+        "title": "פניית התחברות מחדש"
+      },
+      "invite_review": {
+        "title": "הזמנת משוב אחרי חיפוש דיגיטלי"
+      },
+      "relationship_review": {
+        "title": "קביעת סקירת קשר"
+      }
+    }
+  },
+  "products": {
+    "mobile": {
+      "title": "מוצרים מובילים"
+    },
+    "filter": {
+      "clear": "נקה מסננים"
+    },
+    "legend": {
+      "highest": "הכי גבוה"
+    },
+    "a11y": {
+      "legend": "עוצמת מספר לקוחות"
+    },
+    "filters": {
+      "cohort": "Cohort לקוחות",
+      "allCities": "כל הערים"
+    },
+    "classes": {
+      "life_protection": "חיים והגנה",
+      "health": "בריאות ומשלימים",
+      "property": "רכוש ויסודי",
+      "long_term_savings": "חיסכון לטווח ארוך"
+    }
+  },
+  "admin": {
+    "mobile": {
+      "snapshotTitle": "תמונת מצב מחסן"
+    },
+    "title": "ניהול מחסן ונתונים",
+    "health": {
+      "title": "בריאות המערכת"
+    },
+    "kpi": {
+      "databaseFile": {
+        "label": "קובץ מסד נתונים"
+      },
+      "warehouseLoaded": {
+        "label": "מחסן נטען לאחרונה"
+      },
+      "cataloguedTables": {
+        "label": "טבלאות במאגר"
+      },
+      "qualityFlags": {
+        "label": "דגלי איכות",
+        "sub": "בדיקות שלמות שאינן תקינות"
+      }
+    },
+    "tables": {
+      "title": "סקירת טבלאות",
+      "columns": {
+        "lastLoaded": "נטען לאחרונה",
+        "sourceJob": "Job מקור"
+      }
+    },
+    "schema": {
+      "title": "מפת סכימה",
+      "joinReference": "הפניה ל-Join"
+    },
+    "quality": {
+      "title": "שלמות ואיכות"
+    },
+    "config": {
+      "title": "הגדרות",
+      "a11y": "הגדרות ניהול",
+      "tabs": {
+        "warehouse": "Backend מחסן",
+        "llm": "ספק LLM",
+        "kpiBenchmarks": "יעדי KPI עסקיים",
+        "appearance": "מראה וערכות נושא"
+      }
+    },
+    "llm": {
+      "providerLegend": "ספק פעיל",
+      "bedrockSection": "דריסות מודל Bedrock",
+      "bedrockRegion": "אזור Bedrock",
+      "bedrockModelId": "מזהה מודל",
+      "privateAiSection": "נקודת קצה PrivateAI",
+      "privateAiBaseUrl": "כתובת בסיס",
+      "privateAiModelId": "מזהה מודל",
+      "privateAiToken": "טוקן API",
+      "clearToken": "הסר טוקן API שמור",
+      "samplingSection": "מגבלות Generation (כל הספקים)",
+      "maxTokens": "מקסימום Tokens",
+      "save": "שמור הגדרות LLM",
+      "test": "בדיקת ספק"
+    },
+    "datasource": {
+      "title": "Backend מחסן",
+      "modeLegend": "מצב Backend",
+      "sqlitePath": "נתיב SQLite",
+      "testConnection": "בדיקת חיבור",
+      "backendTypeLegend": "סוג Backend",
+      "sqliteFilePath": "נתיב קובץ SQLite",
+      "jdbcUrl": "כתובת JDBC",
+      "cdwHostOptional": "מארח CDW (אופציונלי אם הוגדר JDBC URL)",
+      "useTlsTrino": "השתמש ב-TLS לבדיקת Trino HTTP",
+      "icebergRestUri": "כתובת Iceberg REST Catalog",
+      "catalogName": "שם Catalog"
+    },
+    "kpiBenchmarks": {
+      "title": "יעדי KPI עסקיים",
+      "save": "שמור יעדים",
+      "previewAuto": "אוטומטי (מהספר)",
+      "enabledColumn": "מופעל"
+    },
+    "schemaDiagram": {
+      "cachesTitle": "מטמון, הגדרות והתייחסות",
+      "legendPk": "מפתח ראשי",
+      "legendFk": "עמודת Join / FK",
+      "noColumns": "אין עמודות (טבלה חסרה ב-DB)"
+    },
+    "appearance": {
+      "modeLegend": "מצב בהיר / כהה",
+      "colorLegend": "פלטת צבעי דגש"
+    },
+    "status": {
+      "ok": "תקין",
+      "warn": "אזהרה",
+      "critical": "קריטי"
+    },
+    "checks": {
+      "customers": {
+        "label": "לקוחות נוכחיים"
+      },
+      "email_coverage": {
+        "label": "אימייל מאוכלס"
+      },
+      "mobile_coverage": {
+        "label": "נייד מאוכלס"
+      },
+      "churn_coverage": {
+        "label": "ציוני נטישה קיימים"
+      },
+      "metrics_cache": {
+        "label": "מטמון מדדי רשימה"
+      },
+      "policy_coverage": {
+        "label": "לקוחות עם לפחות פוליסה אחת"
+      },
+      "scd_uniqueness": {
+        "label": "שורה נוכחית יחידה לכל מזהה לקוח"
+      },
+      "policy_referential": {
+        "label": "פוליסות מצביעות על לקוחות נוכחיים"
+      },
+      "investment_amounts": {
+        "label": "צילומי השקעה עם יתרה"
+      },
+      "churn_high_tier": {
+        "label": "דרגת נטישה גבוהה (מידע)"
+      },
+      "data_source": {
+        "label": "Backend מחסן מוגדר"
+      },
+      "database": {
+        "label": "מחסן SQLite"
+      },
+      "llm": {
+        "label": "ספק LLM",
+        "detail": "הגדר Bedrock עם אישורי AWS או בחר PrivateAI תחת נתונים וניהול → הגדרות → ספק LLM."
+      },
+      "churn_model": {
+        "label": "ציון נטישה"
+      }
+    }
+  },
+  "assistant": {
+    "title": "עוזר מנהלים",
+    "shortTitle": "עוזר",
+    "tabs": {
+      "retention": "תור שימור"
+    },
+    "input": {
+      "label": "שאל את Customer 360"
+    },
+    "a11y": {
+      "toggleClose": "סגור עוזר מנהלים",
+      "toggleOpen": "פתח עוזר מנהלים"
+    },
+    "toggleTitle": {
+      "close": "סגור עוזר",
+      "open": "פתח עוזר"
+    },
+    "retention": {
+      "actions": {
+        "retention_call": {
+          "title": "שיחת שימור בעדיפות"
+        },
+        "proactive_review": {
+          "title": "סקירת פוליסה יזומה"
+        },
+        "loyalty_check_in": {
+          "title": "בדיקת נאמנות"
+        }
+      }
+    }
+  }
+}

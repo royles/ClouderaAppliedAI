@@ -1,0 +1,122 @@
+name: Insurance Customer 360
+description: >
+  Cloudera AI application: unified insurance Customer 360 dashboard with a DDS-aligned
+  SQLite warehouse, churn scoring, synthetic interaction events, and Amazon Bedrock for
+  AI insights and outreach drafts. Import as an Applied ML Prototype (AMP) or deploy from
+  Git; automated jobs install dependencies, build the React UI, seed data, train churn,
+  and start the FastAPI application.
+author: Cloudera Applied AI
+specification_version: "1.0"
+prototype_version: "1.1"
+date: "2026-09-21"
+
+environment_variables:
+  CUSTOMER360_DB_PATH:
+    default: "data/customer360.db"
+    description: >
+      Relative or absolute path to the SQLite warehouse file. Relative paths resolve
+      from the CAI project root (CDSW_PROJECT), including nested repo folders.
+    required: false
+  AWS_ACCESS_KEY_ID:
+    default: ""
+    description: >
+      Optional AWS access key for Amazon Bedrock. Omit when the CAI runtime uses an
+      instance profile or default credential chain with Bedrock access.
+    required: false
+  AWS_SECRET_ACCESS_KEY:
+    default: ""
+    description: Optional AWS secret key for Bedrock (pair with AWS_ACCESS_KEY_ID).
+    required: false
+  AWS_SESSION_TOKEN:
+    default: ""
+    description: Optional session token for temporary AWS credentials.
+    required: false
+  AWS_REGION:
+    default: "us-east-1"
+    description: Default AWS region for the credential chain.
+    required: false
+  CUSTOMER360_BEDROCK_REGION:
+    default: "us-east-1"
+    description: >
+      Region passed to the Bedrock Runtime client (use the region where your model is enabled).
+    required: false
+  CUSTOMER360_BEDROCK_MODEL_ID:
+    default: "anthropic.claude-haiku-4-5-20251001-v1:0"
+    description: Bedrock foundation model ID for insights and communication drafts.
+    required: false
+  CUSTOMER360_BEDROCK_MAX_TOKENS:
+    default: "900"
+    description: Maximum output tokens per Bedrock insight or draft request.
+    required: false
+  CUSTOMER360_BEDROCK_TEMPERATURE:
+    default: "0.35"
+    description: Sampling temperature for Bedrock (when supported by the model).
+    required: false
+
+runtimes:
+  - editor: Workbench
+    kernel: Python 3.11
+    edition: Standard
+
+tasks:
+  # Stage 1 — Python deps (API + ML + Bedrock) and editable package
+  - type: create_job
+    name: Install Dependencies
+    entity_label: install_dependencies
+    script: 1_session-install-dependencies/install.py
+    kernel: python3
+    cpu: 1
+    memory: 2
+
+  - type: run_job
+    entity_label: install_dependencies
+
+  # Stage 2 — React production build (skipped if frontend/dist is committed)
+  - type: create_job
+    name: Build React Frontend
+    entity_label: build_frontend
+    script: scripts/build_frontend.py
+    kernel: python3
+    cpu: 2
+    memory: 4
+
+  - type: run_job
+    entity_label: build_frontend
+
+  # Stage 3 — SQLite warehouse + interaction events
+  - type: create_job
+    name: Initialize Customer 360 Database
+    entity_label: init_database
+    script: 2_job-init-database/init_database.py
+    kernel: python3
+    cpu: 1
+    memory: 2
+
+  - type: run_job
+    entity_label: init_database
+
+  # Stage 4 — Churn model v2 (requires stage 3)
+  - type: create_job
+    name: Train Churn Model
+    entity_label: train_churn
+    script: 3_job-train-churn-model/train_churn.py
+    kernel: python3
+    cpu: 2
+    memory: 4
+
+  - type: run_job
+    entity_label: train_churn
+
+  # Stage 5 — Customer 360 web application (FastAPI + static React)
+  - type: start_application
+    name: Customer 360 Dashboard
+    description: >
+      Interactive Customer 360 UI with churn badges, interaction timeline, Bedrock AI
+      insights, and simulated outreach drafts. Binds to CDSW_APP_PORT / APP_PORT.
+    entity_label: customer_360_dashboard
+    subdomain: customer-360
+    script: 4_application/start-app.py
+    kernel: python3
+    cpu: 2
+    memory: 4
+    static_subdomain: true

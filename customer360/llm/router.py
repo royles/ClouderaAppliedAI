@@ -1,0 +1,63 @@
+"""Route text generation to the configured LLM backend."""
+
+from __future__ import annotations
+
+from collections.abc import Iterator
+
+from customer360.llm.errors import LLMError
+from customer360.llm.openai_compatible import (
+    invoke_openai_compatible_text,
+    stream_openai_compatible_text,
+)
+from customer360.llm_provider import get_active_provider, is_llm_configured as _is_llm_configured
+
+
+def is_llm_configured() -> bool:
+    return _is_llm_configured()
+
+
+def invoke_text(
+    *,
+    system_prompt: str,
+    user_prompt: str,
+    json_mode: bool = False,
+) -> tuple[str, str]:
+    provider = get_active_provider()
+    if provider == "openai_compatible":
+        return invoke_openai_compatible_text(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            json_mode=json_mode,
+        )
+
+    from customer360.bedrock.client import BedrockError, invoke_text as invoke_bedrock_text
+
+    try:
+        return invoke_bedrock_text(system_prompt=system_prompt, user_prompt=user_prompt)
+    except BedrockError as exc:
+        raise LLMError(str(exc), status_code=exc.status_code) from exc
+
+
+def stream_text_chunks(
+    *,
+    system_prompt: str,
+    user_prompt: str,
+    json_mode: bool = False,
+) -> Iterator[str]:
+    provider = get_active_provider()
+    if provider == "openai_compatible":
+        yield from stream_openai_compatible_text(
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            json_mode=json_mode,
+        )
+        return
+
+    from customer360.bedrock.client import BedrockError, stream_text as stream_bedrock_text
+
+    try:
+        yield from stream_bedrock_text(system_prompt=system_prompt, user_prompt=user_prompt)
+    except BedrockError as exc:
+        raise LLMError(str(exc), status_code=exc.status_code) from exc
+
+

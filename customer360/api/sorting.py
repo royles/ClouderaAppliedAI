@@ -1,0 +1,69 @@
+"""Customer list sort options."""
+
+from __future__ import annotations
+
+from typing import Literal
+
+SortBy = Literal["name", "policy_count", "investment_count", "churn_risk", "customer_value"]
+SortOrder = Literal["asc", "desc"]
+
+SORT_SQL: dict[str, str] = {
+    "name": "c.CUSTOMER_NAME",
+    "policy_count": "policy_count",
+    "investment_count": "investment_count",
+    "customer_value": "customer_value",
+}
+
+DEFAULT_SORT_BY = "churn_risk"
+
+
+def normalize_sort_by(value: str | None) -> str:
+    key = (value or DEFAULT_SORT_BY).strip().lower()
+    if key in ("churn", "churn_probability", "churn_risk_tier"):
+        key = "churn_risk"
+    if key in ("value", "total_value", "customer_value"):
+        key = "customer_value"
+    if key == "churn_risk":
+        return key
+    return key if key in SORT_SQL else DEFAULT_SORT_BY
+
+
+def normalize_sort_order(value: str | None, *, sort_by: str) -> str:
+    order = (value or "").strip().lower()
+    if order in ("asc", "desc"):
+        return order
+    if sort_by in ("churn_risk", "customer_value", "policy_count", "investment_count"):
+        return "desc"
+    return "asc"
+
+
+def order_clause(sort_by: str, sort_order: str, *, churn_scores_available: bool = True) -> str:
+    if sort_by == "customer_value":
+        direction = "DESC" if sort_order == "desc" else "ASC"
+        if churn_scores_available:
+            return (
+                f"customer_value {direction}, "
+                "CASE ch.CHURN_RISK_TIER "
+                "WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END ASC, "
+                "ch.CHURN_PROBABILITY DESC, c.CUSTOMER_NAME ASC"
+            )
+        return f"customer_value {direction}, c.CUSTOMER_NAME ASC"
+
+    if sort_by == "churn_risk":
+        value_tiebreak = "customer_value DESC, c.CUSTOMER_NAME ASC"
+        if sort_order == "desc":
+            return (
+                "CASE ch.CHURN_RISK_TIER "
+                "WHEN 'HIGH' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'LOW' THEN 3 ELSE 4 END ASC, "
+                f"ch.CHURN_PROBABILITY DESC, {value_tiebreak}"
+            )
+        return (
+            "CASE ch.CHURN_RISK_TIER "
+            "WHEN 'LOW' THEN 1 WHEN 'MEDIUM' THEN 2 WHEN 'HIGH' THEN 3 ELSE 4 END ASC, "
+            f"ch.CHURN_PROBABILITY ASC, {value_tiebreak}"
+        )
+    column = SORT_SQL[sort_by]
+    direction = "DESC" if sort_order == "desc" else "ASC"
+    if sort_by == "name":
+        return f"{column} {direction}, c.CUSTOMER_ID ASC"
+    return f"{column} {direction}, c.CUSTOMER_NAME ASC"

@@ -1,0 +1,48 @@
+{
+  "app": {
+    "a11y": {
+      "skipToMain": "Skip to main content",
+      "mainContent": "Main content"
+    }
+  },
+  "common": {
+    "a11y": {
+      "selected": "Selected",
+      "notSelected": "Not selected",
+      "filterToggle": "{{label}}. {{description}} {{state}}.",
+      "loading": "Loading"
+    }
+  },
+  "customer": {
+    "churn": {
+      "badgeA11y": "Churn risk {{tier}}, likelihood {{pct}}"
+    },
+    "tabs": {
+      "listLabel": "Customer record sections"
+    },
+    "policies": {
+      "rowA11y": "Policy {{number}}, click to filter investments",
+      "rowSelectedA11y": "Policy {{number}}, selected for investment filter"
+    }
+  },
+  "products": {
+    "a11y": {
+      "productCard": "{{name}}, {{count}} customers, {{policies}} active policies"
+    }
+  },
+  "engagement": {
+    "a11y": {
+      "influenceScore": "Influence score {{score}} out of 100"
+    }
+  },
+  "admin": {
+    "schemaDiagram": {
+      "tableSchemaA11y": "Table {{name}} schema"
+    }
+  },
+  "assistant": {
+    "tabs": {
+      "listA11y": "Assistant panels"
+    }
+  }
+}

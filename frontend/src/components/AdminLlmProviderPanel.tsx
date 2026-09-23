@@ -1,0 +1,345 @@
+import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  fetchLlmProviderConfig,
+  LlmProviderConfig,
+  testLlmProvider,
+  updateLlmProviderConfig,
+} from "../api";
+import i18n from "../i18n";
+
+type ProviderChoice = "bedrock" | "openai_compatible";
+
+type FormState = {
+  provider_type: ProviderChoice;
+  bedrock_region: string;
+  bedrock_model_id: string;
+  bedrock_max_tokens: string;
+  bedrock_temperature: string;
+  openai_base_url: string;
+  openai_model_id: string;
+  openai_api_token: string;
+  clear_openai_api_token: boolean;
+};
+
+function configToForm(cfg: LlmProviderConfig): FormState {
+  return {
+    provider_type: (cfg.provider_type as ProviderChoice) || "bedrock",
+    bedrock_region: cfg.bedrock_region ?? "",
+    bedrock_model_id: cfg.bedrock_model_id ?? "",
+    bedrock_max_tokens:
+      cfg.bedrock_max_tokens != null ? String(cfg.bedrock_max_tokens) : "",
+    bedrock_temperature:
+      cfg.bedrock_temperature != null ? String(cfg.bedrock_temperature) : "",
+    openai_base_url: cfg.openai_base_url ?? "",
+    openai_model_id: cfg.openai_model_id ?? "",
+    openai_api_token: "",
+    clear_openai_api_token: false,
+  };
+}
+
+function buildUpdatePayload(form: FormState): Record<string, unknown> {
+  const payload: Record<string, unknown> = {
+    provider_type: form.provider_type,
+    bedrock_region: form.bedrock_region.trim() || null,
+    bedrock_model_id: form.bedrock_model_id.trim() || null,
+    openai_base_url: form.openai_base_url.trim() || null,
+    openai_model_id: form.openai_model_id.trim() || null,
+  };
+  const maxTok = parseInt(form.bedrock_max_tokens, 10);
+  if (Number.isFinite(maxTok) && maxTok > 0) {
+    payload.bedrock_max_tokens = maxTok;
+  } else if (form.bedrock_max_tokens.trim() === "") {
+    payload.bedrock_max_tokens = null;
+  }
+  const temp = parseFloat(form.bedrock_temperature);
+  if (Number.isFinite(temp)) {
+    payload.bedrock_temperature = temp;
+  } else if (form.bedrock_temperature.trim() === "") {
+    payload.bedrock_temperature = null;
+  }
+  if (form.openai_api_token.trim()) {
+    payload.openai_api_token = form.openai_api_token;
+  }
+  if (form.clear_openai_api_token) {
+    payload.clear_openai_api_token = true;
+  }
+  return payload;
+}
+
+export default function AdminLlmProviderPanel() {
+  const { t } = useTranslation();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [savedNote, setSavedNote] = useState<string | null>(null);
+  const [testMessage, setTestMessage] = useState<string | null>(null);
+  const [meta, setMeta] = useState<LlmProviderConfig | null>(null);
+  const [form, setForm] = useState<FormState | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cfg = await fetchLlmProviderConfig();
+      setMeta(cfg);
+      setForm(configToForm(cfg));
+    } catch (e) {
+      const message =
+        e instanceof Error && e.name === "AbortError"
+          ? i18n.t("admin.llm.loadTimeout")
+          : e instanceof Error
+            ? e.message
+            : i18n.t("admin.llm.loadError");
+      setError(message);
+      setForm(null);
+      setMeta(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!form) return;
+    setSaving(true);
+    setSavedNote(null);
+    setTestMessage(null);
+    try {
+      const updated = await updateLlmProviderConfig(buildUpdatePayload(form));
+      setMeta(updated);
+      setForm(configToForm(updated));
+      setSavedNote(t("admin.llm.saved"));
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("admin.llm.saveError"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const onTest = async () => {
+    if (!form) return;
+    setTesting(true);
+    setTestMessage(null);
+    try {
+      const result = await testLlmProvider(buildUpdatePayload(form));
+      setTestMessage(
+        result.ok
+          ? result.message + (result.detail ? ` — ${result.detail}` : "")
+          : result.message,
+      );
+    } catch (err) {
+      setTestMessage(err instanceof Error ? err.message : t("admin.llm.testFailed"));
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="admin-llm-panel" aria-busy="true">
+        <p className="muted small">{t("admin.llm.loading")}</p>
+        <div className="skeleton skeleton-title" style={{ maxWidth: "28rem" }} />
+        <div className="skeleton skeleton-stat" style={{ maxWidth: "20rem", marginTop: "0.75rem" }} />
+      </div>
+    );
+  }
+
+  if (!form) {
+    return (
+      <div className="admin-llm-panel">
+        <p className="error">{error ?? t("admin.llm.loadError")}</p>
+        <button type="button" className="btn secondary" onClick={() => void load()}>
+          {t("admin.llm.retry")}
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="admin-llm-panel">
+      <header className="admin-llm-intro">
+        <p className="muted small">{t("admin.llm.lede")}</p>
+        {meta?.env_note && <p className="muted small admin-llm-env-note">{meta.env_note}</p>}
+      </header>
+
+      <form className="admin-datasource-form admin-llm-form" onSubmit={(e) => void onSubmit(e)}>
+        <fieldset>
+          <legend>{t("admin.llm.providerLegend")}</legend>
+          <div className="admin-llm-provider-options">
+            <label className="admin-datasource-radio">
+              <input
+                type="radio"
+                name="provider_type"
+                checked={form.provider_type === "bedrock"}
+                onChange={() => setForm({ ...form, provider_type: "bedrock" })}
+              />
+              {t("admin.llm.providers.bedrock")}
+            </label>
+            <label className="admin-datasource-radio">
+              <input
+                type="radio"
+                name="provider_type"
+                checked={form.provider_type === "openai_compatible"}
+                onChange={() => setForm({ ...form, provider_type: "openai_compatible" })}
+              />
+              {t("admin.llm.providers.privateAi")}
+            </label>
+          </div>
+        </fieldset>
+
+        {form.provider_type === "bedrock" && (
+          <section className="admin-llm-section" aria-labelledby="admin-llm-bedrock-heading">
+            <h3 id="admin-llm-bedrock-heading" className="subsection-title">
+              {t("admin.llm.bedrockSection")}
+            </h3>
+            <p className="muted small admin-llm-section-lede">{t("admin.llm.bedrockHint")}</p>
+            <div className="admin-datasource-row">
+              <label className="admin-datasource-field admin-datasource-field-narrow">
+                <span>{t("admin.llm.bedrockRegion")}</span>
+                <input
+                  type="text"
+                  value={form.bedrock_region}
+                  onChange={(e) => setForm({ ...form, bedrock_region: e.target.value })}
+                  placeholder="us-east-1"
+                  autoComplete="off"
+                />
+              </label>
+              <label className="admin-datasource-field">
+                <span>{t("admin.llm.bedrockModelId")}</span>
+                <input
+                  type="text"
+                  className="admin-llm-input-mono"
+                  value={form.bedrock_model_id}
+                  onChange={(e) => setForm({ ...form, bedrock_model_id: e.target.value })}
+                  placeholder="anthropic.claude-haiku-4-5-20251001-v1:0"
+                  autoComplete="off"
+                />
+              </label>
+            </div>
+          </section>
+        )}
+
+        {form.provider_type === "openai_compatible" && (
+          <section className="admin-llm-section" aria-labelledby="admin-llm-privateai-heading">
+            <h3 id="admin-llm-privateai-heading" className="subsection-title">
+              {t("admin.llm.privateAiSection")}
+            </h3>
+            <label className="admin-datasource-field admin-llm-field-wide">
+              <span>{t("admin.llm.privateAiBaseUrl")}</span>
+              <input
+                type="url"
+                className="admin-llm-input-mono"
+                value={form.openai_base_url}
+                onChange={(e) => setForm({ ...form, openai_base_url: e.target.value })}
+                placeholder="https://your-gateway.example.com/v1"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <label className="admin-datasource-field admin-llm-field-wide">
+              <span>{t("admin.llm.privateAiModelId")}</span>
+              <input
+                type="text"
+                className="admin-llm-input-mono"
+                value={form.openai_model_id}
+                onChange={(e) => setForm({ ...form, openai_model_id: e.target.value })}
+                placeholder="gpt-4o-mini"
+                autoComplete="off"
+                spellCheck={false}
+              />
+            </label>
+            <label className="admin-datasource-field admin-llm-field-wide">
+              <span>{t("admin.llm.privateAiToken")}</span>
+              <input
+                type="password"
+                className="admin-llm-input-mono"
+                value={form.openai_api_token}
+                onChange={(e) => setForm({ ...form, openai_api_token: e.target.value })}
+                placeholder={t("admin.llm.tokenPlaceholderEmpty")}
+                autoComplete="new-password"
+              />
+              {meta.openai_api_token_set && (
+                <span className="muted small admin-llm-field-hint">{t("admin.llm.tokenHintSet")}</span>
+              )}
+            </label>
+            {meta.openai_api_token_set && (
+              <label className="admin-datasource-checkbox">
+                <input
+                  type="checkbox"
+                  checked={form.clear_openai_api_token}
+                  onChange={(e) =>
+                    setForm({ ...form, clear_openai_api_token: e.target.checked })
+                  }
+                />
+                {t("admin.llm.clearToken")}
+              </label>
+            )}
+          </section>
+        )}
+
+        <section className="admin-llm-section" aria-labelledby="admin-llm-sampling-heading">
+          <h3 id="admin-llm-sampling-heading" className="subsection-title">
+            {t("admin.llm.samplingSection")}
+          </h3>
+          <div className="admin-llm-sampling-row">
+            <label className="admin-datasource-field admin-datasource-field-narrow">
+              <span>{t("admin.llm.maxTokens")}</span>
+              <input
+                type="number"
+                min={64}
+                max={8192}
+                value={form.bedrock_max_tokens}
+                onChange={(e) => setForm({ ...form, bedrock_max_tokens: e.target.value })}
+                placeholder="900"
+              />
+            </label>
+            <label className="admin-datasource-field admin-datasource-field-narrow">
+              <span>{t("admin.llm.temperature")}</span>
+              <input
+                type="number"
+                step="0.05"
+                min={0}
+                max={2}
+                value={form.bedrock_temperature}
+                onChange={(e) => setForm({ ...form, bedrock_temperature: e.target.value })}
+                placeholder="0.35"
+              />
+            </label>
+          </div>
+        </section>
+
+        {error && <p className="error">{error}</p>}
+        {savedNote && <p className="admin-datasource-success">{savedNote}</p>}
+        {testMessage && <p className="admin-datasource-test">{testMessage}</p>}
+
+        <div className="admin-datasource-actions">
+          <button type="submit" className="btn primary" disabled={saving}>
+            {saving ? t("admin.llm.saving") : t("admin.llm.save")}
+          </button>
+          <button
+            type="button"
+            className="btn secondary"
+            disabled={testing}
+            onClick={() => void onTest()}
+          >
+            {testing ? t("admin.llm.testing") : t("admin.llm.test")}
+          </button>
+        </div>
+        {meta.updated_at && (
+          <p className="muted small admin-llm-updated">
+            {t("admin.datasource.lastUpdated", {
+              date: new Date(meta.updated_at).toLocaleString(),
+            })}
+          </p>
+        )}
+      </form>
+    </div>
+  );
+}

@@ -1,0 +1,48 @@
+{
+  "app": {
+    "a11y": {
+      "skipToMain": "דלג לתוכן הראשי",
+      "mainContent": "תוכן ראשי"
+    }
+  },
+  "common": {
+    "a11y": {
+      "selected": "נבחר",
+      "notSelected": "לא נבחר",
+      "filterToggle": "{{label}}. {{description}} {{state}}.",
+      "loading": "טוען"
+    }
+  },
+  "customer": {
+    "churn": {
+      "badgeA11y": "סיכון נטישה {{tier}}, סבירות {{pct}}"
+    },
+    "tabs": {
+      "listLabel": "מקטעי רשומת לקוח"
+    },
+    "policies": {
+      "rowA11y": "פוליסה {{number}}, לחץ לסינון השקעות",
+      "rowSelectedA11y": "פוליסה {{number}}, נבחרה לסינון השקעות"
+    }
+  },
+  "products": {
+    "a11y": {
+      "productCard": "{{name}}, {{count}} לקוחות, {{policies}} פוליסות פעילות"
+    }
+  },
+  "engagement": {
+    "a11y": {
+      "influenceScore": "ציון השפעה {{score}} מתוך 100"
+    }
+  },
+  "admin": {
+    "schemaDiagram": {
+      "tableSchemaA11y": "סכימת טבלה {{name}}"
+    }
+  },
+  "assistant": {
+    "tabs": {
+      "listA11y": "לוחות עוזר"
+    }
+  }
+}
