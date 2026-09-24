@@ -22,6 +22,7 @@ The application task (`4_application/start-app.py`) launches **Uvicorn in a subp
 | `BANKING_CONTROL_SCHEMA_PATH` | — | Full path to DDL file (overrides data dir discovery) |
 | `BANKING_CONTROL_FRONTEND_DIR` | — | Path to built UI (`frontend/dist` with `index.html`) |
 | `CDSW_APP_PORT` / `APP_PORT` | `8080` | Application listen port |
+| `BANKING_CONTROL_LOG_ALL_ACCESS` | — | Set to `1` to log every `GET /` access line (default: first root hit only) |
 
 Schema and database paths are discovered by walking up from `CDSW_PROJECT` and the installed package until `data/schema.sql` is found, so a project root of `/home/cdsw/banking-controls` still uses `/home/cdsw/data/schema.sql` when that is where the file lives.
 

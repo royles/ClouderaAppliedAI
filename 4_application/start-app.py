@@ -35,6 +35,8 @@ port = application_port()
 
 print(f"Starting Banking Control Solution on {host}:{port}", flush=True)
 
+log_config = ROOT / "banking_control" / "uvicorn_log.json"
+
 subprocess.check_call(
     [
         sys.executable,
@@ -47,6 +49,8 @@ subprocess.check_call(
         str(port),
         "--workers",
         "1",
+        "--log-config",
+        str(log_config),
     ],
     cwd=str(ROOT),
 )
