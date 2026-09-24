@@ -25,6 +25,11 @@ from banking_control.assistant.response_format import (
     postprocess_user_visible,
 )
 from banking_control.assistant.thinking_suppress import suppress_thinking_markup
+from banking_control.assistant.workflow_tasks import (
+    collect_workflow_tasks,
+    dedupe_tasks,
+    strip_workflow_boilerplate_from_answer,
+)
 from banking_control.assistant.router import answer_question_rules, suggest_actions
 from banking_control.tools.engine import ControlToolEngine
 
@@ -234,7 +239,26 @@ def stream_assistant_events(
     provider = cfg.provider_type
 
     if not is_llm_configured(conn):
-        yield sse_event("done", _rules_fallback(conn, engine, trimmed))
+        rules_payload = _rules_fallback(conn, engine, trimmed)
+        from banking_control.assistant.grounding import fetch_control_grounding
+        import re as _re
+
+        guide = None
+        if m := _re.search(r"\b([A-Z]{2,10}-\d{3})\b", trimmed.upper()):
+            guide = fetch_control_grounding(conn, m.group(1))
+        wf_tasks = dedupe_tasks(
+            collect_workflow_tasks(
+                conn,
+                answer_text=rules_payload.get("answer", ""),
+                guide=guide if guide and guide.get("found") else None,
+            )
+        )
+        if wf_tasks:
+            rules_payload["answer"] = strip_workflow_boilerplate_from_answer(
+                rules_payload.get("answer", ""), wf_tasks
+            )
+            rules_payload["workflow_tasks"] = wf_tasks
+        yield sse_event("done", rules_payload)
         return
 
     yield sse_event("meta", {"provider": provider, "status": "Running tools…"})
@@ -301,6 +325,7 @@ def stream_assistant_events(
                 str(b.get("text", "")) for b in last_content if b.get("type") == "text"
             ).strip()
             if prefilled:
+                prefilled = postprocess_user_visible(prefilled)
                 for i in range(0, len(prefilled), 32):
                     piece = prefilled[i : i + 32]
                     buffer.append(piece)
@@ -311,8 +336,10 @@ def stream_assistant_events(
                     messages=bedrock_messages,
                     admin=cfg,
                 ):
-                    buffer.append(piece)
-                    yield sse_event("delta", {"text": piece})
+                    clean = suppress_thinking_markup(piece)
+                    if clean:
+                        buffer.append(clean)
+                        yield sse_event("delta", {"text": clean})
 
         structured_final = answer_from_tool_messages(tool_result_messages, tools_called)
         final_answer = structured_final or "".join(buffer)
@@ -322,17 +349,26 @@ def stream_assistant_events(
             visible_answer = structured_final
         else:
             visible_answer = postprocess_user_visible(final_answer)
-        actions = suggest_actions(conn, trimmed, tools_called=tools_called)
-        yield sse_event(
-            "done",
-            {
-                "answer": visible_answer.strip() or "No response generated.",
-                "source": provider,
-                "provider": provider,
-                "model_id": cfg.bedrock_model_id or cfg.openai_model_id,
-                "tools_called": tools_called,
-                "actions": actions,
-            },
+        workflow_tasks = dedupe_tasks(
+            collect_workflow_tasks(
+                conn,
+                messages=tool_result_messages,
+                answer_text=visible_answer,
+            )
         )
+        if workflow_tasks:
+            visible_answer = strip_workflow_boilerplate_from_answer(visible_answer, workflow_tasks)
+        actions = suggest_actions(conn, trimmed, tools_called=tools_called)
+        done_body: dict[str, Any] = {
+            "answer": visible_answer.strip() or "No response generated.",
+            "source": provider,
+            "provider": provider,
+            "model_id": cfg.bedrock_model_id or cfg.openai_model_id,
+            "tools_called": tools_called,
+            "actions": actions,
+        }
+        if workflow_tasks:
+            done_body["workflow_tasks"] = workflow_tasks
+        yield sse_event("done", done_body)
     except LLMError as exc:
         yield sse_event("error", {"detail": str(exc)})

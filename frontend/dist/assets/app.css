@@ -977,6 +977,81 @@ body.copilot-open .copilot-toggle {
   word-break: break-word;
 }
 
+.assistant-workflow-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin: 0.65rem 0 0.35rem;
+}
+
+.assistant-workflow-task {
+  border: 1px solid rgba(61, 214, 195, 0.35);
+  border-radius: 8px;
+  padding: 0.55rem 0.65rem;
+  background: rgba(12, 17, 24, 0.55);
+}
+
+.assistant-workflow-task.is-pending {
+  border-style: dashed;
+  border-color: rgba(139, 156, 179, 0.45);
+}
+
+.assistant-workflow-task-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.assistant-workflow-type {
+  font-size: 0.78rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.assistant-workflow-artifact {
+  font-size: 0.88rem;
+  margin-bottom: 0.35rem;
+}
+
+.assistant-workflow-meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.15rem 0.55rem;
+  margin: 0 0 0.45rem;
+  font-size: 0.76rem;
+}
+
+.assistant-workflow-meta dt {
+  margin: 0;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.assistant-workflow-meta dd {
+  margin: 0;
+}
+
+.assistant-workflow-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.assistant-workflow-link {
+  font-size: 0.76rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 4px;
+  border: 1px solid rgba(139, 156, 179, 0.35);
+  background: transparent;
+  color: var(--accent, #3dd6c3);
+  cursor: pointer;
+}
+
+.assistant-workflow-link-primary {
+  border-color: rgba(61, 214, 195, 0.55);
+  font-weight: 600;
+}
+
 .assistant-thinking {
   margin: 0.35rem 0 0.5rem;
   font-size: 0.72rem;

@@ -216,7 +216,21 @@ def answer_question_rules(
                                 proposed_artifact_ref=item.get("proposed_artifact_ref"),
                             ),
                         )
-                return {"answer": answer_body, "actions": actions[:4], "source": "rules"}
+                from banking_control.assistant.workflow_tasks import (
+                    collect_workflow_tasks,
+                    dedupe_tasks,
+                    strip_workflow_boilerplate_from_answer,
+                )
+
+                wf_tasks = dedupe_tasks(
+                    collect_workflow_tasks(conn, answer_text=answer_body, guide=guide)
+                )
+                if wf_tasks:
+                    answer_body = strip_workflow_boilerplate_from_answer(answer_body, wf_tasks)
+                payload = {"answer": answer_body, "actions": actions[:4], "source": "rules"}
+                if wf_tasks:
+                    payload["workflow_tasks"] = wf_tasks
+                return payload
 
         cid = _control_id_by_code(conn, code)
         if cid:

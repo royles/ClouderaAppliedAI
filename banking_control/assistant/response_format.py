@@ -62,18 +62,12 @@ def format_testing_guide_payload(guide: dict[str, Any]) -> str:
         lines.extend(["", f"Warehouse assessment evidence ref (if relevant): `{wh}`"])
     wf = guide.get("workflow_suggestions") or []
     if wf:
-        lines.extend(["", "### Workflows (create evidence)"])
-        for item in wf:
-            if item.get("action") == "create" and item.get("proposed_artifact_ref"):
-                lines.append(
-                    f"- {item.get('label', 'Workflow')}: use **Start workflow** to create "
-                    f"`{item['proposed_artifact_ref']}`"
-                )
-            elif item.get("artifact_ref"):
-                lines.append(
-                    f"- {item.get('label', 'Workflow')}: `{item['artifact_ref']}` "
-                    f"({item.get('status', 'Draft')})"
-                )
+        lines.extend(
+            [
+                "",
+                "_Workflow and artifact details appear in the task panel below when applicable._",
+            ]
+        )
     lines.extend(
         [
             "",

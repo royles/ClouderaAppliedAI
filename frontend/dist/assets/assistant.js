@@ -121,6 +121,92 @@
       }
     });
 
+    function workflowStatusClass(status) {
+      const s = String(status || "").toLowerCase();
+      if (s === "complete") return "pill-ok";
+      if (s === "cancelled") return "pill-muted";
+      if (s === "in progress") return "pill-warn";
+      return "pill-warn";
+    }
+
+    function renderWorkflowTasks(container, tasks) {
+      if (!container || !tasks?.length) return;
+      container.querySelector(".assistant-workflow-tasks")?.remove();
+      const row = document.createElement("div");
+      row.className = "assistant-workflow-tasks";
+      row.setAttribute("role", "list");
+      tasks.forEach((task) => {
+        const card = document.createElement("article");
+        card.className = `assistant-workflow-task ${task.exists ? "is-active" : "is-pending"}`;
+        card.setAttribute("role", "listitem");
+
+        const head = document.createElement("div");
+        head.className = "assistant-workflow-task-head";
+        const status = task.status || (task.exists ? "Active" : "Not started");
+        head.innerHTML = `<span class="pill ${workflowStatusClass(task.status)} assistant-workflow-status">${status}</span>
+          <span class="assistant-workflow-type">${task.workflow_label || task.workflow_type || "Workflow"}</span>`;
+        card.appendChild(head);
+
+        const title = document.createElement("div");
+        title.className = "assistant-workflow-artifact";
+        title.innerHTML = `<code>${task.artifact_ref || task.proposed_artifact_ref || "—"}</code>`;
+        card.appendChild(title);
+
+        const meta = document.createElement("dl");
+        meta.className = "assistant-workflow-meta";
+        if (task.control_code) {
+          meta.innerHTML += `<dt>Control</dt><dd><code>${task.control_code}</code>${task.control_name ? ` — ${task.control_name}` : ""}</dd>`;
+        }
+        if (task.updated_at || task.created_at) {
+          meta.innerHTML += `<dt>Updated</dt><dd>${task.updated_at || task.created_at}</dd>`;
+        }
+        card.appendChild(meta);
+
+        const links = document.createElement("div");
+        links.className = "assistant-workflow-links";
+        (task.links || []).forEach((link) => {
+          if (link.kind === "control_detail" && link.control_id) {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "assistant-workflow-link";
+            btn.textContent = link.label || "Open control";
+            btn.addEventListener("click", () => {
+              if (typeof window.navigateToDetail === "function") {
+                window.navigateToDetail("controls", String(link.control_id));
+              }
+            });
+            links.appendChild(btn);
+          }
+        });
+        if (!task.exists && task.control_code && task.workflow_type) {
+          const start = document.createElement("button");
+          start.type = "button";
+          start.className = "assistant-workflow-link assistant-workflow-link-primary";
+          start.textContent = "Start workflow";
+          start.addEventListener("click", () =>
+            void executeAssistantAction({
+              action_type: "start_workflow",
+              payload: {
+                control_code: task.control_code,
+                control_id: task.control_id,
+                workflow_type: task.workflow_type,
+                proposed_artifact_ref: task.proposed_artifact_ref || task.artifact_ref,
+              },
+            })
+          );
+          links.appendChild(start);
+        }
+        card.appendChild(links);
+        row.appendChild(card);
+      });
+      const anchor = container.querySelector(".assistant-actions") || container.querySelector(".assistant-msg-text");
+      if (anchor?.nextSibling) {
+        container.insertBefore(row, anchor.nextSibling);
+      } else {
+        container.appendChild(row);
+      }
+    }
+
     function renderActionChips(container, actions) {
       if (!container || !actions?.length) return;
       const row = document.createElement("div");
@@ -389,6 +475,7 @@
             } else if (textNode) {
               textNode.textContent = done.answer || "";
             }
+            renderWorkflowTasks(assistantNode, done.workflow_tasks);
             renderActionChips(assistantNode, done.actions);
             if (metaNode) {
               metaNode.textContent = [
