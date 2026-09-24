@@ -92,6 +92,8 @@ def list_controls(
             params,
         ).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
 
 
 @app.get("/api/exceptions")
