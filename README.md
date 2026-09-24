@@ -49,6 +49,10 @@ See [docs/CAI_APPLICATION.md](docs/CAI_APPLICATION.md) for deployment notes.
 
 Each control can be invoked as a tool with JSON Schema I/O and a pluggable simulator. See [docs/PLUGINS.md](docs/PLUGINS.md).
 
+### Control assistant (streaming chat)
+
+Foldable **Assistant** panel in the UI with SSE streaming, **Amazon Bedrock** or **local OpenAI-compatible** LLM, admin settings (`/api/admin/llm`), and tool calling over overview, controls, simulations, and audit events (`/api/assistant/chat/stream`).
+
 ### Data domains
 
 | Table | Purpose |
