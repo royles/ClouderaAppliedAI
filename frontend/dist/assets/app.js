@@ -412,6 +412,7 @@ async function loadAlertsFromUi() {
 window.loadExceptions = loadExceptions;
 window.loadOverview = loadOverview;
 window.loadAudit = loadAudit;
+window.loadControls = loadControlsFromUi;
 
 async function loadExceptions() {
   setTableLoading("exceptions-body");
@@ -532,7 +533,8 @@ async function boot() {
       resetControlCatalogFilters();
       activeMetricFilter = null;
       if (opts.domain) document.getElementById("domain-filter").value = opts.domain;
-      if (opts.golden_only) document.getElementById("golden-filter").checked = true;
+      if (opts.golden_only === true) document.getElementById("golden-filter").checked = true;
+      else if (opts.golden_only === false) document.getElementById("golden-filter").checked = false;
       if (opts.search) document.getElementById("control-search").value = opts.search;
       if (opts.risk_tier) controlCatalogFilters.riskTier = opts.risk_tier;
       if (opts.needs_attention) controlCatalogFilters.needsAttention = true;

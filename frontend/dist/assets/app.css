@@ -1074,6 +1074,20 @@ tr.data-row:focus-visible,
   display: block;
 }
 
+.detail-flash {
+  margin: 0 0 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.detail-flash-success {
+  background: rgba(30, 107, 97, 0.25);
+  border: 1px solid rgba(61, 214, 195, 0.45);
+  color: var(--text);
+}
+
 .detail-head h2 {
   margin: 0;
   font-size: 1.35rem;

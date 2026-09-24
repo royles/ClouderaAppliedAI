@@ -128,6 +128,7 @@ def create_control(
         description=body.description,
         similarity_key=similarity_key,
     )
+    conn.commit()
 
     row = conn.execute(
         "SELECT * FROM DIM_CONTROL WHERE control_id = ?", (control_id,)
@@ -151,7 +152,8 @@ def create_control(
                 tester="Control create simulation",
                 notes=summary,
             )
-        except ToolValidationError as exc:
+            conn.commit()
+        except (ToolValidationError, Exception) as exc:
             simulation_error = str(exc)
 
     conn.execute(
@@ -167,9 +169,14 @@ def create_control(
     conn.commit()
     refresh_overview_cache(conn)
 
+    detail = fetch_control_detail(conn, control_id)
+
     return {
         "control_id": control_id,
         "control_code": control_code,
+        "control": detail["control"],
+        "latest_status": detail["latest_status"],
+        "assessments": detail["assessments"],
         "catalog_review": catalog_review,
         "simulation": simulation,
         "simulation_error": simulation_error,
@@ -245,11 +252,7 @@ def list_controls(
     return [dict(r) for r in rows]
 
 
-@router.get("/controls/{control_id}")
-def get_control(
-    control_id: int,
-    conn: Any = Depends(get_db_connection),
-) -> dict[str, Any]:
+def fetch_control_detail(conn: Any, control_id: int) -> dict[str, Any]:
     row = conn.execute(
         "SELECT * FROM DIM_CONTROL WHERE control_id = ?",
         (control_id,),
@@ -352,3 +355,11 @@ def get_control(
         "process_graph": process_graph,
         "process_flows": list_flows_for_control(control_code),
     }
+
+
+@router.get("/controls/{control_id}")
+def get_control(
+    control_id: int,
+    conn: Any = Depends(get_db_connection),
+) -> dict[str, Any]:
+    return fetch_control_detail(conn, control_id)

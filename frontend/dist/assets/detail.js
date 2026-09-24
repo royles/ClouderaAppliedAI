@@ -89,11 +89,20 @@
       data = null;
     }
     if (!res.ok) {
-      const msg =
-        (data && (data.detail?.validation_errors?.join?.("; ") || data.detail?.message || data.detail)) ||
-        text ||
-        res.statusText;
-      throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+      let msg = text || res.statusText;
+      if (data?.detail) {
+        const d = data.detail;
+        if (Array.isArray(d?.validation_errors)) {
+          msg = d.validation_errors.join("; ");
+        } else if (typeof d === "string") {
+          msg = d;
+        } else if (d?.message) {
+          msg = d.message;
+        } else {
+          msg = JSON.stringify(d);
+        }
+      }
+      throw new Error(msg);
     }
     return data;
   }
@@ -261,10 +270,66 @@
     }
   }
 
+  function stashControlCreateFlash(result) {
+    const sim = result.simulation?.outputs;
+    sessionStorage.setItem(
+      "controlCreateFlash",
+      JSON.stringify({
+        control_id: result.control_id,
+        control_code: result.control_code,
+        latest_status: result.latest_status,
+        simulation_status: sim?.status || null,
+        simulation_error: result.simulation_error || null,
+      })
+    );
+  }
+
+  function consumeControlCreateFlash(controlId) {
+    const raw = sessionStorage.getItem("controlCreateFlash");
+    if (!raw) return "";
+    sessionStorage.removeItem("controlCreateFlash");
+    let flash;
+    try {
+      flash = JSON.parse(raw);
+    } catch {
+      return "";
+    }
+    if (String(flash.control_id) !== String(controlId)) return "";
+    const simLine = flash.simulation_status
+      ? ` Initial simulation: ${flash.simulation_status}.`
+      : flash.simulation_error
+        ? ` Simulation note: ${flash.simulation_error}.`
+        : "";
+    return `<div class="detail-flash detail-flash-success" role="status">
+      Control saved as <code>${escapeHtml(flash.control_code)}</code> (id ${flash.control_id}).${escapeHtml(simLine)}
+      It is now in the catalog — use Back to dashboard to see it in the filtered control list.
+    </div>`;
+  }
+
+  async function syncDashboardForNewControl(result, domain) {
+    const code = result.control_code;
+    const dash = window.dashboardAssistant;
+    if (dash?.filterControls) {
+      await dash.filterControls({ domain, search: code, golden_only: false });
+      if (typeof window.loadOverview === "function") await window.loadOverview(true);
+      return;
+    }
+    const domainFilter = document.getElementById("domain-filter");
+    if (domainFilter && domain) domainFilter.value = domain;
+    const goldenFilter = document.getElementById("golden-filter");
+    if (goldenFilter) goldenFilter.checked = false;
+    const search = document.getElementById("control-search");
+    if (search) search.value = code;
+    if (typeof window.loadControls === "function") await window.loadControls();
+    if (typeof window.loadOverview === "function") await window.loadOverview(true);
+  }
+
   async function submitControlCreate(form) {
     const status = document.getElementById("control-create-status");
     const fd = new FormData(form);
     const payload = Object.fromEntries(fd.entries());
+    if (!String(payload.control_code || "").trim()) delete payload.control_code;
+    if (!String(payload.similarity_key || "").trim()) delete payload.similarity_key;
     if (status) status.textContent = "Validating, comparing to catalog, and running simulation…";
     form.querySelector('[type="submit"]')?.setAttribute("disabled", "true");
     try {
@@ -273,33 +338,11 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, run_simulation: true }),
       });
-      const resultSection = document.getElementById("control-create-result");
-      const resultBody = document.getElementById("control-create-result-body");
-      resultSection?.classList.remove("hidden");
-      const sim = result.simulation?.outputs;
-      const warnings = result.catalog_review?.warnings || [];
-      resultBody.innerHTML = `
-        <p class="detail-lead"><code>${escapeHtml(result.control_code)}</code> created (id ${result.control_id}).</p>
-        ${warnings.length ? `<ul class="control-create-warnings">${warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("")}</ul>` : ""}
-        ${
-          sim
-            ? `<dl class="detail-dl">
-            ${dlRow("Simulation status", statusPill(sim.status))}
-            ${dlRow("Summary", escapeHtml(sim.summary || "—"))}
-            ${dlRow("Exception rate", sim.metrics?.exception_rate_pct != null ? `${sim.metrics.exception_rate_pct}%` : "—")}
-          </dl>`
-            : `<p class="empty">${escapeHtml(result.simulation_error || "Simulation did not run.")}</p>`
-        }
-        <button type="button" class="btn btn-primary" id="control-create-open" data-id="${result.control_id}">Open control detail</button>`;
-      document.getElementById("control-create-open")?.addEventListener("click", (ev) => {
-        navigateToDetail("controls", ev.currentTarget.dataset.id);
-      });
-      if (status) status.textContent = "Control created successfully.";
-      if (typeof window.loadControls === "function") window.loadControls();
-      if (typeof window.loadOverview === "function") window.loadOverview(true);
+      stashControlCreateFlash(result);
+      await syncDashboardForNewControl(result, payload.domain);
+      navigateToDetail("controls", String(result.control_id));
     } catch (err) {
       if (status) status.textContent = err instanceof Error ? err.message : "Create failed";
-    } finally {
       form.querySelector('[type="submit"]')?.removeAttribute("disabled");
     }
   }
@@ -644,7 +687,10 @@
   function renderControlDetail(data) {
     const c = data.control;
     document.title = `${c.control_code} · Banking Control Solution`;
+    const createFlash = consumeControlCreateFlash(c.control_id);
     const meta = [
+      dlRow("Control code", `<code>${escapeHtml(c.control_code)}</code>`),
+      dlRow("Control ID", String(c.control_id)),
       dlRow("Domain", c.domain),
       dlRow("Risk tier", statusPill(c.risk_tier)),
       dlRow("Latest test status", statusPill(data.latest_status || "Not Tested")),
@@ -683,7 +729,8 @@
       : `<p class="empty">No exceptions linked to this control.</p>`;
 
     return `
-      <p class="detail-lead"><code>${c.control_code}</code> — ${c.control_name}</p>
+      ${createFlash}
+      <p class="detail-lead"><code>${escapeHtml(c.control_code)}</code> — ${escapeHtml(c.control_name)}</p>
       <section class="detail-section">
         <h3>Overview</h3>
         <dl class="detail-dl">${meta}</dl>
