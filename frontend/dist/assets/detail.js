@@ -137,15 +137,75 @@
     </section>`;
   }
 
+  let dagResizeObserver = null;
+
+  function measureDagWrapWidth(wrap) {
+    if (!wrap) return 640;
+    const w = wrap.clientWidth;
+    return Math.max(280, w > 0 ? w : 640);
+  }
+
+  function estimateEdgeLabelWidth(label) {
+    const text = String(label || "");
+    return Math.min(text.length, 32) * 6.4 + 14;
+  }
+
+  function ensureDagResizeObserver() {
+    if (dagResizeObserver || typeof ResizeObserver === "undefined") return;
+    dagResizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const graph = entry.target._processGraph;
+        if (graph) paintControlFlowGraph(graph);
+      }
+    });
+  }
+
+  function appendEdgeLabel(labelLayer, x, y, text) {
+    const labelText = String(text || "");
+    if (!labelText) return;
+    const w = estimateEdgeLabelWidth(labelText);
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("class", "control-dag-edge-label-group");
+    const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    bg.setAttribute("class", "control-dag-edge-label-bg");
+    bg.setAttribute("x", String(x - w / 2));
+    bg.setAttribute("y", String(y - 12));
+    bg.setAttribute("width", String(w));
+    bg.setAttribute("height", "16");
+    bg.setAttribute("rx", "4");
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", String(x));
+    label.setAttribute("y", String(y));
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("dominant-baseline", "middle");
+    label.setAttribute("class", "control-dag-edge-label");
+    label.textContent = labelText;
+    group.appendChild(bg);
+    group.appendChild(label);
+    labelLayer.appendChild(group);
+  }
+
   function paintControlFlowGraph(graph) {
     const svg = document.getElementById("control-flow-graph");
     if (!svg || !graph?.nodes?.length) return;
 
-    const NODE_W = 112;
-    const NODE_H = 48;
-    const LAYER_GAP = 40;
-    const ROW_GAP = 14;
-    const PAD = 14;
+    const wrap = svg.closest(".control-dag-wrap");
+    if (wrap) {
+      wrap._processGraph = graph;
+      ensureDagResizeObserver();
+      dagResizeObserver?.observe(wrap);
+    }
+
+    const NODE_H = 54;
+    const ROW_GAP = 16;
+    const PAD_X = 12;
+    const PAD_Y = 22;
+    const MIN_NODE_W = 84;
+    const MIN_LAYER_GAP = 52;
+    const LABEL_CLEARANCE = 10;
+
+    const layerOf = new Map();
+    graph.nodes.forEach((n) => layerOf.set(n.control_code, n.layer ?? 0));
 
     const byLayer = new Map();
     graph.nodes.forEach((n) => {
@@ -156,28 +216,73 @@
     byLayer.forEach((list) => list.sort((a, b) => a.control_code.localeCompare(b.control_code)));
 
     const maxLayer = Math.max(...graph.nodes.map((n) => n.layer ?? 0));
+    const numCols = maxLayer + 1;
+    const gapCount = Math.max(0, maxLayer);
+
+    const gapNeeded = new Array(gapCount).fill(MIN_LAYER_GAP);
+    (graph.edges || []).forEach((e) => {
+      if (!e.label) return;
+      const fromL = layerOf.get(e.from);
+      const toL = layerOf.get(e.to);
+      if (fromL === undefined || toL === undefined || fromL === toL) return;
+      const lo = Math.min(fromL, toL);
+      const hi = Math.max(fromL, toL);
+      const span = hi - lo;
+      const perGap = estimateEdgeLabelWidth(e.label) / Math.max(1, span);
+      for (let g = lo; g < hi; g += 1) {
+        gapNeeded[g] = Math.max(gapNeeded[g], perGap + LABEL_CLEARANCE);
+      }
+    });
+
+    const containerWidth = measureDagWrapWidth(wrap);
+    const totalGapMin = gapNeeded.reduce((sum, g) => sum + g, 0);
+    let nodeW = Math.floor((containerWidth - PAD_X * 2 - totalGapMin) / numCols);
+    nodeW = Math.max(MIN_NODE_W, nodeW);
+
+    let totalGap = totalGapMin;
+    let width = PAD_X * 2 + numCols * nodeW + totalGap;
+    if (width < containerWidth && gapCount > 0) {
+      const extra = containerWidth - width;
+      const weights = gapNeeded.slice();
+      const weightSum = weights.reduce((a, b) => a + b, 0) || gapCount;
+      gapNeeded.forEach((g, i) => {
+        gapNeeded[i] = g + (extra * weights[i]) / weightSum;
+      });
+      totalGap = gapNeeded.reduce((sum, g) => sum + g, 0);
+      width = PAD_X * 2 + numCols * nodeW + totalGap;
+    }
+
+    const layerX = new Map();
+    let xCursor = PAD_X;
+    for (let layer = 0; layer <= maxLayer; layer += 1) {
+      layerX.set(layer, xCursor);
+      xCursor += nodeW;
+      if (layer < maxLayer) xCursor += gapNeeded[layer];
+    }
+
     const maxRows = Math.max(1, ...[...byLayer.values()].map((l) => l.length));
     const columnHeight = maxRows * NODE_H + Math.max(0, maxRows - 1) * ROW_GAP;
 
     const positions = new Map();
     byLayer.forEach((list, layer) => {
       const blockH = list.length * NODE_H + Math.max(0, list.length - 1) * ROW_GAP;
-      const startY = PAD + (columnHeight - blockH) / 2;
+      const startY = PAD_Y + (columnHeight - blockH) / 2;
+      const x = layerX.get(layer) ?? PAD_X;
       list.forEach((n, i) => {
         positions.set(n.control_code, {
-          x: PAD + layer * (NODE_W + LAYER_GAP),
+          x,
           y: startY + i * (NODE_H + ROW_GAP),
           node: n,
         });
       });
     });
 
-    const width = PAD * 2 + (maxLayer + 1) * NODE_W + maxLayer * LAYER_GAP;
-    const height = PAD * 2 + columnHeight;
+    const height = PAD_Y * 2 + columnHeight;
 
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    svg.setAttribute("width", String(width));
-    svg.setAttribute("height", String(height));
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.removeAttribute("width");
+    svg.removeAttribute("height");
     svg.innerHTML = "";
 
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
@@ -196,42 +301,53 @@
       const from = positions.get(e.from);
       const to = positions.get(e.to);
       if (!from || !to) return;
-      const x1 = from.x + NODE_W;
+      const x1 = from.x + nodeW;
       const y1 = from.y + NODE_H / 2;
       const x2 = to.x;
       const y2 = to.y + NODE_H / 2;
-      const midX = Math.round((x1 + x2) / 2);
-      const curve = Math.max(18, Math.abs(y2 - y1) * 0.35);
+      const goingForward = x2 >= x1;
+      const startX = goingForward ? x1 : from.x;
+      const endX = goingForward ? x2 : to.x + nodeW;
+      const curve = Math.max(22, Math.abs(x2 - x1) * 0.12, Math.abs(y2 - y1) * 0.4);
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute(
-        "d",
-        `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`
-      );
+      if (goingForward) {
+        path.setAttribute(
+          "d",
+          `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`
+        );
+        path.setAttribute("marker-end", "url(#dag-arrow)");
+      } else {
+        path.setAttribute(
+          "d",
+          `M ${from.x} ${y1} C ${from.x - curve} ${y1}, ${to.x + nodeW + curve} ${y2}, ${to.x + nodeW} ${y2}`
+        );
+        path.setAttribute("marker-end", "url(#dag-arrow)");
+      }
       path.setAttribute("fill", "none");
       path.setAttribute("stroke", "rgba(147, 164, 188, 0.5)");
       path.setAttribute("stroke-width", "1.25");
-      path.setAttribute("marker-end", "url(#dag-arrow)");
       edgeLayer.appendChild(path);
 
-      if (!e.label || x2 - x1 < 40) return;
-      const slotKey = `${midX}`;
+      if (!e.label) return;
+      const corridorW = Math.abs(endX - startX);
+      const labelW = estimateEdgeLabelWidth(e.label);
+      if (corridorW < labelW + 8) return;
+
+      const midX = (startX + endX) / 2;
+      const midY = (y1 + y2) / 2;
+      const slotKey = `${Math.round(midX)}:${Math.round(midY)}`;
       const slot = labelSlots.get(slotKey) ?? 0;
       labelSlots.set(slotKey, slot + 1);
-      const baseY = (y1 + y2) / 2;
-      const labelY = baseY - 6 + slot * 9 - (labelSlots.get(slotKey) > 1 ? 4 : 0);
+      const laneOffset = 16 + slot * 13;
+      const labelY =
+        Math.abs(y2 - y1) < 4
+          ? Math.min(from.y, to.y) - 8 - slot * 12
+          : midY - laneOffset;
 
-      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      label.setAttribute("x", String(midX));
-      label.setAttribute("y", String(labelY));
-      label.setAttribute("text-anchor", "middle");
-      label.setAttribute("class", "control-dag-edge-label");
-      label.setAttribute("font-size", "var(--dag-edge-size)");
-      label.textContent = e.label.length > 18 ? `${e.label.slice(0, 16)}…` : e.label;
-      labelLayer.appendChild(label);
+      appendEdgeLabel(labelLayer, midX, labelY, e.label);
     });
 
     svg.appendChild(edgeLayer);
-    svg.appendChild(labelLayer);
 
     positions.forEach(({ x, y, node }) => {
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -245,7 +361,7 @@
       const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
       rect.setAttribute("x", String(x));
       rect.setAttribute("y", String(y));
-      rect.setAttribute("width", String(NODE_W));
+      rect.setAttribute("width", String(nodeW));
       rect.setAttribute("height", String(NODE_H));
       rect.setAttribute("rx", "6");
       g.appendChild(rect);
@@ -253,20 +369,23 @@
       const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
       fo.setAttribute("x", String(x));
       fo.setAttribute("y", String(y));
-      fo.setAttribute("width", String(NODE_W));
+      fo.setAttribute("width", String(nodeW));
       fo.setAttribute("height", String(NODE_H));
+      const maxNameChars = Math.max(18, Math.floor(nodeW / 5.2));
       const shortName =
-        (node.control_name || "").length > 28
-          ? `${node.control_name.slice(0, 26)}…`
+        (node.control_name || "").length > maxNameChars
+          ? `${node.control_name.slice(0, maxNameChars - 1)}…`
           : node.control_name || "";
       fo.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" class="control-dag-node-inner">
-        <span class="control-dag-code">${node.control_code}</span>
-        <span class="control-dag-name">${shortName}</span>
+        <span class="control-dag-code">${escapeHtml(node.control_code)}</span>
+        <span class="control-dag-name">${escapeHtml(shortName)}</span>
       </div>`;
       g.appendChild(fo);
 
       svg.appendChild(g);
     });
+
+    svg.appendChild(labelLayer);
   }
 
   function renderControlDetail(data) {

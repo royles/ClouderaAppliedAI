@@ -1129,11 +1129,13 @@ tr.data-row:focus-visible,
   /* rem-based type scales with browser zoom (WCAG 1.4.4) */
   --dag-code-size: clamp(0.8125rem, 0.78rem + 0.15vw, 0.875rem);
   --dag-name-size: clamp(0.75rem, 0.72rem + 0.1vw, 0.8125rem);
-  --dag-edge-size: clamp(0.75rem, 0.72rem + 0.08vw, 0.8125rem);
-  overflow: auto;
-  max-height: 240px;
+  --dag-edge-size: clamp(0.6875rem, 0.66rem + 0.06vw, 0.75rem);
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: min(320px, 42vh);
   margin-top: 0.65rem;
-  padding: 0.35rem 0.5rem;
+  padding: 0.5rem 0.35rem;
   border-radius: 0.55rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -1141,8 +1143,9 @@ tr.data-row:focus-visible,
 
 .control-dag-svg {
   display: block;
+  width: 100%;
+  min-width: 100%;
   height: auto;
-  margin: 0 auto;
 }
 
 .control-dag-node rect {
@@ -1199,6 +1202,16 @@ tr.data-row:focus-visible,
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   line-height: 1.35;
+}
+
+.control-dag-edge-label-group {
+  pointer-events: none;
+}
+
+.control-dag-edge-label-bg {
+  fill: rgba(22, 30, 42, 0.96);
+  stroke: rgba(147, 164, 188, 0.35);
+  stroke-width: 1;
 }
 
 .control-dag-edge-label {
