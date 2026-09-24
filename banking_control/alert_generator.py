@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+import os
 import random
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any
 
 ALERT_TYPES: tuple[str, ...] = (
@@ -24,8 +25,15 @@ CHANNELS: tuple[str, ...] = (
     "Instant Payment",
 )
 
-# ~100 TM alerts / day ≈ mid-size EU retail + commercial bank operating volume.
-ALERTS_PER_DAY_MEAN = 100.0
+def alerts_per_day_mean() -> float:
+    raw = os.environ.get("TM_ALERTS_PER_DAY", "120").strip()
+    try:
+        return max(20.0, float(raw))
+    except ValueError:
+        return 120.0
+
+
+MIN_ALERT_POOL = 48
 
 NARRATIVES: tuple[str, ...] = (
     "Monitoring rule fired on aggregated activity; analyst review required per policy.",
@@ -40,17 +48,34 @@ def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
+def parse_alert_at(value: str) -> datetime:
+    s = str(value or "").strip()
+    if "T" in s:
+        return datetime.fromisoformat(s.replace("Z", "+00:00"))
+    day = date.fromisoformat(s[:10])
+    return datetime.combine(day, time(23, 59, 59), tzinfo=timezone.utc)
+
+
 def expire_alerts_older_than(conn: sqlite3.Connection, *, days: float = 2.0) -> int:
-    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).replace(microsecond=0)
-    cutoff_s = cutoff.isoformat()
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    rows = conn.execute("SELECT alert_id, alert_at FROM FCT_TRANSACTION_ALERT").fetchall()
+    stale = [int(r["alert_id"]) for r in rows if parse_alert_at(r["alert_at"]) < cutoff]
+    if not stale:
+        return 0
+    placeholders = ",".join("?" for _ in stale)
     cur = conn.execute(
-        "DELETE FROM FCT_TRANSACTION_ALERT WHERE alert_at < ?",
-        (cutoff_s,),
+        f"DELETE FROM FCT_TRANSACTION_ALERT WHERE alert_id IN ({placeholders})",
+        stale,
     )
     return int(cur.rowcount)
 
 
-def insert_transaction_alert(conn: sqlite3.Connection, rng: random.Random) -> int | None:
+def insert_transaction_alert(
+    conn: sqlite3.Connection,
+    rng: random.Random,
+    *,
+    alert_at: str | None = None,
+) -> int | None:
     unit_count = conn.execute("SELECT COUNT(*) AS n FROM DIM_BUSINESS_UNIT").fetchone()["n"]
     if unit_count == 0:
         return None
@@ -75,7 +100,7 @@ def insert_transaction_alert(conn: sqlite3.Connection, rng: random.Random) -> in
         (
             next_id,
             unit_id,
-            _utc_now_iso(),
+            alert_at or _utc_now_iso(),
             alert_type,
             amount,
             f"CUST-{rng.randint(10000, 99999)}",
@@ -89,12 +114,32 @@ def insert_transaction_alert(conn: sqlite3.Connection, rng: random.Random) -> in
 
 
 def seconds_until_next_alert(rng: random.Random) -> float:
-    """Poisson process inter-arrival (mean ALERTS_PER_DAY_MEAN alerts per 86400s)."""
-    rate_per_second = ALERTS_PER_DAY_MEAN / 86400.0
+    """Poisson inter-arrival (mean alerts_per_day_mean() alerts per 86400s)."""
+    rate_per_second = alerts_per_day_mean() / 86400.0
     return rng.expovariate(rate_per_second)
 
 
+def ensure_alert_pool(
+    conn: sqlite3.Connection,
+    rng: random.Random,
+    *,
+    min_count: int = MIN_ALERT_POOL,
+) -> int:
+    """Keep a rolling window of recent alerts so the TM panel is never empty."""
+    current = int(conn.execute("SELECT COUNT(*) AS n FROM FCT_TRANSACTION_ALERT").fetchone()["n"])
+    if current >= min_count:
+        return 0
+    need = min_count - current
+    now = datetime.now(timezone.utc)
+    created = 0
+    for _ in range(need):
+        hours_ago = rng.uniform(0.05, 47.0)
+        at = (now - timedelta(hours=hours_ago)).replace(microsecond=0).isoformat()
+        if insert_transaction_alert(conn, rng, alert_at=at):
+            created += 1
+    return created
+
+
 def run_generator_tick(conn: sqlite3.Connection, rng: random.Random) -> dict[str, Any]:
-    expired = expire_alerts_older_than(conn, days=2.0)
     new_id = insert_transaction_alert(conn, rng)
-    return {"expired": expired, "created_alert_id": new_id}
+    return {"created_alert_id": new_id}

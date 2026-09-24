@@ -185,6 +185,13 @@ def prepare_connection(conn: sqlite3.Connection) -> None:
     ensure_admin_llm_schema(conn)
     sync_control_catalog_metadata(conn)
     ensure_monitoring_seed_data(conn)
+    from banking_control.alert_generator import ensure_alert_pool
+    import random
+
+    added = ensure_alert_pool(conn, random.Random())
+    if added:
+        conn.commit()
+        refresh_overview_cache(conn)
 
 
 def refresh_overview_cache(conn: sqlite3.Connection) -> dict[str, Any]:

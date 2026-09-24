@@ -6,7 +6,12 @@ import threading
 import time
 from pathlib import Path
 
-from banking_control.alert_generator import seconds_until_next_alert, run_generator_tick
+from banking_control.alert_generator import (
+    ensure_alert_pool,
+    expire_alerts_older_than,
+    insert_transaction_alert,
+    seconds_until_next_alert,
+)
 from banking_control.db import connect, prepare_connection, refresh_overview_cache
 
 logger = logging.getLogger(__name__)
@@ -33,6 +38,7 @@ class TransactionAlertWorker:
             name="tm-alert-generator",
             daemon=True,
         )
+        self._bootstrap_pool()
         self._thread.start()
         logger.info("Transaction monitoring alert generator started")
 
@@ -61,16 +67,31 @@ class TransactionAlertWorker:
         prepare_connection(conn)
         return conn
 
+    def _bootstrap_pool(self) -> None:
+        try:
+            conn = self._connect()
+            try:
+                added = ensure_alert_pool(conn, self._rng)
+                if added:
+                    conn.commit()
+                    refresh_overview_cache(conn)
+                    conn.commit()
+                    logger.info("TM alert pool topped up with %s recent alerts", added)
+            finally:
+                conn.close()
+        except Exception:
+            logger.exception("TM alert pool bootstrap failed")
+
     def _generate_once(self) -> None:
         try:
             conn = self._connect()
             try:
-                result = run_generator_tick(conn, self._rng)
+                new_id = insert_transaction_alert(conn, self._rng)
                 conn.commit()
                 refresh_overview_cache(conn)
                 conn.commit()
-                if result.get("created_alert_id"):
-                    logger.debug("TM alert created id=%s", result["created_alert_id"])
+                if new_id:
+                    logger.debug("TM alert created id=%s", new_id)
             finally:
                 conn.close()
         except Exception:
@@ -80,14 +101,16 @@ class TransactionAlertWorker:
         try:
             conn = self._connect()
             try:
-                from banking_control.alert_generator import expire_alerts_older_than
-
                 expired = expire_alerts_older_than(conn, days=2.0)
-                if expired:
+                added = ensure_alert_pool(conn, self._rng)
+                if expired or added:
                     conn.commit()
                     refresh_overview_cache(conn)
                     conn.commit()
+                if expired:
                     logger.debug("Expired %s TM alerts older than 2 days", expired)
+                if added:
+                    logger.debug("TM alert pool refilled with %s alerts after expiry", added)
             finally:
                 conn.close()
         except Exception:

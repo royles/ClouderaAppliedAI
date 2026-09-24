@@ -1,6 +1,6 @@
 (function () {
   const PAGE_SIZE = 35;
-  const POLL_MS = 8000;
+  const POLL_MS = 5000;
 
   const state = {
     items: [],
@@ -63,9 +63,32 @@
     state.maxAlertId = Math.max(...state.items.map((r) => r.alert_id));
   }
 
+  function updateTimelineFilterNotice() {
+    const notice = document.getElementById("alerts-time-filter-notice");
+    if (!notice) return;
+    const tf = window.activityTimeFilter;
+    const active = Boolean(tf?.from || tf?.to);
+    notice.classList.toggle("hidden", !active);
+    if (!active) {
+      notice.textContent = "";
+      return;
+    }
+    const range =
+      tf.from && tf.to
+        ? tf.from === tf.to
+          ? tf.from
+          : `${tf.from} → ${tf.to}`
+        : tf.from || tf.to;
+    notice.innerHTML = `Date filter active (${range}) — showing a subset of alerts. <button type="button" class="btn btn-ghost alerts-clear-date" id="alerts-clear-date">Show all dates</button>`;
+    notice.querySelector("#alerts-clear-date")?.addEventListener("click", () => {
+      window.clearActivityTimeFilter?.();
+    });
+  }
+
   function renderAlertsBody() {
     const body = document.getElementById("alerts-body");
     const meta = document.getElementById("alerts-stream-meta");
+    updateTimelineFilterNotice();
     if (!body) return;
     if (!state.items.length) {
       body.innerHTML = `<tr><td colspan="5" class="empty">No alerts at this risk threshold</td></tr>`;
@@ -213,6 +236,10 @@
     startPolling();
     document.addEventListener("visibilitychange", () => {
       if (!document.hidden) void pollNewAlerts();
+    });
+    document.addEventListener("activity-time-filter", () => {
+      updateTimelineFilterNotice();
+      void resetAndLoadAlerts();
     });
   }
 

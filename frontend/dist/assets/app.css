@@ -1128,6 +1128,22 @@ tr.data-row:focus-visible,
   color: var(--text);
 }
 
+.alerts-filter-notice {
+  margin: 0.35rem 0 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.45rem;
+  font-size: 0.78rem;
+  color: #f0c674;
+  background: rgba(240, 198, 116, 0.08);
+  border: 1px solid rgba(240, 198, 116, 0.35);
+}
+
+.alerts-filter-notice .alerts-clear-date {
+  margin-left: 0.35rem;
+  padding: 0.1rem 0.35rem;
+  vertical-align: baseline;
+}
+
 .detail-head h2 {
   margin: 0;
   font-size: 1.35rem;

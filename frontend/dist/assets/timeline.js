@@ -301,6 +301,8 @@
     void loadTimelineData();
   }
 
+  window.clearActivityTimeFilter = clearFilter;
+
   window.initActivityTimeline = initActivityTimeline;
   window.reloadActivityTimeline = loadTimelineData;
 
