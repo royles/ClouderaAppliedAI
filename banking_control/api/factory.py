@@ -8,7 +8,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from banking_control.api.routers import alerts, audit, controls, core, exceptions, tools
+from banking_control.api.routers import (
+    admin_llm,
+    alerts,
+    assistant,
+    audit,
+    controls,
+    core,
+    exceptions,
+    tools,
+)
 from banking_control.db import connect, prepare_connection
 from banking_control.paths import default_db_path, default_frontend_dist_dir
 from banking_control.plugins.manager import PluginManager
@@ -67,7 +76,7 @@ def create_app(
         allow_headers=["*"],
     )
 
-    for module in (core, controls, exceptions, alerts, audit, tools):
+    for module in (core, controls, exceptions, alerts, audit, tools, assistant, admin_llm):
         app.include_router(module.router)
 
     @app.on_event("startup")

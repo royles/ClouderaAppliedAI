@@ -1,3 +1,5 @@
+import { initAssistant } from "./assistant.js";
+
 const fmtMoney = (n) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 
@@ -225,6 +227,8 @@ async function boot() {
     const btn = e.target.closest(".advance-btn");
     if (btn) advanceException(btn.dataset.id);
   });
+
+  initAssistant();
 }
 
 boot().catch((err) => {

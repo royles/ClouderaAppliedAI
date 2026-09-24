@@ -280,3 +280,145 @@ input[type="range"] {
   padding: 1rem;
   color: var(--muted);
 }
+
+.app-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: calc(100vh - 5rem);
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.assistant-panel {
+  width: min(420px, 92vw);
+  border-left: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.2s ease, opacity 0.2s ease;
+}
+
+.assistant-panel.collapsed {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  border: none;
+}
+
+.assistant-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.assistant-head h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+
+.assistant-history {
+  flex: 1;
+  overflow: auto;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.assistant-msg {
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.assistant-msg-user {
+  align-self: flex-end;
+  max-width: 92%;
+  border-color: rgba(61, 214, 195, 0.35);
+}
+
+.assistant-msg-assistant {
+  align-self: stretch;
+}
+
+.assistant-msg-role {
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.assistant-msg-text {
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.assistant-msg-meta {
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.assistant-form {
+  border-top: 1px solid var(--border);
+  padding: 0.75rem 1rem 1rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.assistant-form textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 4.5rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  padding: 0.55rem 0.65rem;
+  font: inherit;
+}
+
+.assistant-admin {
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.assistant-admin.hidden {
+  display: none;
+}
+
+.assistant-admin label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.assistant-admin input,
+.assistant-admin select {
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.assistant-admin-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}

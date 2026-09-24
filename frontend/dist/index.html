@@ -24,11 +24,13 @@
         </div>
         <div class="topbar-actions">
           <span id="health-pill" class="pill pill-muted">Checking…</span>
+          <button type="button" id="assistant-toggle" class="btn btn-secondary">Assistant</button>
           <button type="button" id="refresh-btn" class="btn btn-secondary">Refresh metrics</button>
         </div>
       </header>
 
-      <main class="layout">
+      <div class="app-shell">
+      <main class="layout main-content">
         <section class="hero-metrics" id="overview-cards"></section>
 
         <div class="grid-two">
@@ -114,6 +116,43 @@
           </section>
         </div>
       </main>
+
+      <aside id="assistant-panel" class="assistant-panel collapsed" aria-label="Control assistant">
+        <div class="assistant-head">
+          <div>
+            <h2>Control assistant</h2>
+            <span id="assistant-status" class="pill pill-muted">Checking LLM…</span>
+          </div>
+          <button type="button" id="assistant-admin-toggle" class="btn btn-ghost">Admin</button>
+        </div>
+        <div id="assistant-admin" class="assistant-admin hidden">
+          <form id="admin-llm-form">
+            <label>Provider
+              <select name="provider_type">
+                <option value="bedrock">Amazon Bedrock</option>
+                <option value="openai_compatible">Local / OpenAI-compatible</option>
+              </select>
+            </label>
+            <label>Bedrock region <input name="bedrock_region" placeholder="eu-west-1" /></label>
+            <label>Bedrock model id <input name="bedrock_model_id" /></label>
+            <label>Max tokens <input name="bedrock_max_tokens" type="number" /></label>
+            <label>Temperature <input name="bedrock_temperature" type="number" step="0.05" /></label>
+            <label>Local base URL <input name="openai_base_url" placeholder="http://127.0.0.1:8000/v1" /></label>
+            <label>Local model id <input name="openai_model_id" /></label>
+            <label>API token <input name="openai_api_token" type="password" autocomplete="off" /></label>
+            <div class="assistant-admin-actions">
+              <button type="button" id="admin-llm-test" class="btn btn-secondary">Test</button>
+              <button type="submit" class="btn btn-secondary">Save</button>
+            </div>
+          </form>
+        </div>
+        <div id="assistant-history" class="assistant-history"></div>
+        <form id="assistant-form" class="assistant-form">
+          <textarea id="assistant-input" rows="3" placeholder="Ask about controls, run a simulation, or explore audit events…"></textarea>
+          <button type="submit" class="btn btn-secondary">Send</button>
+        </form>
+      </aside>
+      </div>
     </div>
     <script src="/assets/app.js" type="module"></script>
   </body>

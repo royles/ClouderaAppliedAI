@@ -76,6 +76,19 @@ CREATE TABLE IF NOT EXISTS APP_OVERVIEW_SNAPSHOT (
   refreshed_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS APP_ADMIN_LLM (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  provider_type TEXT NOT NULL DEFAULT 'bedrock',
+  bedrock_region TEXT,
+  bedrock_model_id TEXT,
+  bedrock_max_tokens INTEGER,
+  bedrock_temperature REAL,
+  openai_base_url TEXT,
+  openai_model_id TEXT,
+  openai_api_token TEXT,
+  updated_at TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_assessment_control ON FCT_CONTROL_ASSESSMENT(control_id);
 CREATE INDEX IF NOT EXISTS idx_exception_status ON FCT_EXCEPTION(status);
 CREATE INDEX IF NOT EXISTS idx_alert_status ON FCT_TRANSACTION_ALERT(status);

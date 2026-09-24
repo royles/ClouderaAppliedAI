@@ -45,6 +45,9 @@ def migrate_control_catalog_columns(conn: sqlite3.Connection) -> None:
 def prepare_connection(conn: sqlite3.Connection) -> None:
     """Apply lightweight migrations before serving API requests."""
     migrate_control_catalog_columns(conn)
+    from banking_control.llm.admin_store import ensure_admin_llm_schema
+
+    ensure_admin_llm_schema(conn)
 
 
 def refresh_overview_cache(conn: sqlite3.Connection) -> dict[str, Any]:
