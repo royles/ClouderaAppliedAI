@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from banking_control.catalog import ControlDefinition, build_control_catalog
+from banking_control.tools.codes import control_code_candidates
 from banking_control.tools.models import ControlTool
 
 
@@ -28,12 +29,14 @@ class ToolRegistry:
         return sorted(tools, key=lambda t: (t.domain, t.control_code))
 
     def get_tool(self, control_code: str) -> ControlTool | None:
-        key = control_code.strip()
         by_code = {t.control_code: t for t in self.list_tools()}
-        if key in by_code:
-            return by_code[key]
-        alt = key.replace("_", "-").upper()
-        return by_code.get(alt)
+        for candidate in control_code_candidates(control_code):
+            if candidate in by_code:
+                return by_code[candidate]
+        return None
+
+    def known_control_codes(self) -> list[str]:
+        return [t.control_code for t in self.list_tools()]
 
     @staticmethod
     def _to_tool(ctrl: ControlDefinition) -> ControlTool:

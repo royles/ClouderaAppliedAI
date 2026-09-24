@@ -4,6 +4,7 @@ from typing import Any
 
 from banking_control.plugins.manager import PluginManager
 from banking_control.tools.models import ControlTool
+from banking_control.tools.codes import suggest_control_codes
 from banking_control.tools.registry import ToolRegistry
 
 try:
@@ -66,7 +67,16 @@ class ControlToolEngine:
     def _require_tool(self, control_code: str) -> ControlTool:
         tool = self.get_tool(control_code)
         if tool is None:
-            raise ToolValidationError(f"Unknown control tool: {control_code}")
+            suggestions = suggest_control_codes(
+                control_code,
+                self._registry.known_control_codes(),
+            )
+            hint = "Use catalog control codes like AML-001 (domain, hyphen, three-digit id)."
+            if suggestions:
+                hint += f" Did you mean: {', '.join(suggestions)}?"
+            raise ToolValidationError(
+                f"Unknown control tool: {control_code}. {hint}"
+            )
         return tool
 
     def _validate(self, schema: dict[str, Any], payload: dict[str, Any], *, label: str = "input") -> None:

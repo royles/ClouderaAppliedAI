@@ -5,7 +5,7 @@ import sqlite3
 from typing import Any
 
 from banking_control.db import get_overview
-from banking_control.tools.engine import ControlToolEngine
+from banking_control.tools.engine import ControlToolEngine, ToolValidationError
 
 COPILOT_TOOL_SPECS: list[dict[str, Any]] = [
     {
@@ -125,11 +125,33 @@ def execute_copilot_tool(
         return json.dumps([dict(r) for r in rows], default=str)
     if name == "describe_control_tool":
         code = str(args.get("control_code", ""))
-        return json.dumps(engine.describe_tool(code), default=str)
+        try:
+            return json.dumps(engine.describe_tool(code), default=str)
+        except ToolValidationError as exc:
+            return json.dumps(
+                {
+                    "error": "unknown_control_code",
+                    "control_code": code,
+                    "message": str(exc),
+                    "hint": "Tell the user you cannot run that control unless they use a valid code such as AML-001.",
+                },
+                default=str,
+            )
     if name == "invoke_control_tool":
         code = str(args.get("control_code", ""))
         inputs = args.get("inputs") or {}
-        return json.dumps(engine.invoke(code, inputs), default=str)
+        try:
+            return json.dumps(engine.invoke(code, inputs), default=str)
+        except ToolValidationError as exc:
+            return json.dumps(
+                {
+                    "error": "unknown_control_code",
+                    "control_code": code,
+                    "message": str(exc),
+                    "hint": "Tell the user you cannot simulate that control; suggest the correct code format (e.g. AML-001).",
+                },
+                default=str,
+            )
     if name == "list_audit_events":
         limit = min(int(args.get("limit") or 20), 50)
         rows = conn.execute(
