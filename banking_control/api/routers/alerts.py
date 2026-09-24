@@ -19,6 +19,10 @@ def list_alerts(
     limit: int = Query(40, ge=1, le=100),
     before_id: int | None = Query(None, description="Page older alerts with alert_id less than this"),
     since_id: int | None = Query(None, description="Return alerts newer than this alert_id"),
+    live: bool = Query(
+        False,
+        description="When true with since_id, skip date filters so live feed can prepend new alerts",
+    ),
     conn: Any = Depends(get_db_connection),
 ) -> dict[str, Any]:
     params: list[Any] = [min_risk]
@@ -26,7 +30,8 @@ def list_alerts(
     if status:
         clauses.append("a.status = ?")
         params.append(status)
-    append_iso_date_range(clauses, params, column="a.alert_at", from_date=from_date, to_date=to_date)
+    if not (live and since_id is not None):
+        append_iso_date_range(clauses, params, column="a.alert_at", from_date=from_date, to_date=to_date)
 
     if since_id is not None:
         clauses.append("a.alert_id > ?")
