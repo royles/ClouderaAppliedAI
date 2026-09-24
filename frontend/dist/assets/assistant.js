@@ -105,6 +105,7 @@
       e.stopPropagation();
       const open = adminMenuPanel?.classList.contains("hidden");
       setAdminMenuOpen(adminMenuPanel, adminMenuToggle, Boolean(open));
+      if (open) void loadAdminConfig();
     });
 
     document.addEventListener("click", (e) => {
@@ -280,14 +281,41 @@
         setField("openai_model_id", cfg.openai_model_id);
         const tokenInput = adminForm.querySelector('[name="openai_api_token"]');
         if (tokenInput) {
+          tokenInput.value = "";
           tokenInput.placeholder = cfg.openai_api_token_set
-            ? "Token saved (leave blank to keep)"
-            : "Bearer token";
+            ? "Token saved on server (enter only to replace)"
+            : "Bearer token (optional until saved)";
+        }
+        const credHint = document.getElementById("admin-bedrock-cred-hint");
+        if (credHint) {
+          if (cfg.bedrock_aws_credentials_configured) {
+            credHint.textContent =
+              "Amazon Bedrock uses AWS credentials from the server environment or instance role. Keys are never sent to the browser.";
+            credHint.hidden = false;
+          } else {
+            credHint.textContent =
+              "No AWS credentials detected on the server. Configure AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY or an instance role.";
+            credHint.hidden = false;
+          }
         }
       } catch {
         /* optional */
       }
     }
+
+    document.getElementById("admin-clear-openai-token")?.addEventListener("click", async () => {
+      const res = await fetch("/api/admin/llm", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clear_openai_api_token: true }),
+      });
+      if (!res.ok) {
+        alert(await res.text());
+        return;
+      }
+      await loadAdminConfig();
+      await refreshAssistantStatus();
+    });
 
     adminForm?.addEventListener("submit", async (e) => {
       e.preventDefault();

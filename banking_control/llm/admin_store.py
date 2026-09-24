@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Literal
 
@@ -120,7 +120,26 @@ def save_llm_config(conn: sqlite3.Connection, config: LlmProviderConfig) -> LlmP
 
 
 def public_config_dict(config: LlmProviderConfig) -> dict[str, Any]:
-    data = asdict(config)
-    data["openai_api_token"] = None
-    data["openai_api_token_set"] = config.openai_api_token_set
-    return data
+    """Safe for the browser: effective Bedrock settings, never secrets or API tokens."""
+    from banking_control.llm.bedrock_client import is_bedrock_configured
+    from banking_control.llm.bedrock_config import effective_bedrock_settings
+
+    effective = effective_bedrock_settings(config)
+    return {
+        "provider_type": config.provider_type,
+        "bedrock_region": effective.bedrock_region,
+        "bedrock_model_id": effective.model_id,
+        "bedrock_max_tokens": effective.max_tokens,
+        "bedrock_temperature": effective.temperature,
+        "bedrock_stored_in_db": {
+            "region": bool(config.bedrock_region and str(config.bedrock_region).strip()),
+            "model_id": bool(config.bedrock_model_id and str(config.bedrock_model_id).strip()),
+            "max_tokens": config.bedrock_max_tokens is not None,
+            "temperature": config.bedrock_temperature is not None,
+        },
+        "bedrock_aws_credentials_configured": is_bedrock_configured(config),
+        "openai_base_url": config.openai_base_url or "",
+        "openai_model_id": config.openai_model_id or "",
+        "openai_api_token_set": config.openai_api_token_set,
+        "updated_at": config.updated_at,
+    }

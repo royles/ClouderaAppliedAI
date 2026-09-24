@@ -173,6 +173,25 @@ body {
   display: none;
 }
 
+.icon-menu-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.icon-menu-panel .btn-link {
+  display: block;
+  margin: -0.25rem 0 0.5rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent, #3dd6c3);
+  font-size: 0.78rem;
+  cursor: pointer;
+  text-align: left;
+}
+
 .icon-menu-panel-title {
   margin: 0 0 0.65rem;
   font-size: 0.82rem;

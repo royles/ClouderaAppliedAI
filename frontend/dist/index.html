@@ -71,13 +71,17 @@
                       <option value="openai_compatible">Local / OpenAI-compatible</option>
                     </select>
                   </label>
-                  <label>Bedrock region <input name="bedrock_region" placeholder="eu-west-1" /></label>
-                  <label>Bedrock model id <input name="bedrock_model_id" /></label>
-                  <label>Max tokens <input name="bedrock_max_tokens" type="number" /></label>
-                  <label>Temperature <input name="bedrock_temperature" type="number" step="0.05" /></label>
-                  <label>Local base URL <input name="openai_base_url" placeholder="http://127.0.0.1:8000/v1" /></label>
-                  <label>Local model id <input name="openai_model_id" /></label>
-                  <label>API token <input name="openai_api_token" type="password" autocomplete="off" /></label>
+                  <p id="admin-bedrock-cred-hint" class="icon-menu-hint" hidden></p>
+                  <label>Bedrock region <input name="bedrock_region" placeholder="eu-west-1" autocomplete="off" /></label>
+                  <label>Bedrock model id <input name="bedrock_model_id" autocomplete="off" /></label>
+                  <label>Max tokens <input name="bedrock_max_tokens" type="number" autocomplete="off" /></label>
+                  <label>Temperature <input name="bedrock_temperature" type="number" step="0.05" autocomplete="off" /></label>
+                  <label>Local base URL <input name="openai_base_url" placeholder="http://127.0.0.1:8000/v1" autocomplete="off" /></label>
+                  <label>Local model id <input name="openai_model_id" autocomplete="off" /></label>
+                  <label>API token (never stored in browser)
+                    <input name="openai_api_token" type="password" autocomplete="new-password" value="" />
+                  </label>
+                  <button type="button" id="admin-clear-openai-token" class="btn btn-link">Clear saved API token</button>
                   <div class="admin-form-actions">
                     <button type="button" id="admin-llm-test" class="btn btn-secondary">Test</button>
                     <button type="submit" class="btn btn-secondary">Save</button>
@@ -293,7 +297,7 @@
       </button>
     </div>
     <script src="/assets/assistant-markdown.js?v=2"></script>
-    <script src="/assets/assistant.js?v=12"></script>
+    <script src="/assets/assistant.js?v=13"></script>
     <script src="/assets/app.js?v=15"></script>
     <script src="/assets/alerts-panel.js?v=4"></script>
     <script src="/assets/detail.js?v=9"></script>
