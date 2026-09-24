@@ -105,6 +105,35 @@ body {
   background: var(--surface);
   color: var(--muted);
   cursor: pointer;
+  position: relative;
+}
+
+.icon-menu-btn-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  right: 0;
+  z-index: 1300;
+  padding: 0.28rem 0.55rem;
+  border-radius: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s ease, visibility 0.12s ease;
+}
+
+.icon-menu-btn-tooltip:hover::after,
+.icon-menu-btn-tooltip:focus-visible::after {
+  opacity: 1;
+  visibility: visible;
 }
 
 .icon-menu-btn:hover,
@@ -122,6 +151,7 @@ body {
 
 .icon-menu-cog {
   display: block;
+  flex-shrink: 0;
 }
 
 .icon-menu-panel {
