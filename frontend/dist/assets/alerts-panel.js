@@ -8,10 +8,15 @@
     loading: false,
     loadingMore: false,
     polling: false,
-    maxAlertId: 0,
+    /** Highest alert_id the server reported (live poll cursor). */
+    lastGlobalAlertId: 0,
     observer: null,
     pollTimer: null,
   };
+
+  function alertId(r) {
+    return Number(r.alert_id);
+  }
 
   function alertRowHtml(r, extraClass = "") {
     const fmtMoney = window.fmtMoney || ((n) => String(n));
@@ -30,13 +35,13 @@
     params.set("limit", String(extra.limit != null ? extra.limit : PAGE_SIZE));
     const minRisk = Number(document.getElementById("risk-slider")?.value || 0) / 100;
     params.set("min_risk", String(minRisk));
+    const live = Boolean(extra.live);
     const statusFilter = window.getAlertStatusFilter?.();
-    if (statusFilter) params.set("status", statusFilter);
-    // Live poll must not apply timeline date brush — new alerts would be excluded.
-    if (!extra.live && typeof window.appendActivityTimeParams === "function") {
+    if (statusFilter && !live) params.set("status", statusFilter);
+    if (!live && typeof window.appendActivityTimeParams === "function") {
       window.appendActivityTimeParams(params);
     }
-    if (extra.live) params.set("live", "true");
+    if (live) params.set("live", "true");
     Object.entries(extra).forEach(([k, v]) => {
       if (k === "live" || k === "limit") return;
       if (v != null) params.set(k, String(v));
@@ -45,7 +50,21 @@
   }
 
   function sortNewestFirst(rows) {
-    return rows.slice().sort((a, b) => b.alert_id - a.alert_id);
+    return rows.slice().sort((a, b) => alertId(b) - alertId(a));
+  }
+
+  function alertPassesUiFilters(r) {
+    const minRisk = Number(document.getElementById("risk-slider")?.value || 0) / 100;
+    if (Number(r.risk_score) < minRisk) return false;
+    const statusFilter = window.getAlertStatusFilter?.();
+    if (statusFilter && r.status !== statusFilter) return false;
+    const tf = window.activityTimeFilter;
+    if (tf?.from || tf?.to) {
+      const day = String(r.alert_at || "").slice(0, 10);
+      if (tf.from && day < tf.from) return false;
+      if (tf.to && day > tf.to) return false;
+    }
+    return true;
   }
 
   async function fetchAlertsPage(extra = {}) {
@@ -55,12 +74,10 @@
     return res.json();
   }
 
-  function syncMaxId() {
-    if (!state.items.length) {
-      state.maxAlertId = 0;
-      return;
+  function applyServerMax(data) {
+    if (data?.max_alert_id != null) {
+      state.lastGlobalAlertId = Math.max(state.lastGlobalAlertId, Number(data.max_alert_id));
     }
-    state.maxAlertId = Math.max(...state.items.map((r) => r.alert_id));
   }
 
   function updateTimelineFilterNotice() {
@@ -85,9 +102,18 @@
     });
   }
 
+  function updateMeta(extra = "") {
+    const meta = document.getElementById("alerts-stream-meta");
+    if (!meta) return;
+    if (!state.items.length) {
+      meta.textContent = extra || "";
+      return;
+    }
+    meta.textContent = `${state.items.length} loaded${state.hasMore ? " · scroll for more" : ""}${extra ? ` · ${extra}` : ""}`;
+  }
+
   function renderAlertsBody() {
     const body = document.getElementById("alerts-body");
-    const meta = document.getElementById("alerts-stream-meta");
     updateTimelineFilterNotice();
     if (!body) return;
     if (!state.items.length) {
@@ -95,34 +121,28 @@
     } else {
       body.innerHTML = state.items.map((r) => alertRowHtml(r)).join("");
     }
-    if (meta) {
-      meta.textContent = state.items.length
-        ? `${state.items.length} loaded${state.hasMore ? " · scroll for more" : ""}`
-        : "";
-    }
+    updateMeta();
     const sentinel = document.getElementById("alerts-load-sentinel");
     sentinel?.classList.toggle("hidden", !state.hasMore);
   }
 
   function prependAlerts(rows) {
-    if (!rows.length) return;
-    const existing = new Set(state.items.map((r) => r.alert_id));
-    const fresh = sortNewestFirst(rows.filter((r) => !existing.has(r.alert_id)));
-    if (!fresh.length) return;
+    if (!rows.length) return 0;
+    const existing = new Set(state.items.map((r) => alertId(r)));
+    const fresh = sortNewestFirst(rows.filter((r) => !existing.has(alertId(r)) && alertPassesUiFilters(r)));
+    if (!fresh.length) return 0;
 
     const scrollRoot = document.getElementById("alerts-scroll");
     const stickToTop = scrollRoot ? scrollRoot.scrollTop < 120 : true;
 
     state.items = [...fresh, ...state.items];
-    syncMaxId();
     const body = document.getElementById("alerts-body");
-    if (!body) return;
+    if (!body) return fresh.length;
     body.querySelector("tr.empty")?.remove();
     if (!body.querySelector("tr[data-alert-id]")) {
       renderAlertsBody();
-      return;
+      return fresh.length;
     }
-    // Insert oldest-of-batch first so newest row ends up at the top of the table.
     fresh
       .slice()
       .reverse()
@@ -133,14 +153,8 @@
     if (stickToTop && scrollRoot) {
       scrollRoot.scrollTo({ top: 0, behavior: "smooth" });
     }
-
-    const meta = document.getElementById("alerts-stream-meta");
-    if (meta && state.items.length) {
-      const newCount = fresh.length;
-      meta.textContent = `${state.items.length} loaded · ${newCount} new at top${
-        state.hasMore ? " · scroll for more" : ""
-      }`;
-    }
+    updateMeta(`${fresh.length} new at top`);
+    return fresh.length;
   }
 
   async function resetAndLoadAlerts() {
@@ -153,10 +167,7 @@
       const data = await fetchAlertsPage();
       state.items = sortNewestFirst(data.items || []);
       state.hasMore = Boolean(data.has_more);
-      syncMaxId();
-      if (data.max_alert_id != null) {
-        state.maxAlertId = Math.max(state.maxAlertId, data.max_alert_id);
-      }
+      applyServerMax(data);
       renderAlertsBody();
     } finally {
       state.loading = false;
@@ -166,7 +177,7 @@
 
   async function loadOlderAlerts() {
     if (state.loading || state.loadingMore || !state.hasMore || !state.items.length) return;
-    const oldest = state.items[state.items.length - 1]?.alert_id;
+    const oldest = alertId(state.items[state.items.length - 1]);
     if (!oldest) return;
     state.loadingMore = true;
     const sentinel = document.getElementById("alerts-load-sentinel");
@@ -174,11 +185,12 @@
     try {
       const data = await fetchAlertsPage({ before_id: oldest });
       const batch = data.items || [];
-      const existing = new Set(state.items.map((r) => r.alert_id));
+      const existing = new Set(state.items.map((r) => alertId(r)));
       batch.forEach((r) => {
-        if (!existing.has(r.alert_id)) state.items.push(r);
+        if (!existing.has(alertId(r))) state.items.push(r);
       });
       state.hasMore = Boolean(data.has_more);
+      applyServerMax(data);
       renderAlertsBody();
     } finally {
       state.loadingMore = false;
@@ -188,21 +200,18 @@
 
   async function pollNewAlerts() {
     if (state.loading || state.polling) return;
-    if (document.hidden) return;
     state.polling = true;
     try {
-      const since = state.maxAlertId || 0;
-      const data = await fetchAlertsPage({ since_id: since, limit: 25, live: true });
+      const since = state.lastGlobalAlertId || 0;
+      const data = await fetchAlertsPage({ since_id: since, limit: 30, live: true });
+      applyServerMax(data);
       const batch = data.items || [];
-      if (batch.length) prependAlerts(batch);
-      if (data.max_alert_id != null) {
-        state.maxAlertId = Math.max(state.maxAlertId, data.max_alert_id);
-      }
-      if (batch.length && typeof window.loadOverview === "function") {
+      const added = prependAlerts(batch);
+      if (added > 0 && typeof window.loadOverview === "function") {
         await window.loadOverview(true);
       }
-    } catch {
-      /* ignore transient poll errors */
+    } catch (err) {
+      console.warn("alerts live poll failed", err);
     } finally {
       state.polling = false;
     }
@@ -224,6 +233,7 @@
   function startPolling() {
     stopPolling();
     state.pollTimer = setInterval(() => void pollNewAlerts(), POLL_MS);
+    void pollNewAlerts();
   }
 
   function stopPolling() {
@@ -232,6 +242,7 @@
   }
 
   function initAlertsPanel() {
+    if (!document.getElementById("alerts-body")) return;
     ensureScrollObserver();
     startPolling();
     document.addEventListener("visibilitychange", () => {
@@ -251,4 +262,12 @@
   };
 
   window.loadAlertsFromUi = resetAndLoadAlerts;
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      initAlertsPanel();
+    });
+  } else {
+    initAlertsPanel();
+  }
 })();

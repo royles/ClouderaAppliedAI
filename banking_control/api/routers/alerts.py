@@ -27,10 +27,11 @@ def list_alerts(
 ) -> dict[str, Any]:
     params: list[Any] = [min_risk]
     clauses = ["a.risk_score >= ?"]
-    if status:
+    live_feed = live and since_id is not None
+    if status and not live_feed:
         clauses.append("a.status = ?")
         params.append(status)
-    if not (live and since_id is not None):
+    if not live_feed:
         append_iso_date_range(clauses, params, column="a.alert_at", from_date=from_date, to_date=to_date)
 
     if since_id is not None:

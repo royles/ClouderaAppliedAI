@@ -39,6 +39,7 @@ class TransactionAlertWorker:
             daemon=True,
         )
         self._bootstrap_pool()
+        self._generate_once()
         self._thread.start()
         logger.info("Transaction monitoring alert generator started")
 

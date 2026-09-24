@@ -384,36 +384,13 @@ function appendActivityTimeParams(params) {
 }
 
 async function loadAlertsFromUi() {
+  if (typeof window.loadAlertsFromUi === "function" && window.loadAlertsFromUi !== loadAlertsFromUi) {
+    await window.loadAlertsFromUi();
+    return;
+  }
   if (window.alertsPanel?.resetAndLoadAlerts) {
     await window.alertsPanel.resetAndLoadAlerts();
-    return;
   }
-  setTableLoading("alerts-body");
-  const minRisk = Number(document.getElementById("risk-slider")?.value || 0) / 100;
-  const params = new URLSearchParams();
-  params.set("min_risk", String(minRisk));
-  params.set("limit", "50");
-  if (alertStatusFilter) params.set("status", alertStatusFilter);
-  appendActivityTimeParams(params);
-  const data = await api(`/api/alerts?${params}`);
-  const rows = data.items || data;
-  const body = document.getElementById("alerts-body");
-  if (!body) return;
-  if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="5" class="empty">No alerts at this risk threshold</td></tr>`;
-    return;
-  }
-  body.innerHTML = rows
-    .map(
-      (r) => `<tr class="data-row" tabindex="0" role="link" data-detail="alerts" data-id="${r.alert_id}" aria-label="Open transaction alert">
-      <td>${r.alert_at}</td>
-      <td>${r.alert_type}<br /><small>${r.unit_code} · ${r.channel}</small></td>
-      <td>${fmtMoney(r.amount_usd)}</td>
-      <td>${(r.risk_score * 100).toFixed(0)}%</td>
-      <td>${statusPill(r.status)}</td>
-    </tr>`
-    )
-    .join("");
 }
 
 window.loadExceptions = loadExceptions;
@@ -462,7 +439,6 @@ async function refreshDashboard() {
 }
 
 async function boot() {
-  window.alertsPanel?.initAlertsPanel?.();
   await loadStatusChips();
 
   const jobs = [
