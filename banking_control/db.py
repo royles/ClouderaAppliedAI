@@ -186,7 +186,8 @@ def refresh_overview_cache(conn: sqlite3.Connection) -> dict[str, Any]:
         """
         SELECT
           COUNT(*) AS control_count,
-          SUM(CASE WHEN risk_tier = 'Critical' THEN 1 ELSE 0 END) AS critical_controls
+          SUM(CASE WHEN risk_tier = 'Critical' THEN 1 ELSE 0 END) AS critical_controls,
+          SUM(CASE WHEN is_golden = 1 THEN 1 ELSE 0 END) AS golden_controls
         FROM DIM_CONTROL
         """
     ).fetchone()
@@ -235,6 +236,7 @@ def refresh_overview_cache(conn: sqlite3.Connection) -> dict[str, Any]:
         "control_health_pct": control_health,
         "control_count": row["control_count"],
         "critical_controls": row["critical_controls"],
+        "golden_controls": row["golden_controls"] or 0,
         "assessment_status": status_counts,
         "open_exceptions": open_exceptions,
         "alert_status": alert_counts,
