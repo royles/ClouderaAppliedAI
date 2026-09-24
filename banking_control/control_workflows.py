@@ -37,7 +37,10 @@ def proposed_artifact_ref(control_code: str, workflow_type: str, *, year: int | 
 
 def _control_row(conn: sqlite3.Connection, control_code: str) -> sqlite3.Row | None:
     return conn.execute(
-        "SELECT control_id, control_code, control_name FROM DIM_CONTROL WHERE control_code = ? COLLATE NOCASE",
+        """
+        SELECT control_id, control_code, control_name, description
+        FROM DIM_CONTROL WHERE control_code = ? COLLATE NOCASE
+        """,
         (control_code.strip().upper(),),
     ).fetchone()
 
@@ -141,6 +144,12 @@ def start_workflow(
     artifact_ref = proposed_artifact_ref(row["control_code"], workflow_type)
     existing = find_workflow_by_artifact(conn, artifact_ref)
     if existing:
+        from banking_control.control_resources import ensure_evidence_resources
+
+        ensure_evidence_resources(
+            conn, int(row["control_id"]), row["control_code"], row["description"] or ""
+        )
+        _link_existing_workflow_resource(conn, existing, int(row["control_id"]))
         return {
             "ok": True,
             "created": False,
@@ -198,6 +207,18 @@ def start_workflow(
         "created_at": now,
         "updated_at": now,
     }
+    from banking_control.control_resources import ensure_evidence_resources, link_workflow_to_resource
+
+    ensure_evidence_resources(
+        conn, int(row["control_id"]), row["control_code"], row["description"] or ""
+    )
+    link_workflow_to_resource(
+        conn,
+        control_id=int(row["control_id"]),
+        workflow_type=workflow_type,
+        workflow_id=int(next_id),
+        artifact_ref=artifact_ref,
+    )
     return {
         "ok": True,
         "created": True,
@@ -206,3 +227,15 @@ def start_workflow(
         "control_id": int(row["control_id"]),
         "message": f"Created draft workflow artifact {artifact_ref}.",
     }
+
+
+def _link_existing_workflow_resource(conn: sqlite3.Connection, existing: sqlite3.Row, control_id: int) -> None:
+    from banking_control.control_resources import link_workflow_to_resource
+
+    link_workflow_to_resource(
+        conn,
+        control_id=control_id,
+        workflow_type=existing["workflow_type"],
+        workflow_id=int(existing["workflow_id"]),
+        artifact_ref=existing["artifact_ref"],
+    )

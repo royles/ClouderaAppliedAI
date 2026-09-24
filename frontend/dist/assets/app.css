@@ -977,6 +977,59 @@ body.copilot-open .copilot-toggle {
   word-break: break-word;
 }
 
+.control-resource-card {
+  border: 1px solid rgba(139, 156, 179, 0.35);
+  border-radius: 8px;
+  padding: 0.75rem 0.85rem;
+  margin-bottom: 0.65rem;
+  background: rgba(12, 17, 24, 0.45);
+}
+
+.control-resource-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.35rem;
+}
+
+.control-resource-form label {
+  display: block;
+  font-size: 0.78rem;
+  margin: 0.45rem 0 0.35rem;
+}
+
+.control-resource-form input {
+  display: block;
+  width: 100%;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+}
+
+.control-resource-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+  align-items: center;
+}
+
+.control-resource-open {
+  display: inline-block;
+  margin-top: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--accent, #3dd6c3);
+}
+
+.control-resource-toolbar {
+  margin-top: 0.5rem;
+}
+
+.control-workflow-history {
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+}
+
 .assistant-workflow-tasks {
   display: flex;
   flex-direction: column;

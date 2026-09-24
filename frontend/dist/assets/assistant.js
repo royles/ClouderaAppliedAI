@@ -165,7 +165,15 @@
         const links = document.createElement("div");
         links.className = "assistant-workflow-links";
         (task.links || []).forEach((link) => {
-          if (link.kind === "control_detail" && link.control_id) {
+          if (link.kind === "document" && link.url) {
+            const a = document.createElement("a");
+            a.className = "assistant-workflow-link assistant-workflow-link-primary";
+            a.href = link.url;
+            a.target = "_blank";
+            a.rel = "noopener noreferrer";
+            a.textContent = link.label || "Open document";
+            links.appendChild(a);
+          } else if (link.kind === "control_detail" && link.control_id) {
             const btn = document.createElement("button");
             btn.type = "button";
             btn.className = "assistant-workflow-link";

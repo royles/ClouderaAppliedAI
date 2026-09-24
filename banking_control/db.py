@@ -114,6 +114,20 @@ def ensure_warehouse_schema(conn: sqlite3.Connection) -> None:
           metadata_json TEXT
         );
 
+        CREATE TABLE IF NOT EXISTS FCT_CONTROL_EVIDENCE_RESOURCE (
+          resource_id INTEGER PRIMARY KEY,
+          control_id INTEGER NOT NULL REFERENCES DIM_CONTROL(control_id),
+          resource_key TEXT NOT NULL,
+          label TEXT NOT NULL,
+          placeholder_ref TEXT NOT NULL,
+          document_url TEXT,
+          document_title TEXT,
+          workflow_id INTEGER REFERENCES FCT_CONTROL_WORKFLOW(workflow_id),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          UNIQUE(control_id, resource_key)
+        );
+
         CREATE TABLE IF NOT EXISTS APP_OVERVIEW_SNAPSHOT (
           snapshot_key TEXT PRIMARY KEY,
           payload_json TEXT NOT NULL,
@@ -134,6 +148,7 @@ def ensure_warehouse_indexes(conn: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_alert_at ON FCT_TRANSACTION_ALERT(alert_at)",
         "CREATE INDEX IF NOT EXISTS idx_audit_event_at ON FCT_AUDIT_EVENT(event_at)",
         "CREATE INDEX IF NOT EXISTS idx_workflow_control ON FCT_CONTROL_WORKFLOW(control_id)",
+        "CREATE INDEX IF NOT EXISTS idx_evidence_resource_control ON FCT_CONTROL_EVIDENCE_RESOURCE(control_id)",
     ]
     for stmt in statements:
         try:

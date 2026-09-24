@@ -716,8 +716,49 @@
           .join("")}</tbody></table></div>`
       : `<p class="empty">No assessments recorded yet.</p>`;
 
-    const workflows = data.workflows?.length
-      ? `<div class="table-wrap"><table><thead><tr>
+    const resourceStatePill = (state) => {
+      if (state === "document_linked") return statusPill("Document linked");
+      if (state === "workflow_started") return statusPill("Workflow started");
+      return statusPill("Placeholder");
+    };
+
+    const evidenceResources = (data.evidence_resources || [])
+      .map((r) => {
+        const wfLine =
+          r.workflow_status && r.has_workflow
+            ? `<p class="control-resource-wf">Workflow: ${statusPill(r.workflow_status)} · <code>${escapeHtml(r.workflow_artifact_ref || r.placeholder_ref)}</code></p>`
+            : "";
+        const openDoc =
+          r.document_url && r.is_linked
+            ? `<a class="control-resource-open" href="${escapeHtml(r.document_url)}" target="_blank" rel="noopener noreferrer">Open linked document</a>`
+            : "";
+        return `<article class="control-resource-card" data-resource-id="${r.resource_id}" id="resource-${r.resource_id}">
+          <div class="control-resource-head">
+            ${resourceStatePill(r.link_state)}
+            <strong>${escapeHtml(r.label)}</strong>
+          </div>
+          <p class="hint">Expected artifact ID: <code>${escapeHtml(r.placeholder_ref)}</code></p>
+          ${wfLine}
+          <div class="control-resource-form">
+            <label>Document title
+              <input type="text" name="document_title" value="${escapeHtml(r.document_title || "")}" placeholder="e.g. AML-001 testing workpaper FY26" maxlength="240" />
+            </label>
+            <label>Document URL
+              <input type="url" name="document_url" value="${escapeHtml(r.document_url || "")}" placeholder="https://…" maxlength="2048" />
+            </label>
+            <div class="control-resource-actions">
+              <button type="button" class="btn btn-secondary control-resource-save" data-control-id="${c.control_id}" data-resource-id="${r.resource_id}">Connect asset</button>
+              <button type="button" class="btn btn-link control-resource-clear" data-control-id="${c.control_id}" data-resource-id="${r.resource_id}" ${r.is_linked ? "" : "disabled"}>Clear link</button>
+            </div>
+            ${openDoc}
+          </div>
+        </article>`;
+      })
+      .join("");
+
+    const workflowsTable = data.workflows?.length
+      ? `<details class="control-workflow-history"><summary>Workflow history (${data.workflows.length})</summary>
+        <div class="table-wrap"><table><thead><tr>
           <th>Artifact</th><th>Type</th><th>Status</th><th>Started</th>
         </tr></thead><tbody>${data.workflows
           .map(
@@ -728,8 +769,8 @@
             <td>${escapeHtml(w.created_at || "")}</td>
           </tr>`
           )
-          .join("")}</tbody></table></div>`
-      : `<p class="empty">No testing workflows started yet. Use the assistant to create a workpaper from the Effective checklist.</p>`;
+          .join("")}</tbody></table></div></details>`
+      : "";
 
     const exceptions = data.exceptions?.length
       ? `<ul class="detail-link-list">${data.exceptions
@@ -758,13 +799,16 @@
         <p class="hint">Peers with the same similarity / objective grouping (harmonization set).</p>
         ${renderRelatedControls(data.related_controls)}
       </section>
-      <section class="detail-section">
-        <h3>Testing workflows</h3>
-        <p class="hint">Workpapers and approval packs are created here — IDs are not assumed until a workflow runs.</p>
-        ${workflows}
-        <button type="button" class="btn btn-secondary control-start-workpaper" data-control-code="${escapeHtml(c.control_code)}" data-workflow-type="testing_workpaper">
-          Start testing workpaper
-        </button>
+      <section class="detail-section" id="control-evidence-resources">
+        <h3>Evidence &amp; resources</h3>
+        <p class="hint">Placeholder slots for required evidence. Connect each slot to a real document URL when the asset exists in your DMS or sharepoint.</p>
+        ${evidenceResources || `<p class="empty">No resource placeholders yet.</p>`}
+        <div class="control-resource-toolbar">
+          <button type="button" class="btn btn-secondary control-start-workpaper" data-control-code="${escapeHtml(c.control_code)}" data-workflow-type="testing_workpaper">
+            Start testing workpaper workflow
+          </button>
+        </div>
+        ${workflowsTable}
       </section>
       <section class="detail-section">
         <h3>Recent assessments</h3>
@@ -908,6 +952,35 @@
     await loadDetailView(route.kind, route.id);
   }
 
+  async function saveControlResourceLink(controlId, resourceId, card) {
+    const title = card.querySelector('[name="document_title"]')?.value?.trim() || "";
+    const url = card.querySelector('[name="document_url"]')?.value?.trim() || "";
+    try {
+      if (!url) {
+        card.insertAdjacentHTML("beforeend", `<p class="pane-error">Enter a document URL to connect an asset.</p>`);
+        return;
+      }
+      await api(`/api/controls/${controlId}/resources/${resourceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ document_title: title || null, document_url: url }),
+      });
+      await loadDetailView("controls", controlId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      card.insertAdjacentHTML("beforeend", `<p class="pane-error">${escapeHtml(msg)}</p>`);
+    }
+  }
+
+  async function clearControlResourceLink(controlId, resourceId) {
+    try {
+      await api(`/api/controls/${controlId}/resources/${resourceId}/link`, { method: "DELETE" });
+      await loadDetailView("controls", controlId);
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
   async function startControlWorkflowFromDetail(controlCode, workflowType) {
     const route = parseDetailHash();
     const controlId = route?.kind === "controls" ? route.id : null;
@@ -974,6 +1047,17 @@
           wpBtn.dataset.controlCode,
           wpBtn.dataset.workflowType || "testing_workpaper"
         );
+      }
+      const saveRes = e.target.closest(".control-resource-save");
+      if (saveRes?.dataset.controlId && saveRes.dataset.resourceId) {
+        const card = saveRes.closest(".control-resource-card");
+        if (card) {
+          void saveControlResourceLink(saveRes.dataset.controlId, saveRes.dataset.resourceId, card);
+        }
+      }
+      const clearRes = e.target.closest(".control-resource-clear");
+      if (clearRes?.dataset.controlId && clearRes.dataset.resourceId) {
+        void clearControlResourceLink(clearRes.dataset.controlId, clearRes.dataset.resourceId);
       }
     });
 

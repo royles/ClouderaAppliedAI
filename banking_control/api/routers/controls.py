@@ -22,6 +22,12 @@ from banking_control.control_create import (
     validate_create_payload,
 )
 from banking_control.control_graph import build_process_graph, list_flows_for_control
+from banking_control.control_resources import (
+    clear_resource_document,
+    ensure_evidence_resources,
+    list_evidence_resources,
+    update_resource_document,
+)
 from banking_control.control_workflows import list_workflows_for_control, start_workflow
 from banking_control.db import refresh_overview_cache
 from banking_control.tools.engine import ControlToolEngine, ToolValidationError
@@ -39,6 +45,11 @@ class ControlRecommendRequest(BaseModel):
 
 class StartWorkflowRequest(BaseModel):
     workflow_type: str = Field(..., min_length=3, max_length=64)
+
+
+class ControlResourceLinkRequest(BaseModel):
+    document_url: str | None = Field(None, max_length=2048)
+    document_title: str | None = Field(None, max_length=240)
 
 
 class ControlCreateRequest(BaseModel):
@@ -298,6 +309,13 @@ def fetch_control_detail(conn: Any, control_id: int) -> dict[str, Any]:
         (control_id,),
     ).fetchall()
     control = dict(row)
+    ensure_evidence_resources(
+        conn,
+        control_id,
+        control["control_code"],
+        control.get("description") or "",
+    )
+    conn.commit()
     standards_refs: list[dict[str, str]] = []
     raw_standards = control.pop("standards_json", None)
     if raw_standards:
@@ -357,6 +375,7 @@ def fetch_control_detail(conn: Any, control_id: int) -> dict[str, Any]:
         "assessments": [dict(r) for r in assessments],
         "exceptions": [dict(r) for r in exceptions],
         "workflows": list_workflows_for_control(conn, control_id),
+        "evidence_resources": list_evidence_resources(conn, control_id),
         "related_controls": related,
         "process_graph": process_graph,
         "process_flows": list_flows_for_control(control_code),
@@ -389,4 +408,53 @@ def post_control_workflow(
         raise HTTPException(status_code=400, detail=result)
     conn.commit()
     refresh_overview_cache(conn)
+    return result
+
+
+@router.patch("/controls/{control_id}/resources/{resource_id}")
+def patch_control_resource(
+    control_id: int,
+    resource_id: int,
+    body: ControlResourceLinkRequest,
+    conn: Any = Depends(get_db_connection),
+) -> dict[str, Any]:
+    result = update_resource_document(
+        conn,
+        control_id=control_id,
+        resource_id=resource_id,
+        document_url=body.document_url,
+        document_title=body.document_title,
+    )
+    if not result.get("ok"):
+        if result.get("error") == "not_found":
+            raise HTTPException(status_code=404, detail=result)
+        raise HTTPException(status_code=400, detail=result)
+    conn.execute(
+        """
+        INSERT INTO FCT_AUDIT_EVENT (event_id, event_at, actor, action, entity_type, entity_id, detail)
+        VALUES (
+          (SELECT COALESCE(MAX(event_id), 0) + 1 FROM FCT_AUDIT_EVENT),
+          datetime('now'), 'dashboard', 'Evidence resource linked', 'control_resource', ?, ?
+        )
+        """,
+        (
+            str(resource_id),
+            f"Control {control_id} resource {resource_id}: "
+            f"{body.document_title or body.document_url or 'cleared'}",
+        ),
+    )
+    conn.commit()
+    return result
+
+
+@router.delete("/controls/{control_id}/resources/{resource_id}/link")
+def delete_control_resource_link(
+    control_id: int,
+    resource_id: int,
+    conn: Any = Depends(get_db_connection),
+) -> dict[str, Any]:
+    result = clear_resource_document(conn, control_id=control_id, resource_id=resource_id)
+    if not result.get("ok"):
+        raise HTTPException(status_code=404, detail=result)
+    conn.commit()
     return result

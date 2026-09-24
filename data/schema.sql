@@ -102,7 +102,22 @@ CREATE TABLE IF NOT EXISTS FCT_CONTROL_WORKFLOW (
   metadata_json TEXT
 );
 
+CREATE TABLE IF NOT EXISTS FCT_CONTROL_EVIDENCE_RESOURCE (
+  resource_id INTEGER PRIMARY KEY,
+  control_id INTEGER NOT NULL REFERENCES DIM_CONTROL(control_id),
+  resource_key TEXT NOT NULL,
+  label TEXT NOT NULL,
+  placeholder_ref TEXT NOT NULL,
+  document_url TEXT,
+  document_title TEXT,
+  workflow_id INTEGER REFERENCES FCT_CONTROL_WORKFLOW(workflow_id),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(control_id, resource_key)
+);
+
 CREATE INDEX IF NOT EXISTS idx_assessment_control ON FCT_CONTROL_ASSESSMENT(control_id);
 CREATE INDEX IF NOT EXISTS idx_workflow_control ON FCT_CONTROL_WORKFLOW(control_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_resource_control ON FCT_CONTROL_EVIDENCE_RESOURCE(control_id);
 CREATE INDEX IF NOT EXISTS idx_exception_status ON FCT_EXCEPTION(status);
 CREATE INDEX IF NOT EXISTS idx_alert_status ON FCT_TRANSACTION_ALERT(status);

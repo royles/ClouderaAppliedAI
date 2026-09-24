@@ -19,10 +19,43 @@ _METADATA_LINE = re.compile(
 )
 
 
-def _task_from_db_row(row: sqlite3.Row) -> dict[str, Any]:
+def _document_link_for_placeholder(
+    conn: sqlite3.Connection, control_id: int, placeholder_ref: str
+) -> dict[str, Any] | None:
+    doc = conn.execute(
+        """
+        SELECT document_url, document_title FROM FCT_CONTROL_EVIDENCE_RESOURCE
+        WHERE control_id = ? AND placeholder_ref = ? COLLATE NOCASE
+          AND document_url IS NOT NULL AND trim(document_url) != ''
+        """,
+        (control_id, placeholder_ref),
+    ).fetchone()
+    if not doc:
+        return None
+    title = doc["document_title"] or "Open linked document"
+    return {
+        "link_id": "document",
+        "label": title,
+        "kind": "document",
+        "url": doc["document_url"],
+    }
+
+
+def _task_from_db_row(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any]:
     wf_type = row["workflow_type"]
     label = WORKFLOW_TYPES.get(wf_type, {}).get("label", wf_type)
     control_id = int(row["control_id"])
+    links: list[dict[str, Any]] = [
+        {
+            "link_id": "control_workflows",
+            "label": f"Open {row['control_code']} · evidence",
+            "kind": "control_detail",
+            "control_id": control_id,
+        },
+    ]
+    doc_link = _document_link_for_placeholder(conn, control_id, row["artifact_ref"])
+    if doc_link:
+        links.insert(0, doc_link)
     return {
         "task_id": f"workflow_{row['workflow_id']}",
         "exists": True,
@@ -36,14 +69,7 @@ def _task_from_db_row(row: sqlite3.Row) -> dict[str, Any]:
         "control_name": row["control_name"],
         "created_at": row["created_at"],
         "updated_at": row["updated_at"],
-        "links": [
-            {
-                "link_id": "control_workflows",
-                "label": f"Open {row['control_code']} · workflows",
-                "kind": "control_detail",
-                "control_id": control_id,
-            },
-        ],
+        "links": links,
     }
 
 
@@ -61,7 +87,7 @@ def lookup_workflow_task(conn: sqlite3.Connection, artifact_ref: str) -> dict[st
     ).fetchone()
     if row is None:
         return None
-    return _task_from_db_row(row)
+    return _task_from_db_row(conn, row)
 
 
 def _task_from_suggestion(
