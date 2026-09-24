@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from banking_control.api.deps import get_db_connection
+from banking_control.control_graph import build_process_graph, list_flows_for_control
 
 router = APIRouter(prefix="/api", tags=["controls"])
 
@@ -122,9 +123,57 @@ def get_control(
         (control_id,),
     ).fetchall()
     control = dict(row)
+    control_code = control["control_code"]
+    similarity_key = control.get("similarity_key")
+
+    related: list[dict[str, Any]] = []
+    if similarity_key:
+        rel_rows = conn.execute(
+            """
+            SELECT control_id, control_code, control_name, domain, risk_tier, is_golden,
+                   similarity_key
+            FROM DIM_CONTROL
+            WHERE similarity_key = ? AND control_code != ?
+            ORDER BY is_golden DESC,
+              CASE risk_tier
+                WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 ELSE 4
+              END,
+              control_code
+            LIMIT 16
+            """,
+            (similarity_key, control_code),
+        ).fetchall()
+        related = [
+            {**dict(r), "relation": "same_objective", "relation_label": "Same control objective"}
+            for r in rel_rows
+        ]
+
+    process_graph = build_process_graph(control_code)
+    if process_graph:
+        codes = {n["control_code"] for n in process_graph["nodes"]}
+        placeholders = ",".join("?" for _ in codes)
+        id_rows = conn.execute(
+            f"""
+            SELECT control_id, control_code, control_name, domain, risk_tier
+            FROM DIM_CONTROL
+            WHERE control_code IN ({placeholders})
+            """,
+            list(codes),
+        ).fetchall()
+        by_code = {r["control_code"]: dict(r) for r in id_rows}
+        for node in process_graph["nodes"]:
+            info = by_code.get(node["control_code"], {})
+            node["control_id"] = info.get("control_id")
+            node["control_name"] = info.get("control_name", node["control_code"])
+            node["domain"] = info.get("domain")
+            node["risk_tier"] = info.get("risk_tier")
+
     return {
         "control": control,
         "latest_status": latest["status"] if latest else "Not Tested",
         "assessments": [dict(r) for r in assessments],
         "exceptions": [dict(r) for r in exceptions],
+        "related_controls": related,
+        "process_graph": process_graph,
+        "process_flows": list_flows_for_control(control_code),
     }

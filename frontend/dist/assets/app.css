@@ -1008,3 +1008,66 @@ tr.data-row:focus-visible,
   color: #6ee8da;
 }
 
+.related-controls-list .related-meta {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-top: 0.15rem;
+}
+
+.detail-section-graph .control-dag-wrap {
+  overflow-x: auto;
+  margin-top: 0.65rem;
+  padding-bottom: 0.35rem;
+  border-radius: 0.55rem;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+
+.control-dag-svg {
+  display: block;
+  min-width: 100%;
+  height: auto;
+}
+
+.control-dag-node rect {
+  fill: rgba(26, 36, 51, 0.95);
+  stroke: var(--border);
+  stroke-width: 1.25;
+  transition: stroke 0.12s ease, fill 0.12s ease;
+}
+
+.control-dag-node.is-current rect {
+  stroke: var(--accent);
+  fill: rgba(30, 107, 97, 0.35);
+  stroke-width: 2;
+}
+
+.control-dag-node[data-id] {
+  cursor: pointer;
+}
+
+.control-dag-node[data-id]:hover rect,
+.control-dag-node[data-id]:focus rect {
+  stroke: var(--accent-dim);
+}
+
+.control-dag-code {
+  fill: var(--accent);
+  font-size: 11px;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 500;
+}
+
+.control-dag-name {
+  fill: var(--muted);
+  font-size: 9px;
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+
+.control-dag-edge-label {
+  fill: var(--muted);
+  font-size: 8px;
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+

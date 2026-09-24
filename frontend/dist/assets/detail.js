@@ -74,6 +74,156 @@
     return null;
   }
 
+  function renderRelatedControls(related) {
+    if (!related?.length) {
+      return `<p class="empty">No peer controls share the same similarity group.</p>`;
+    }
+    return `<ul class="detail-link-list related-controls-list">${related
+      .map(
+        (r) => `<li>
+        <button type="button" class="detail-entity-link related-control-link" data-detail="controls" data-id="${r.control_id}">
+          <code>${r.control_code}</code> — ${r.control_name}
+          <span class="related-meta">${r.domain} · ${r.relation_label || r.relation}${r.is_golden ? " · ★" : ""}</span>
+        </button>
+      </li>`
+      )
+      .join("")}</ul>`;
+  }
+
+  function renderProcessGraphSection(graph) {
+    if (!graph) {
+      return `<section class="detail-section">
+        <h3>Process sequence</h3>
+        <p class="empty">This control is not yet mapped to a reference process chain.</p>
+      </section>`;
+    }
+    return `<section class="detail-section detail-section-graph">
+      <h3>Process sequence (DAG)</h3>
+      <p class="hint">${graph.flow_name} — ${graph.flow_description}</p>
+      <div class="control-dag-wrap">
+        <svg id="control-flow-graph" class="control-dag-svg" role="img" aria-label="Horizontal control sequence graph"></svg>
+      </div>
+    </section>`;
+  }
+
+  function paintControlFlowGraph(graph) {
+    const svg = document.getElementById("control-flow-graph");
+    if (!svg || !graph?.nodes?.length) return;
+
+    const NODE_W = 132;
+    const NODE_H = 52;
+    const LAYER_GAP = 48;
+    const ROW_GAP = 16;
+    const PAD = 20;
+
+    const byLayer = new Map();
+    graph.nodes.forEach((n) => {
+      const layer = n.layer ?? 0;
+      if (!byLayer.has(layer)) byLayer.set(layer, []);
+      byLayer.get(layer).push(n);
+    });
+    byLayer.forEach((list) => list.sort((a, b) => a.control_code.localeCompare(b.control_code)));
+
+    const positions = new Map();
+    let maxLayer = 0;
+    let maxRows = 1;
+    byLayer.forEach((list, layer) => {
+      maxLayer = Math.max(maxLayer, layer);
+      maxRows = Math.max(maxRows, list.length);
+      list.forEach((n, i) => {
+        positions.set(n.control_code, {
+          x: PAD + layer * (NODE_W + LAYER_GAP),
+          y: PAD + i * (NODE_H + ROW_GAP),
+          node: n,
+        });
+      });
+    });
+
+    const width = PAD * 2 + (maxLayer + 1) * NODE_W + maxLayer * LAYER_GAP;
+    const rows = Math.max(...[...byLayer.values()].map((l) => l.length));
+    const height = PAD * 2 + rows * NODE_H + (rows - 1) * ROW_GAP;
+
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.innerHTML = "";
+
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defs.innerHTML = `<marker id="dag-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(147, 164, 188, 0.95)"></path>
+    </marker>`;
+    svg.appendChild(defs);
+
+    (graph.edges || []).forEach((e) => {
+      const from = positions.get(e.from);
+      const to = positions.get(e.to);
+      if (!from || !to) return;
+      const x1 = from.x + NODE_W;
+      const y1 = from.y + NODE_H / 2;
+      const x2 = to.x;
+      const y2 = to.y + NODE_H / 2;
+      const midX = (x1 + x2) / 2;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute(
+        "d",
+        `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`
+      );
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", "rgba(147, 164, 188, 0.55)");
+      path.setAttribute("stroke-width", "1.5");
+      path.setAttribute("marker-end", "url(#dag-arrow)");
+      svg.appendChild(path);
+
+      if (e.label) {
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", String(midX));
+        label.setAttribute("y", String((y1 + y2) / 2 - 4));
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("class", "control-dag-edge-label");
+        label.textContent = e.label.length > 22 ? `${e.label.slice(0, 20)}…` : e.label;
+        svg.appendChild(label);
+      }
+    });
+
+    positions.forEach(({ x, y, node }) => {
+      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      g.setAttribute("class", `control-dag-node${node.is_current ? " is-current" : ""}`);
+      if (node.control_id) {
+        g.setAttribute("data-id", String(node.control_id));
+        g.setAttribute("role", "link");
+        g.setAttribute("tabindex", "0");
+      }
+
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("x", String(x));
+      rect.setAttribute("y", String(y));
+      rect.setAttribute("width", String(NODE_W));
+      rect.setAttribute("height", String(NODE_H));
+      rect.setAttribute("rx", "8");
+      g.appendChild(rect);
+
+      const code = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      code.setAttribute("x", String(x + NODE_W / 2));
+      code.setAttribute("y", String(y + 20));
+      code.setAttribute("text-anchor", "middle");
+      code.setAttribute("class", "control-dag-code");
+      code.textContent = node.control_code;
+      g.appendChild(code);
+
+      const name = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      name.setAttribute("x", String(x + NODE_W / 2));
+      name.setAttribute("y", String(y + 38));
+      name.setAttribute("text-anchor", "middle");
+      name.setAttribute("class", "control-dag-name");
+      const shortName =
+        (node.control_name || "").length > 24
+          ? `${node.control_name.slice(0, 22)}…`
+          : node.control_name || "";
+      name.textContent = shortName;
+      g.appendChild(name);
+
+      svg.appendChild(g);
+    });
+  }
+
   function renderControlDetail(data) {
     const c = data.control;
     document.title = `${c.control_code} · Banking Control Solution`;
@@ -121,6 +271,12 @@
         <h3>Overview</h3>
         <dl class="detail-dl">${meta}</dl>
         <p class="detail-description">${c.description}</p>
+      </section>
+      ${renderProcessGraphSection(data.process_graph)}
+      <section class="detail-section">
+        <h3>Related controls</h3>
+        <p class="hint">Peers with the same similarity / objective grouping (harmonization set).</p>
+        ${renderRelatedControls(data.related_controls)}
       </section>
       <section class="detail-section">
         <h3>Recent assessments</h3>
@@ -228,7 +384,11 @@
     try {
       let html;
       if (kind === "controls") {
-        html = renderControlDetail(await api(`/api/controls/${id}`));
+        const controlData = await api(`/api/controls/${id}`);
+        html = renderControlDetail(controlData);
+        body.innerHTML = html;
+        paintControlFlowGraph(controlData.process_graph);
+        return;
       } else if (kind === "alerts") {
         html = renderAlertDetail(await api(`/api/alerts/${id}`));
       } else if (kind === "exceptions") {
@@ -274,6 +434,11 @@
     document.getElementById("detail-back")?.addEventListener("click", () => closeDetailView());
 
     document.getElementById("detail-view")?.addEventListener("click", (e) => {
+      const dagNode = e.target.closest(".control-dag-node[data-id]");
+      if (dagNode?.dataset.id) {
+        navigateToDetail("controls", dagNode.dataset.id);
+        return;
+      }
       const link = e.target.closest(".detail-entity-link");
       if (link?.dataset.detail && link.dataset.id) {
         navigateToDetail(link.dataset.detail, link.dataset.id);
@@ -298,6 +463,14 @@
       if (!row?.dataset.detail || !row.dataset.id) return;
       e.preventDefault();
       navigateToDetail(row.dataset.detail, row.dataset.id);
+    });
+
+    document.getElementById("detail-view")?.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const dagNode = e.target.closest(".control-dag-node[data-id]");
+      if (!dagNode) return;
+      e.preventDefault();
+      navigateToDetail("controls", dagNode.dataset.id);
     });
 
     window.addEventListener("hashchange", () => {
