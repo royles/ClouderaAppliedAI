@@ -177,26 +177,63 @@ async function advanceException(id) {
   await loadAudit();
 }
 
-async function loadHealthPill() {
-  const health = document.getElementById("health-pill");
+function setStatusPill(el, text, tone, title) {
+  if (!el) return;
+  el.textContent = text;
+  el.className = `pill pill-${tone}`;
+  if (title != null) el.title = title;
+}
+
+async function loadStatusChips() {
+  const apiPill = document.getElementById("api-health-pill");
+  const dbPill = document.getElementById("health-pill");
+  const llmPill = document.getElementById("llm-health-pill");
   try {
     const h = await api("/api/health");
-    if (h.database === "ready") {
-      const parts = ["Database ready"];
-      if (h.control_count != null) parts.push(`${h.control_count} controls`);
-      if (h.golden_count != null) parts.push(`${h.golden_count} golden`);
-      health.textContent = parts.join(" · ");
-      health.title = h.version ? `App v${h.version}` : "";
-      health.className = "pill pill-ok";
+    const versionTitle = h.version ? `Banking Control v${h.version}` : "Banking Control Solution";
+
+    if (h.status === "ok" && h.api === "ok") {
+      setStatusPill(apiPill, "API online", "ok", `${versionTitle} · REST API responding`);
     } else {
-      health.textContent = h.database === "error" ? "Database error" : "Database missing";
-      health.className = "pill pill-danger";
+      setStatusPill(apiPill, "API degraded", "warn", versionTitle);
+    }
+
+    if (h.database === "ready") {
+      const dbTitle = [
+        versionTitle,
+        h.control_count != null ? `${h.control_count} controls` : "",
+        h.golden_count != null ? `${h.golden_count} golden` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      setStatusPill(dbPill, "Database ready", "ok", dbTitle);
+    } else if (h.database === "error") {
+      setStatusPill(dbPill, "Database error", "danger", versionTitle);
+    } else {
+      setStatusPill(dbPill, "Database missing", "danger", `${versionTitle} · run init-database job`);
+    }
+
+    if (h.llm_link === "online") {
+      const provider = h.llm_provider === "openai_compatible" ? "local" : h.llm_provider || "provider";
+      setStatusPill(llmPill, "LLM online", "ok", `Assistant link ready (${provider})`);
+    } else if (h.llm_link === "offline") {
+      setStatusPill(
+        llmPill,
+        "LLM offline",
+        "warn",
+        "Configure Bedrock or local LLM via settings (⚙)"
+      );
+    } else {
+      setStatusPill(llmPill, "LLM unknown", "muted", versionTitle);
     }
   } catch {
-    health.textContent = "API offline";
-    health.className = "pill pill-danger";
+    setStatusPill(apiPill, "API offline", "danger", "Cannot reach /api/health");
+    setStatusPill(dbPill, "Database unknown", "muted", "");
+    setStatusPill(llmPill, "LLM unknown", "muted", "");
   }
 }
+
+window.loadStatusChips = loadStatusChips;
 
 async function loadOverview(refresh = false) {
   const cards = document.getElementById("overview-cards");
@@ -254,7 +291,7 @@ async function refreshDashboard() {
   btn?.setAttribute("disabled", "true");
   try {
     await Promise.all([
-      loadHealthPill(),
+      loadStatusChips(),
       loadOverview(true),
       loadDomainOptions(),
       loadControls(
@@ -272,7 +309,7 @@ async function refreshDashboard() {
 }
 
 async function boot() {
-  await loadHealthPill();
+  await loadStatusChips();
 
   const jobs = [
     { name: "overview", run: () => loadOverview(), target: "overview-cards" },

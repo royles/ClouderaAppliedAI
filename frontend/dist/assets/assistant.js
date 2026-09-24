@@ -55,44 +55,69 @@
     }
   }
 
-  function setPanelOpen(panel, toggle, open) {
-    panel.classList.toggle("is-open", open);
-    document.body.classList.toggle("assistant-open", open);
+  function setCopilotOpen(rail, panel, toggle, open) {
+    if (!rail || !panel) return;
+    rail.classList.toggle("is-open", open);
+    rail.classList.toggle("is-closed", !open);
+    document.body.classList.toggle("copilot-open", open);
     panel.setAttribute("aria-hidden", open ? "false" : "true");
-    if (toggle) toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    if (toggle) {
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      toggle.setAttribute("aria-label", open ? "Close control assistant" : "Open control assistant");
+      toggle.title = open ? "Close assistant" : "Open assistant";
+    }
     localStorage.setItem(STORAGE_KEY, open ? "1" : "0");
+  }
+
+  function setAdminMenuOpen(menuPanel, menuToggle, open) {
+    if (!menuPanel || !menuToggle) return;
+    menuPanel.classList.toggle("hidden", !open);
+    menuToggle.setAttribute("aria-expanded", open ? "true" : "false");
   }
 
   function initBankingAssistant() {
     if (window.__bankingAssistantInit) return;
     window.__bankingAssistantInit = true;
 
+    const rail = document.getElementById("copilot-rail");
     const panel = document.getElementById("assistant-panel");
     const toggle = document.getElementById("assistant-toggle");
-    const backdrop = document.getElementById("assistant-backdrop");
     const history = document.getElementById("assistant-history");
     const form = document.getElementById("assistant-form");
     const input = document.getElementById("assistant-input");
     const statusEl = document.getElementById("assistant-status");
-    const adminToggle = document.getElementById("assistant-admin-toggle");
-    const adminPanel = document.getElementById("assistant-admin");
+    const adminMenuToggle = document.getElementById("admin-menu-toggle");
+    const adminMenuPanel = document.getElementById("admin-menu-panel");
     const adminForm = document.getElementById("admin-llm-form");
 
-    if (!panel || !toggle) return;
+    if (!panel || !toggle || !rail) return;
 
     const shouldOpen = localStorage.getItem(STORAGE_KEY) === "1";
-    setPanelOpen(panel, toggle, shouldOpen);
+    setCopilotOpen(rail, panel, toggle, shouldOpen);
 
     toggle.addEventListener("click", (e) => {
       e.preventDefault();
-      const open = !panel.classList.contains("is-open");
-      setPanelOpen(panel, toggle, open);
+      const open = !rail.classList.contains("is-open");
+      setCopilotOpen(rail, panel, toggle, open);
     });
 
-    backdrop?.addEventListener("click", () => setPanelOpen(panel, toggle, false));
+    adminMenuToggle?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const open = adminMenuPanel?.classList.contains("hidden");
+      setAdminMenuOpen(adminMenuPanel, adminMenuToggle, Boolean(open));
+    });
 
-    adminToggle?.addEventListener("click", () => {
-      adminPanel?.classList.toggle("hidden");
+    document.addEventListener("click", (e) => {
+      if (!adminMenuPanel || adminMenuPanel.classList.contains("hidden")) return;
+      if (e.target.closest("#admin-icon-menu")) return;
+      setAdminMenuOpen(adminMenuPanel, adminMenuToggle, false);
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && adminMenuPanel && !adminMenuPanel.classList.contains("hidden")) {
+        setAdminMenuOpen(adminMenuPanel, adminMenuToggle, false);
+        adminMenuToggle?.focus();
+      }
     });
 
     function appendMessage(role, text) {
@@ -121,8 +146,9 @@
         const data = await res.json();
         statusEl.textContent = data.llm_configured
           ? `LLM ready (${data.provider})`
-          : "LLM not configured — open Admin";
+          : "LLM not configured — use ⚙ in header";
         statusEl.className = `pill ${data.llm_configured ? "pill-ok" : "pill-warn"}`;
+        window.loadStatusChips?.();
       } catch {
         statusEl.textContent = "Assistant status unknown";
         statusEl.className = "pill pill-muted";
@@ -154,7 +180,7 @@
             : "Bearer token";
         }
       } catch {
-        /* admin optional */
+        /* optional */
       }
     }
 
@@ -178,6 +204,7 @@
       }
       await loadAdminConfig();
       await refreshAssistantStatus();
+      window.loadStatusChips?.();
     });
 
     document.getElementById("admin-llm-test")?.addEventListener("click", async () => {
@@ -193,9 +220,10 @@
       alert(data.ok ? `OK: ${data.detail || data.message}` : data.message);
     });
 
-    form?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!input) return;
+    let sending = false;
+
+    async function submitChat() {
+      if (!input || sending) return;
       const message = input.value.trim();
       if (!message) return;
       input.value = "";
@@ -203,7 +231,8 @@
       const assistantNode = appendMessage("assistant", "…");
       const textNode = assistantNode.querySelector(".assistant-msg-text");
       const metaNode = assistantNode.querySelector(".assistant-msg-meta");
-      form.querySelector("button")?.setAttribute("disabled", "true");
+      sending = true;
+      form?.querySelector('button[type="submit"]')?.setAttribute("disabled", "true");
       try {
         await postAssistantStream(message, {
           onMeta: (m) => {
@@ -230,8 +259,20 @@
           textNode.textContent = err instanceof Error ? err.message : "Chat failed";
         }
       } finally {
-        form.querySelector("button")?.removeAttribute("disabled");
+        sending = false;
+        form?.querySelector('button[type="submit"]')?.removeAttribute("disabled");
       }
+    }
+
+    form?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      void submitChat();
+    });
+
+    input?.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || e.shiftKey || e.isComposing) return;
+      e.preventDefault();
+      void submitChat();
     });
 
     void refreshAssistantStatus();

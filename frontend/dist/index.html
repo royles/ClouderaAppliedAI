@@ -24,7 +24,9 @@
         </div>
         <div class="topbar-actions">
           <div class="topbar-status-cluster">
-            <span id="health-pill" class="pill pill-muted">Checking…</span>
+            <span id="api-health-pill" class="pill pill-muted" title="FastAPI service">API…</span>
+            <span id="health-pill" class="pill pill-muted" title="SQLite warehouse">Database…</span>
+            <span id="llm-health-pill" class="pill pill-muted" title="Assistant LLM provider">LLM…</span>
             <div class="icon-menu" id="admin-icon-menu">
               <button
                 type="button"
@@ -234,7 +236,7 @@
         </svg>
       </button>
     </div>
-    <script src="/assets/assistant.js?v=5"></script>
-    <script src="/assets/app.js?v=5"></script>
+    <script src="/assets/assistant.js?v=6"></script>
+    <script src="/assets/app.js?v=6"></script>
   </body>
 </html>

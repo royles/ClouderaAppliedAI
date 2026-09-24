@@ -79,6 +79,102 @@ body {
   gap: 0.75rem;
 }
 
+.topbar-status-cluster {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: min(52rem, 70vw);
+  justify-content: flex-end;
+}
+
+.icon-menu {
+  position: relative;
+}
+
+.icon-menu-btn {
+  box-sizing: border-box;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.icon-menu-btn:hover,
+.icon-menu-btn:focus-visible,
+.icon-menu-btn[aria-expanded="true"] {
+  color: var(--text);
+  border-color: var(--accent-dim);
+  background: var(--surface-2);
+  outline: none;
+}
+
+.icon-menu-btn:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+.icon-menu-cog {
+  display: block;
+}
+
+.icon-menu-panel {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  z-index: 1200;
+  width: min(20rem, 92vw);
+  max-height: min(70vh, 32rem);
+  overflow: auto;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.icon-menu-panel.hidden {
+  display: none;
+}
+
+.icon-menu-panel-title {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.icon-menu-panel label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin-bottom: 0.5rem;
+}
+
+.icon-menu-panel input,
+.icon-menu-panel select {
+  font: inherit;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.45rem;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.admin-form-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  justify-content: flex-end;
+}
+
 .layout {
   padding: 1.5rem 1.75rem 2.5rem;
 }
@@ -483,8 +579,16 @@ body.copilot-open .copilot-toggle {
 .assistant-form {
   border-top: 1px solid var(--border);
   padding: 0.75rem 1rem 1rem;
-  display: grid;
-  gap: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.assistant-input-hint {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 
 .assistant-form textarea {
@@ -499,37 +603,3 @@ body.copilot-open .copilot-toggle {
   font: inherit;
 }
 
-.assistant-admin {
-  border-bottom: 1px solid var(--border);
-  padding: 0.75rem 1rem;
-  max-height: 40vh;
-  overflow: auto;
-}
-
-.assistant-admin.hidden {
-  display: none;
-}
-
-.assistant-admin label {
-  display: grid;
-  gap: 0.25rem;
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin-bottom: 0.5rem;
-}
-
-.assistant-admin input,
-.assistant-admin select {
-  font: inherit;
-  padding: 0.35rem 0.5rem;
-  border-radius: 0.45rem;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--text);
-}
-
-.assistant-admin-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.35rem;
-}
