@@ -49,7 +49,7 @@ See [docs/CAI_APPLICATION.md](docs/CAI_APPLICATION.md) for deployment notes.
 
 | Table | Purpose |
 | --- | --- |
-| `DIM_CONTROL` | Control catalog with domain and risk tier |
+| `DIM_CONTROL` | EU control catalog (~396 rows, 94 MVP golden); optional `similarity_key` for overlapping controls |
 | `FCT_CONTROL_ASSESSMENT` | Latest testing results by unit |
 | `FCT_EXCEPTION` | Open remediation items tied to controls |
 | `FCT_TRANSACTION_ALERT` | AML / monitoring alerts |
