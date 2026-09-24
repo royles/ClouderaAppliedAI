@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from banking_control.api.deps import get_db_connection
 
@@ -75,3 +75,56 @@ def list_controls(
         params,
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+@router.get("/controls/{control_id}")
+def get_control(
+    control_id: int,
+    conn: Any = Depends(get_db_connection),
+) -> dict[str, Any]:
+    row = conn.execute(
+        "SELECT * FROM DIM_CONTROL WHERE control_id = ?",
+        (control_id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Control not found")
+
+    latest = conn.execute(
+        """
+        SELECT status FROM FCT_CONTROL_ASSESSMENT
+        WHERE control_id = ?
+        ORDER BY assessment_date DESC LIMIT 1
+        """,
+        (control_id,),
+    ).fetchone()
+    assessments = conn.execute(
+        """
+        SELECT a.assessment_id, a.assessment_date, a.status, a.tester,
+               a.evidence_ref, a.notes, u.unit_code, u.unit_name
+        FROM FCT_CONTROL_ASSESSMENT a
+        JOIN DIM_BUSINESS_UNIT u ON u.unit_id = a.unit_id
+        WHERE a.control_id = ?
+        ORDER BY a.assessment_date DESC
+        LIMIT 20
+        """,
+        (control_id,),
+    ).fetchall()
+    exceptions = conn.execute(
+        """
+        SELECT e.exception_id, e.title, e.severity, e.status, e.opened_at,
+               e.due_date, e.assignee, u.unit_code
+        FROM FCT_EXCEPTION e
+        JOIN DIM_BUSINESS_UNIT u ON u.unit_id = e.unit_id
+        WHERE e.control_id = ?
+        ORDER BY e.opened_at DESC
+        LIMIT 25
+        """,
+        (control_id,),
+    ).fetchall()
+    control = dict(row)
+    return {
+        "control": control,
+        "latest_status": latest["status"] if latest else "Not Tested",
+        "assessments": [dict(r) for r in assessments],
+        "exceptions": [dict(r) for r in exceptions],
+    }

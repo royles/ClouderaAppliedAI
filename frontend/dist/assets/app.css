@@ -691,3 +691,132 @@ body.copilot-open .copilot-toggle {
   font: inherit;
 }
 
+.hidden {
+  display: none !important;
+}
+
+tr.data-row,
+.audit-list li.data-row {
+  cursor: pointer;
+}
+
+tr.data-row:hover,
+tr.data-row:focus-visible,
+.audit-list li.data-row:hover,
+.audit-list li.data-row:focus-visible {
+  background: rgba(61, 214, 195, 0.08);
+  outline: none;
+}
+
+.detail-view {
+  animation: detail-in 0.18s ease-out;
+}
+
+@keyframes detail-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.detail-head h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.detail-back {
+  font-size: 0.88rem;
+}
+
+.detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.detail-lead {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+
+.detail-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 1rem 1.15rem;
+  box-shadow: var(--shadow);
+}
+
+.detail-section h3 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+}
+
+.detail-dl {
+  display: grid;
+  grid-template-columns: minmax(8rem, 11rem) 1fr;
+  gap: 0.45rem 1rem;
+  margin: 0;
+}
+
+.detail-dl-row {
+  display: contents;
+}
+
+.detail-dl dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.detail-dl dd {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.detail-description {
+  margin: 0.85rem 0 0;
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.detail-link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.detail-entity-link {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.detail-entity-link:hover {
+  color: #6ee8da;
+}
+

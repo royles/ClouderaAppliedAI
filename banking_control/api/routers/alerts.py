@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 from banking_control.api.deps import get_db_connection
 
@@ -36,3 +36,24 @@ def list_alerts(
         params,
     ).fetchall()
     return [dict(r) for r in rows]
+
+
+@router.get("/alerts/{alert_id}")
+def get_alert(
+    alert_id: int,
+    conn: Any = Depends(get_db_connection),
+) -> dict[str, Any]:
+    row = conn.execute(
+        """
+        SELECT a.alert_id, a.alert_at, a.alert_type, a.amount_usd, a.customer_ref,
+               a.channel, a.status, a.risk_score, a.narrative,
+               u.unit_id, u.unit_code, u.unit_name, u.region
+        FROM FCT_TRANSACTION_ALERT a
+        JOIN DIM_BUSINESS_UNIT u ON u.unit_id = a.unit_id
+        WHERE a.alert_id = ?
+        """,
+        (alert_id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"alert": dict(row)}

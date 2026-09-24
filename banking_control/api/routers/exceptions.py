@@ -42,6 +42,29 @@ def list_exceptions(
     return [dict(r) for r in rows]
 
 
+@router.get("/exceptions/{exception_id}")
+def get_exception(
+    exception_id: int,
+    conn: Any = Depends(get_db_connection),
+) -> dict[str, Any]:
+    row = conn.execute(
+        """
+        SELECT e.exception_id, e.control_id, e.opened_at, e.severity, e.status,
+               e.title, e.description, e.assignee, e.due_date,
+               c.control_code, c.control_name, c.domain, c.risk_tier,
+               u.unit_id, u.unit_code, u.unit_name, u.region
+        FROM FCT_EXCEPTION e
+        JOIN DIM_CONTROL c ON c.control_id = e.control_id
+        JOIN DIM_BUSINESS_UNIT u ON u.unit_id = e.unit_id
+        WHERE e.exception_id = ?
+        """,
+        (exception_id,),
+    ).fetchone()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Exception not found")
+    return {"exception": dict(row)}
+
+
 @router.patch("/exceptions/{exception_id}")
 def update_exception(
     exception_id: int,

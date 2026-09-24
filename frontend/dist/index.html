@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Banking Control Solution</title>
-    <link rel="stylesheet" href="/assets/app.css?v=2" />
+    <link rel="stylesheet" href="/assets/app.css?v=4" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -92,6 +92,7 @@
 
       <div class="app-shell">
       <main class="layout main-content">
+        <div id="dashboard-home">
         <section class="hero-metrics" id="overview-cards"></section>
 
         <div class="grid-two">
@@ -177,13 +178,22 @@
             </div>
           </section>
 
-          <section class="panel">
+          <section class="panel" id="panel-audit">
             <div class="panel-head">
               <h2>Audit trail</h2>
             </div>
             <ul id="audit-list" class="audit-list"></ul>
           </section>
         </div>
+        </div>
+
+        <article id="detail-view" class="detail-view hidden" aria-hidden="true" aria-live="polite">
+          <header class="detail-head">
+            <button type="button" id="detail-back" class="btn btn-ghost detail-back">← Back to dashboard</button>
+            <h2 id="detail-title">Detail</h2>
+          </header>
+          <div id="detail-body" class="detail-body"></div>
+        </article>
       </main>
 
       <div id="copilot-rail" class="copilot-rail is-closed">
@@ -233,6 +243,7 @@
       </button>
     </div>
     <script src="/assets/assistant.js?v=8"></script>
-    <script src="/assets/app.js?v=9"></script>
+    <script src="/assets/app.js?v=10"></script>
+    <script src="/assets/detail.js?v=1"></script>
   </body>
 </html>

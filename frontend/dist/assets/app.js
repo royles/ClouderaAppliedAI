@@ -118,8 +118,21 @@ function resetControlCatalogFilters() {
   if (search) search.value = "";
 }
 
+function controlCatalogFilterLabel() {
+  if (controlCatalogFilters.riskTier) {
+    return `Filtered: ${controlCatalogFilters.riskTier} risk tier`;
+  }
+  if (controlCatalogFilters.needsAttention) {
+    return "Filtered: needs attention (not effective)";
+  }
+  return "";
+}
+
 async function applyMetricFilter(filterId) {
-  activeMetricFilter = filterId;
+  if (filterId !== "total" && activeMetricFilter === filterId) {
+    filterId = "total";
+  }
+  activeMetricFilter = filterId === "total" ? null : filterId;
   clearPanelFocus();
 
   if (filterId === "total") {
@@ -188,14 +201,18 @@ function renderDomainFilter(domains, selected = "") {
 function renderControls(rows) {
   const body = document.getElementById("controls-body");
   const meta = document.getElementById("control-count-label");
-  if (meta) meta.textContent = rows.length ? `${rows.length} shown` : "";
+  const filterLabel = controlCatalogFilterLabel();
+  if (meta) {
+    const count = rows.length ? `${rows.length} shown` : "";
+    meta.textContent = [count, filterLabel].filter(Boolean).join(" · ");
+  }
   if (!rows.length) {
     body.innerHTML = `<tr><td colspan="5" class="empty">No controls match your filters</td></tr>`;
     return;
   }
   body.innerHTML = rows
     .map(
-      (r) => `<tr>
+      (r) => `<tr class="data-row" tabindex="0" role="link" data-detail="controls" data-id="${r.control_id}" aria-label="Open control ${r.control_code}">
       <td><code>${r.control_code}</code>${r.is_golden ? " ★" : ""}</td>
       <td>${r.control_name}${r.similarity_key ? `<br /><small>${r.similarity_key}</small>` : ""}</td>
       <td>${r.domain}</td>
@@ -214,7 +231,7 @@ function renderAlerts(rows) {
   }
   body.innerHTML = rows
     .map(
-      (r) => `<tr>
+      (r) => `<tr class="data-row" tabindex="0" role="link" data-detail="alerts" data-id="${r.alert_id}" aria-label="Open transaction alert">
       <td>${r.alert_at}</td>
       <td>${r.alert_type}<br /><small>${r.unit_code} · ${r.channel}</small></td>
       <td>${fmtMoney(r.amount_usd)}</td>
@@ -234,7 +251,7 @@ function renderExceptions(rows) {
   }
   body.innerHTML = open
     .map(
-      (r) => `<tr data-id="${r.exception_id}" data-status="${r.status}">
+      (r) => `<tr class="data-row" tabindex="0" role="link" data-detail="exceptions" data-id="${r.exception_id}" data-id-row="${r.exception_id}" data-status="${r.status}" aria-label="Open exception ${r.title}">
       <td>${r.title}<br /><small>${r.control_code} · ${r.unit_code}</small></td>
       <td>${statusPill(r.severity)}</td>
       <td>${r.due_date}</td>
@@ -255,7 +272,7 @@ function renderAudit(rows) {
   }
   list.innerHTML = rows
     .map(
-      (r) => `<li>
+      (r) => `<li class="data-row audit-item" tabindex="0" role="link" data-detail="audit" data-id="${r.event_id}" aria-label="Open audit event">
       <time>${r.event_at}</time>
       <strong>${r.action}</strong> — ${r.actor}
       <div>${r.detail}</div>
@@ -382,6 +399,10 @@ async function loadAlertsFromUi() {
   renderAlerts(rows);
 }
 
+window.loadExceptions = loadExceptions;
+window.loadOverview = loadOverview;
+window.loadAudit = loadAudit;
+
 async function loadExceptions() {
   setTableLoading("exceptions-body");
   const rows = await api("/api/exceptions?limit=100");
@@ -450,8 +471,7 @@ async function boot() {
   );
 
   const reloadControls = () => {
-    activeMetricFilter = null;
-    void loadOverview().then(() => loadControlsFromUi());
+    void loadControlsFromUi();
   };
   document.getElementById("domain-filter").addEventListener("change", reloadControls);
   document.getElementById("golden-filter").addEventListener("change", reloadControls);
@@ -472,8 +492,12 @@ async function boot() {
     const v = Number(slider.value) / 100;
     label.textContent = v.toFixed(2);
     alertStatusFilter = null;
-    activeMetricFilter = null;
-    void loadOverview().then(() => loadAlertsFromUi());
+    if (activeMetricFilter === "alerts-new") {
+      activeMetricFilter = null;
+      void loadOverview().then(() => loadAlertsFromUi());
+    } else {
+      void loadAlertsFromUi();
+    }
   });
 
   document.getElementById("refresh-btn").addEventListener("click", () => refreshDashboard());
