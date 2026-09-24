@@ -23,6 +23,15 @@ def apply_schema(conn: sqlite3.Connection, schema_path: Path) -> None:
 
 def migrate_control_catalog_columns(conn: sqlite3.Connection) -> None:
     """Add catalog columns for existing databases created before EU expansion."""
+    tables = {
+        row[0]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    if "DIM_CONTROL" not in tables:
+        return
+
     columns = {row[1] for row in conn.execute("PRAGMA table_info(DIM_CONTROL)")}
     if "is_golden" not in columns:
         conn.execute(
@@ -31,6 +40,11 @@ def migrate_control_catalog_columns(conn: sqlite3.Connection) -> None:
     if "similarity_key" not in columns:
         conn.execute("ALTER TABLE DIM_CONTROL ADD COLUMN similarity_key TEXT")
     conn.commit()
+
+
+def prepare_connection(conn: sqlite3.Connection) -> None:
+    """Apply lightweight migrations before serving API requests."""
+    migrate_control_catalog_columns(conn)
 
 
 def refresh_overview_cache(conn: sqlite3.Connection) -> dict[str, Any]:

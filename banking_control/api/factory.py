@@ -9,7 +9,8 @@ from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from banking_control.api.routers import alerts, audit, controls, core, exceptions, tools
-from banking_control.paths import default_frontend_dist_dir
+from banking_control.db import connect, prepare_connection
+from banking_control.paths import default_db_path, default_frontend_dist_dir
 from banking_control.plugins.manager import PluginManager
 from banking_control.plugins.protocols import BankingControlPlugin
 from banking_control.tools.engine import ControlToolEngine
@@ -68,6 +69,17 @@ def create_app(
 
     for module in (core, controls, exceptions, alerts, audit, tools):
         app.include_router(module.router)
+
+    @app.on_event("startup")
+    def _prepare_database_on_startup() -> None:
+        path = default_db_path()
+        if not path.is_file():
+            return
+        conn = connect(path)
+        try:
+            prepare_connection(conn)
+        finally:
+            conn.close()
 
     _mount_frontend(app)
     return app

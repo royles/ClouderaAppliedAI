@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from banking_control.catalog import build_control_catalog
-from banking_control.db import apply_schema, connect, refresh_overview_cache
+from banking_control.db import apply_schema, connect, prepare_connection, refresh_overview_cache
 from banking_control.paths import default_db_path, default_schema_path
 
 UNITS = [
@@ -48,6 +48,7 @@ def init_database(db_path: Path | None = None, *, rebuild: bool = False, seed: i
     conn = connect(path)
     try:
         apply_schema(conn, schema)
+        prepare_connection(conn)
         if conn.execute("SELECT COUNT(*) FROM DIM_CONTROL").fetchone()[0] == 0:
             _seed(conn, seed)
         refresh_overview_cache(conn)

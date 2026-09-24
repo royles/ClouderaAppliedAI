@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import HTTPException, Request
 
-from banking_control.db import connect
+from banking_control.db import connect, prepare_connection
 from banking_control.paths import default_db_path
 from banking_control.plugins.manager import PluginManager
 from banking_control.tools.engine import ControlToolEngine
@@ -31,4 +31,6 @@ def get_db_connection() -> Any:
             status_code=503,
             detail="Database not initialized. Run scripts/init_db.py or the init-database job.",
         )
-    return connect(path)
+    conn = connect(path)
+    prepare_connection(conn)
+    return conn

@@ -185,7 +185,22 @@ async function boot() {
     return;
   }
 
-  await Promise.all([loadOverview(), loadControls(), loadAlerts(), loadExceptions(), loadAudit()]);
+  const loaders = [
+    ["overview", loadOverview()],
+    ["controls", loadControls()],
+    ["alerts", loadAlerts()],
+    ["exceptions", loadExceptions()],
+    ["audit", loadAudit()],
+  ];
+  await Promise.all(
+    loaders.map(async ([name, job]) => {
+      try {
+        await job;
+      } catch (err) {
+        throw new Error(`${name}: ${err.message}`);
+      }
+    })
+  );
 
   const reloadControls = () => {
     loadControls(
