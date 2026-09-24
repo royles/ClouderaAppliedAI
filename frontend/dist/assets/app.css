@@ -799,6 +799,51 @@ body.copilot-open .copilot-toggle {
   font-size: 1rem;
 }
 
+.assistant-lede {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--muted);
+  max-width: 18rem;
+}
+
+.assistant-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+}
+
+.assistant-action-chip {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 1px solid var(--accent-dim);
+  background: var(--surface-2);
+  color: var(--accent);
+  font-weight: 600;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  padding: 0.45rem 0.6rem;
+  border-radius: 0.45rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.assistant-action-chip:hover,
+.assistant-action-chip:focus-visible {
+  background: rgba(61, 214, 195, 0.12);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+.assistant-starter-wrap {
+  border: 1px dashed var(--border);
+  border-radius: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .assistant-history {
   flex: 1 1 auto;
   min-height: 0;

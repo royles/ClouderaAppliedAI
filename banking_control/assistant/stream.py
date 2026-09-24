@@ -16,6 +16,7 @@ from banking_control.llm.bedrock_client import invoke_bedrock_messages, stream_b
 from banking_control.llm.errors import LLMError
 from banking_control.llm.openai_compat import invoke_openai_chat, stream_openai_chat
 from banking_control.llm.router import is_llm_configured
+from banking_control.assistant.router import answer_question_rules, suggest_actions
 from banking_control.tools.engine import ControlToolEngine
 
 MAX_TOOL_TURNS = 6
@@ -28,18 +29,21 @@ When simulating controls, prefer invoke_control_tool with realistic inputs.
 """
 
 
-def _rules_fallback(conn: sqlite3.Connection, engine: ControlToolEngine) -> dict[str, Any]:
-    overview = execute_copilot_tool(conn, engine, "get_overview", {})
-    return {
-        "answer": (
-            "LLM is not configured. Live control tower snapshot: "
-            f"{overview[:800]}. Configure Bedrock or a local OpenAI-compatible endpoint in Assistant → Admin."
-        ),
-        "source": "rules",
-        "model_id": None,
-        "provider": None,
-        "tools_called": ["get_overview"],
-    }
+def _rules_fallback(
+    conn: sqlite3.Connection,
+    engine: ControlToolEngine,
+    message: str,
+) -> dict[str, Any]:
+    payload = answer_question_rules(conn, engine, message)
+    payload.setdefault("tools_called", [])
+    payload["model_id"] = None
+    payload["provider"] = None
+    if not is_llm_configured(conn):
+        payload["answer"] = (
+            payload.get("answer", "")
+            + " Configure Bedrock or a local OpenAI-compatible endpoint via ⚙ Settings to enable full LLM replies."
+        ).strip()
+    return payload
 
 
 def _run_tool_loop_openai(
@@ -133,7 +137,7 @@ def stream_assistant_events(
     provider = cfg.provider_type
 
     if not is_llm_configured(conn):
-        yield sse_event("done", _rules_fallback(conn, engine))
+        yield sse_event("done", _rules_fallback(conn, engine, trimmed))
         return
 
     yield sse_event("meta", {"provider": provider, "status": "Running tools…"})
@@ -187,6 +191,7 @@ def stream_assistant_events(
                     buffer.append(piece)
                     yield sse_event("delta", {"text": piece})
 
+        actions = suggest_actions(conn, trimmed, tools_called=tools_called)
         yield sse_event(
             "done",
             {
@@ -195,6 +200,7 @@ def stream_assistant_events(
                 "provider": provider,
                 "model_id": cfg.bedrock_model_id or cfg.openai_model_id,
                 "tools_called": tools_called,
+                "actions": actions,
             },
         )
     except LLMError as exc:

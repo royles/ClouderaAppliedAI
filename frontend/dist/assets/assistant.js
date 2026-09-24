@@ -120,7 +120,47 @@
       }
     });
 
-    function appendMessage(role, text) {
+    function renderActionChips(container, actions) {
+      if (!container || !actions?.length) return;
+      const row = document.createElement("div");
+      row.className = "assistant-actions";
+      actions.forEach((action) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "assistant-action-chip";
+        btn.textContent = action.label || "Open";
+        btn.addEventListener("click", () => void executeAssistantAction(action));
+        row.appendChild(btn);
+      });
+      container.appendChild(row);
+    }
+
+    async function executeAssistantAction(action) {
+      const dash = window.dashboardAssistant;
+      if (!dash || !action?.action_type) return;
+      const payload = action.payload || {};
+      switch (action.action_type) {
+        case "metric_filter":
+          await dash.applyMetricFilter?.(payload.filter_id);
+          break;
+        case "focus_panel":
+          dash.focusPanel?.(payload.panel_id);
+          break;
+        case "filter_controls":
+          await dash.filterControls?.(payload);
+          break;
+        case "filter_alerts":
+          await dash.filterAlerts?.(payload);
+          break;
+        case "open_detail":
+          dash.openDetail?.(payload.kind, payload.id);
+          break;
+        default:
+          break;
+      }
+    }
+
+    function appendMessage(role, text, actions) {
       const wrap = document.createElement("div");
       wrap.className = `assistant-msg assistant-msg-${role}`;
       const roleEl = document.createElement("div");
@@ -131,6 +171,7 @@
       textEl.textContent = text;
       wrap.appendChild(roleEl);
       wrap.appendChild(textEl);
+      renderActionChips(wrap, actions);
       const metaEl = document.createElement("div");
       metaEl.className = "assistant-msg-meta";
       wrap.appendChild(metaEl);
@@ -139,6 +180,29 @@
         history.scrollTop = history.scrollHeight;
       }
       return wrap;
+    }
+
+    async function showStarterPrompt() {
+      if (!history || history.querySelector(".assistant-starter-wrap")) return;
+      try {
+        const res = await fetch("/api/assistant/starters");
+        if (!res.ok) return;
+        const data = await res.json();
+        const wrap = document.createElement("div");
+        wrap.className = "assistant-starter-wrap assistant-msg assistant-msg-assistant";
+        const roleEl = document.createElement("div");
+        roleEl.className = "assistant-msg-role";
+        roleEl.textContent = "Assistant";
+        const textEl = document.createElement("div");
+        textEl.className = "assistant-msg-text";
+        textEl.textContent = data.answer || "";
+        wrap.appendChild(roleEl);
+        wrap.appendChild(textEl);
+        renderActionChips(wrap, data.actions);
+        history.appendChild(wrap);
+      } catch {
+        /* optional */
+      }
     }
 
     async function refreshAssistantStatus() {
@@ -229,6 +293,7 @@
       const message = input.value.trim();
       if (!message) return;
       input.value = "";
+      history?.querySelector(".assistant-starter-wrap")?.remove();
       appendMessage("user", message);
       const assistantNode = appendMessage("assistant", "…");
       const textNode = assistantNode.querySelector(".assistant-msg-text");
@@ -246,6 +311,7 @@
           },
           onDone: (done) => {
             if (textNode) textNode.textContent = done.answer || "";
+            renderActionChips(assistantNode, done.actions);
             if (metaNode) {
               metaNode.textContent = [
                 done.provider,
@@ -280,6 +346,7 @@
 
     void refreshAssistantStatus();
     void loadAdminConfig();
+    void showStarterPrompt();
   }
 
   window.initBankingAssistant = initBankingAssistant;

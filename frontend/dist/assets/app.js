@@ -17,6 +17,7 @@ let alertStatusFilter = null;
 const controlCatalogFilters = {
   riskTier: "",
   needsAttention: false,
+  similarityKey: "",
 };
 
 async function api(path, options) {
@@ -110,6 +111,7 @@ function focusPanel(panelId) {
 function resetControlCatalogFilters() {
   controlCatalogFilters.riskTier = "";
   controlCatalogFilters.needsAttention = false;
+  controlCatalogFilters.similarityKey = "";
   const domain = document.getElementById("domain-filter");
   const golden = document.getElementById("golden-filter");
   const search = document.getElementById("control-search");
@@ -383,6 +385,7 @@ async function loadControlsFromUi() {
   if (search.trim()) params.set("search", search.trim());
   if (controlCatalogFilters.riskTier) params.set("risk_tier", controlCatalogFilters.riskTier);
   if (controlCatalogFilters.needsAttention) params.set("needs_attention", "true");
+  if (controlCatalogFilters.similarityKey) params.set("similarity_key", controlCatalogFilters.similarityKey);
   params.set("limit", "500");
   const rows = await api(`/api/controls?${params}`);
   renderControls(rows);
@@ -521,6 +524,40 @@ async function boot() {
     const btn = e.target.closest(".advance-btn");
     if (btn) advanceException(btn.dataset.id);
   });
+
+  window.dashboardAssistant = {
+    applyMetricFilter: (filterId) => applyMetricFilter(filterId),
+    focusPanel: (panelId) => focusPanel(panelId),
+    async filterControls(opts = {}) {
+      resetControlCatalogFilters();
+      activeMetricFilter = null;
+      if (opts.domain) document.getElementById("domain-filter").value = opts.domain;
+      if (opts.golden_only) document.getElementById("golden-filter").checked = true;
+      if (opts.search) document.getElementById("control-search").value = opts.search;
+      if (opts.risk_tier) controlCatalogFilters.riskTier = opts.risk_tier;
+      if (opts.needs_attention) controlCatalogFilters.needsAttention = true;
+      if (opts.similarity_key) controlCatalogFilters.similarityKey = opts.similarity_key;
+      await loadOverview();
+      await loadControlsFromUi();
+      focusPanel("panel-controls");
+    },
+    async filterAlerts(opts = {}) {
+      if (opts.status != null) alertStatusFilter = opts.status;
+      if (opts.min_risk != null) {
+        const slider = document.getElementById("risk-slider");
+        slider.value = String(Math.round(Number(opts.min_risk) * 100));
+        document.getElementById("risk-label").textContent = Number(opts.min_risk).toFixed(2);
+      }
+      await loadOverview();
+      await loadAlertsFromUi();
+      focusPanel("panel-alerts");
+    },
+    openDetail: (kind, id) => {
+      if (typeof window.navigateToDetail === "function") {
+        window.navigateToDetail(kind, id);
+      }
+    },
+  };
 }
 
 boot().catch((err) => {
