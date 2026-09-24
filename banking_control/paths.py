@@ -48,6 +48,21 @@ def data_directory() -> Path:
     return default_schema_path().parent
 
 
+def default_frontend_dist_dir() -> Path | None:
+    """Directory containing the built SPA (``index.html`` + ``assets/``)."""
+    override = os.environ.get("BANKING_CONTROL_FRONTEND_DIR")
+    if override:
+        dist = Path(override).expanduser().resolve()
+        return dist if (dist / "index.html").is_file() else None
+
+    for root in _unique_roots():
+        dist = root / "frontend" / "dist"
+        if (dist / "index.html").is_file():
+            return dist
+
+    return None
+
+
 def default_db_path() -> Path:
     override = os.environ.get("BANKING_CONTROL_DB_PATH")
     if override:

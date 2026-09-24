@@ -18,6 +18,7 @@ This project is packaged as a **CAI application (AMP)** using `.project-metadata
 | `BANKING_CONTROL_DB_PATH` | `<data dir>/banking_control.db` | SQLite file; relative paths resolve under `CDSW_PROJECT` |
 | `BANKING_CONTROL_DATA_DIR` | — | Folder containing `schema.sql` (e.g. `/home/cdsw/data` when the Git repo is under `/home/cdsw/banking-controls`) |
 | `BANKING_CONTROL_SCHEMA_PATH` | — | Full path to DDL file (overrides data dir discovery) |
+| `BANKING_CONTROL_FRONTEND_DIR` | — | Path to built UI (`frontend/dist` with `index.html`) |
 | `CDSW_APP_PORT` / `APP_PORT` | `8080` | Application listen port |
 
 Schema and database paths are discovered by walking up from `CDSW_PROJECT` and the installed package until `data/schema.sql` is found, so a project root of `/home/cdsw/banking-controls` still uses `/home/cdsw/data/schema.sql` when that is where the file lives.

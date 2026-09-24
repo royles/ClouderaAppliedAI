@@ -5,11 +5,11 @@ from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from banking_control.db import connect, get_overview, refresh_overview_cache
-from banking_control.paths import default_db_path, project_root
+from banking_control.paths import default_db_path, default_frontend_dist_dir
 
 app = FastAPI(title="Banking Control Solution", version="0.1.0")
 
@@ -204,19 +204,57 @@ def audit_log(limit: int = Query(30, le=100)) -> list[dict[str, Any]]:
         conn.close()
 
 
-static_dir = project_root() / "frontend" / "dist"
-if static_dir.is_dir():
-    app.mount("/assets", StaticFiles(directory=static_dir / "assets"), name="assets")
+_FALLBACK_INDEX = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Banking Control Solution</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0c1118; color: #e8eef7; margin: 2rem; }
+    a { color: #3dd6c3; }
+    code { background: #1a2433; padding: 0.15rem 0.4rem; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <h1>Banking Control Solution</h1>
+  <p>The dashboard bundle was not found under <code>frontend/dist</code>.</p>
+  <p>Check that the Git branch includes <code>frontend/dist</code>, or set
+     <code>BANKING_CONTROL_FRONTEND_DIR</code> to the folder containing <code>index.html</code>.</p>
+  <p>API: <a href="/api/health">/api/health</a> · <a href="/api/overview">/api/overview</a></p>
+</body>
+</html>"""
 
-    @app.get("/")
-    def spa_index() -> FileResponse:
-        return FileResponse(static_dir / "index.html")
 
-    @app.get("/{full_path:path}")
-    def spa_fallback(full_path: str) -> FileResponse:
+def _frontend_dist() -> Path | None:
+    return default_frontend_dist_dir()
+
+
+static_dir = _frontend_dist()
+if static_dir is not None:
+    assets_dir = static_dir / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+
+@app.get("/", include_in_schema=False, response_model=None)
+def spa_index() -> Response:
+    dist = _frontend_dist()
+    if dist is not None:
+        return FileResponse(dist / "index.html")
+    return HTMLResponse(_FALLBACK_INDEX)
+
+
+if static_dir is not None:
+
+    @app.get("/{full_path:path}", include_in_schema=False, response_model=None)
+    def spa_fallback(full_path: str) -> Response:
         if full_path.startswith("api/"):
             raise HTTPException(status_code=404)
-        candidate = static_dir / full_path
+        dist = _frontend_dist()
+        if dist is None:
+            return HTMLResponse(_FALLBACK_INDEX)
+        candidate = dist / full_path
         if candidate.is_file():
             return FileResponse(candidate)
-        return FileResponse(static_dir / "index.html")
+        return FileResponse(dist / "index.html")
