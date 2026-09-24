@@ -8,10 +8,17 @@ import re
 _ROOT_GET = re.compile(r'"GET /(?:\?[^\s"]*)?\s+HTTP/')
 
 
-class SuppressRepeatedRootAccessFilter(logging.Filter):
-    """Log the first GET / (SPA / health probe) then suppress further root hits."""
+def _is_live_alerts_poll(msg: str) -> bool:
+    if "GET /api/alerts" not in msg:
+        return False
+    return "live=true" in msg and "since_id=" in msg
 
-    _heartbeat_logged: bool = False
+
+class SuppressRepeatedRootAccessFilter(logging.Filter):
+    """Suppress noisy high-frequency access lines (SPA root, live alert polls)."""
+
+    _root_heartbeat_logged: bool = False
+    _live_poll_heartbeat_logged: bool = False
 
     def filter(self, record: logging.LogRecord) -> bool:
         if os.environ.get("BANKING_CONTROL_LOG_ALL_ACCESS", "").strip().lower() in (
@@ -21,9 +28,14 @@ class SuppressRepeatedRootAccessFilter(logging.Filter):
         ):
             return True
         msg = record.getMessage()
-        if not _ROOT_GET.search(msg):
-            return True
-        if not SuppressRepeatedRootAccessFilter._heartbeat_logged:
-            SuppressRepeatedRootAccessFilter._heartbeat_logged = True
-            return True
-        return False
+        if _ROOT_GET.search(msg):
+            if not SuppressRepeatedRootAccessFilter._root_heartbeat_logged:
+                SuppressRepeatedRootAccessFilter._root_heartbeat_logged = True
+                return True
+            return False
+        if _is_live_alerts_poll(msg):
+            if not SuppressRepeatedRootAccessFilter._live_poll_heartbeat_logged:
+                SuppressRepeatedRootAccessFilter._live_poll_heartbeat_logged = True
+                return True
+            return False
+        return True
