@@ -176,7 +176,7 @@ async function loadAudit() {
 function showPaneError(targetId, message) {
   const el = document.getElementById(targetId);
   if (!el) return;
-  el.innerHTML = `<tr><td colspan="6" class="empty pane-error">${message}</td></tr>`;
+  el.innerHTML = `<tr><td colspan="5" class="empty pane-error">${message}</td></tr>`;
 }
 
 async function boot() {

@@ -19,9 +19,6 @@ def health() -> dict[str, str]:
 
 @router.get("/api/overview")
 def overview(refresh: bool = False, conn: Any = Depends(get_db_connection)) -> dict[str, Any]:
-    try:
-        if refresh:
-            return refresh_overview_cache(conn)
-        return get_overview(conn)
-    finally:
-        conn.close()
+    if refresh:
+        return refresh_overview_cache(conn)
+    return get_overview(conn)

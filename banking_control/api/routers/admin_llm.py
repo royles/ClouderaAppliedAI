@@ -35,11 +35,8 @@ class LlmConfigUpdate(BaseModel):
 
 @router.get("/llm")
 def get_llm_config(conn: Any = Depends(get_db_connection)) -> dict[str, Any]:
-    try:
-        cfg = load_llm_config(conn)
-        return public_config_dict(cfg)
-    finally:
-        conn.close()
+    cfg = load_llm_config(conn)
+    return public_config_dict(cfg)
 
 
 @router.put("/llm")
@@ -47,30 +44,27 @@ def put_llm_config(
     body: LlmConfigUpdate,
     conn: Any = Depends(get_db_connection),
 ) -> dict[str, Any]:
-    try:
-        current = load_llm_config(conn)
-        provider = (body.provider_type or current.provider_type).strip().lower()
-        if provider not in ("bedrock", "openai_compatible"):
-            raise HTTPException(status_code=400, detail="Invalid provider_type")
-        token = current.openai_api_token
-        if body.clear_openai_api_token:
-            token = ""
-        elif body.openai_api_token:
-            token = body.openai_api_token
-        updated = LlmProviderConfig(
-            provider_type=provider,  # type: ignore[arg-type]
-            bedrock_region=body.bedrock_region if body.bedrock_region is not None else current.bedrock_region,
-            bedrock_model_id=body.bedrock_model_id if body.bedrock_model_id is not None else current.bedrock_model_id,
-            bedrock_max_tokens=body.bedrock_max_tokens if body.bedrock_max_tokens is not None else current.bedrock_max_tokens,
-            bedrock_temperature=body.bedrock_temperature if body.bedrock_temperature is not None else current.bedrock_temperature,
-            openai_base_url=body.openai_base_url if body.openai_base_url is not None else current.openai_base_url,
-            openai_model_id=body.openai_model_id if body.openai_model_id is not None else current.openai_model_id,
-            openai_api_token=token,
-        )
-        saved = save_llm_config(conn, updated)
-        return public_config_dict(saved)
-    finally:
-        conn.close()
+    current = load_llm_config(conn)
+    provider = (body.provider_type or current.provider_type).strip().lower()
+    if provider not in ("bedrock", "openai_compatible"):
+        raise HTTPException(status_code=400, detail="Invalid provider_type")
+    token = current.openai_api_token
+    if body.clear_openai_api_token:
+        token = ""
+    elif body.openai_api_token:
+        token = body.openai_api_token
+    updated = LlmProviderConfig(
+        provider_type=provider,  # type: ignore[arg-type]
+        bedrock_region=body.bedrock_region if body.bedrock_region is not None else current.bedrock_region,
+        bedrock_model_id=body.bedrock_model_id if body.bedrock_model_id is not None else current.bedrock_model_id,
+        bedrock_max_tokens=body.bedrock_max_tokens if body.bedrock_max_tokens is not None else current.bedrock_max_tokens,
+        bedrock_temperature=body.bedrock_temperature if body.bedrock_temperature is not None else current.bedrock_temperature,
+        openai_base_url=body.openai_base_url if body.openai_base_url is not None else current.openai_base_url,
+        openai_model_id=body.openai_model_id if body.openai_model_id is not None else current.openai_model_id,
+        openai_api_token=token,
+    )
+    saved = save_llm_config(conn, updated)
+    return public_config_dict(saved)
 
 
 @router.post("/llm/test")
@@ -110,8 +104,6 @@ def test_llm_config(
         return {"ok": True, "message": "Connection successful", "detail": text[:200]}
     except LLMError as exc:
         return {"ok": False, "message": str(exc)}
-    finally:
-        conn.close()
 
 
 @router.get("/assistant/status")
@@ -119,15 +111,12 @@ def assistant_status(
     conn: Any = Depends(get_db_connection),
     engine: ControlToolEngine = Depends(get_tool_engine),
 ) -> dict[str, Any]:
-    try:
-        cfg = load_llm_config(conn)
-        return {
-            "llm_configured": (
-                (cfg.provider_type == "openai_compatible" and is_openai_configured(cfg))
-                or (cfg.provider_type == "bedrock" and is_bedrock_configured(cfg))
-            ),
-            "provider": cfg.provider_type,
-            "control_tools_registered": len(engine.list_tools()),
-        }
-    finally:
-        conn.close()
+    cfg = load_llm_config(conn)
+    return {
+        "llm_configured": (
+            (cfg.provider_type == "openai_compatible" and is_openai_configured(cfg))
+            or (cfg.provider_type == "bedrock" and is_bedrock_configured(cfg))
+        ),
+        "provider": cfg.provider_type,
+        "control_tools_registered": len(engine.list_tools()),
+    }

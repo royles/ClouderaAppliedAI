@@ -4,17 +4,45 @@ import os
 from pathlib import Path
 
 
-def project_root() -> Path:
+def is_project_root(path: Path) -> bool:
+    return (path / "requirements.txt").is_file() and (path / "banking_control").is_dir()
+
+
+def discover_project_root(script_file: str | Path | None = None) -> Path:
+    """Resolve repository root for scripts and CDSW/CAI notebook cells (no ``__file__``)."""
     env = os.environ.get("CDSW_PROJECT") or os.environ.get("BANKING_CONTROL_PROJECT")
     if env:
-        return Path(env).resolve()
-    here = Path(__file__).resolve().parent.parent
-    return here
+        return Path(env).expanduser().resolve()
+
+    if script_file:
+        start = Path(script_file).resolve().parent
+        for candidate in (start.parent, start, *start.parents):
+            if is_project_root(candidate):
+                return candidate
+
+    try:
+        pkg_root = Path(__file__).resolve().parent.parent
+        if is_project_root(pkg_root):
+            return pkg_root
+    except NameError:
+        pass
+
+    cwd = Path.cwd()
+    for candidate in (cwd, *cwd.parents):
+        if is_project_root(candidate):
+            return candidate
+
+    return pkg_root if "pkg_root" in locals() else cwd
+
+
+def project_root() -> Path:
+    return discover_project_root()
 
 
 def _unique_roots() -> list[Path]:
     """Directories to search for ``data/schema.sql`` (CDSW subfolder layouts)."""
-    seeds: list[Path] = [project_root(), Path(__file__).resolve().parent.parent]
+    pkg_root = discover_project_root()
+    seeds: list[Path] = [project_root(), pkg_root]
     roots: list[Path] = []
     seen: set[Path] = set()
     for seed in seeds:

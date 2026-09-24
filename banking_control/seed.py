@@ -91,6 +91,7 @@ def _seed(conn: sqlite3.Connection, seed: int) -> None:
         )
 
     control_count = len(catalog)
+    unit_count = len(UNITS)
     testers = [
         "Internal Audit",
         "Compliance Testing",
@@ -132,7 +133,7 @@ def _seed(conn: sqlite3.Connection, seed: int) -> None:
     exc_id = 1
     for _ in range(45):
         control_id = rng.randint(1, control_count)
-        unit_id = rng.randint(1, len(UNITS))
+        unit_id = rng.randint(1, unit_count)
         severity = rng.choice(["Critical", "High", "Medium", "Low"])
         status = rng.choices(
             EXCEPTION_STATUSES,
@@ -162,9 +163,25 @@ def _seed(conn: sqlite3.Connection, seed: int) -> None:
         )
         exc_id += 1
 
-    alert_id = 1
-    for _ in range(55):
-        unit_id = rng.randint(1, len(UNITS))
+    _seed_transaction_alerts(conn, rng, today, control_count, alert_id=1)
+    _seed_audit_events(conn, rng, today, control_count, event_id=1)
+    conn.commit()
+
+
+def _seed_transaction_alerts(
+    conn: sqlite3.Connection,
+    rng: random.Random,
+    today: date,
+    control_count: int,
+    *,
+    alert_id: int = 1,
+    count: int = 55,
+) -> None:
+    unit_count = conn.execute("SELECT COUNT(*) FROM DIM_BUSINESS_UNIT").fetchone()[0]
+    if unit_count == 0:
+        return
+    for _ in range(count):
+        unit_id = rng.randint(1, unit_count)
         risk = round(rng.uniform(0.35, 0.98), 2)
         status = rng.choices(
             ["New", "Under Review", "Escalated", "Cleared", "SAR Filed"],
@@ -193,13 +210,23 @@ def _seed(conn: sqlite3.Connection, seed: int) -> None:
         )
         alert_id += 1
 
+
+def _seed_audit_events(
+    conn: sqlite3.Connection,
+    rng: random.Random,
+    today: date,
+    control_count: int,
+    *,
+    event_id: int = 1,
+    count: int = 49,
+) -> None:
     audit_actions = [
         ("Control assessment submitted", "control_assessment"),
         ("Exception status updated", "exception"),
         ("Alert escalated to AML investigations", "alert"),
         ("Evidence package uploaded", "evidence"),
     ]
-    for i in range(1, 50):
+    for i in range(event_id, event_id + count):
         action, entity = rng.choice(audit_actions)
         conn.execute(
             """
@@ -218,4 +245,30 @@ def _seed(conn: sqlite3.Connection, seed: int) -> None:
             ),
         )
 
+
+def ensure_monitoring_seed_data(conn: sqlite3.Connection, *, seed: int = 42) -> None:
+    """Backfill alerts and audit rows when upgrading older SQLite warehouses."""
+    tables = {
+        row[0]
+        for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+    }
+    if "FCT_TRANSACTION_ALERT" not in tables or "FCT_AUDIT_EVENT" not in tables:
+        return
+    if conn.execute("SELECT COUNT(*) FROM DIM_CONTROL").fetchone()[0] == 0:
+        return
+    control_count = conn.execute("SELECT COUNT(*) FROM DIM_CONTROL").fetchone()[0]
+    alert_count = conn.execute("SELECT COUNT(*) FROM FCT_TRANSACTION_ALERT").fetchone()[0]
+    audit_count = conn.execute("SELECT COUNT(*) FROM FCT_AUDIT_EVENT").fetchone()[0]
+    if alert_count > 0 and audit_count > 0:
+        return
+
+    rng = random.Random(seed)
+    today = date.today()
+    if alert_count == 0:
+        next_alert = conn.execute("SELECT COALESCE(MAX(alert_id), 0) + 1 FROM FCT_TRANSACTION_ALERT").fetchone()[0]
+        _seed_transaction_alerts(conn, rng, today, control_count, alert_id=next_alert)
+    if audit_count == 0:
+        next_event = conn.execute("SELECT COALESCE(MAX(event_id), 0) + 1 FROM FCT_AUDIT_EVENT").fetchone()[0]
+        _seed_audit_events(conn, rng, today, control_count, event_id=next_event)
     conn.commit()
+    refresh_overview_cache(conn)

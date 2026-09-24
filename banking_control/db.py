@@ -8,17 +8,144 @@ from typing import Any
 
 def connect(db_path: Path) -> sqlite3.Connection:
     db_path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(db_path))
+    # FastAPI runs sync handlers in a thread pool; allow use across worker threads.
+    conn = sqlite3.connect(str(db_path), check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
+def _split_schema_ddl(ddl: str) -> tuple[str, str]:
+    """Separate table DDL from index DDL so migrations can run in between."""
+    table_parts: list[str] = []
+    index_parts: list[str] = []
+    for chunk in ddl.split("\n\n"):
+        stripped = chunk.strip()
+        if not stripped or stripped.startswith("--"):
+            continue
+        if stripped.upper().startswith("CREATE INDEX"):
+            index_parts.append(stripped)
+        else:
+            table_parts.append(stripped)
+    return "\n\n".join(table_parts), "\n\n".join(index_parts)
+
+
+def ensure_warehouse_schema(conn: sqlite3.Connection) -> None:
+    """Create warehouse tables that may be missing from older SQLite files."""
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS DIM_BUSINESS_UNIT (
+          unit_id INTEGER PRIMARY KEY,
+          unit_code TEXT NOT NULL UNIQUE,
+          unit_name TEXT NOT NULL,
+          region TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS DIM_CONTROL (
+          control_id INTEGER PRIMARY KEY,
+          control_code TEXT NOT NULL UNIQUE,
+          control_name TEXT NOT NULL,
+          domain TEXT NOT NULL,
+          risk_tier TEXT NOT NULL CHECK (risk_tier IN ('Critical', 'High', 'Medium', 'Low')),
+          owner TEXT NOT NULL,
+          frequency TEXT NOT NULL,
+          description TEXT NOT NULL,
+          is_golden INTEGER NOT NULL DEFAULT 0,
+          similarity_key TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS FCT_CONTROL_ASSESSMENT (
+          assessment_id INTEGER PRIMARY KEY,
+          control_id INTEGER NOT NULL REFERENCES DIM_CONTROL(control_id),
+          unit_id INTEGER NOT NULL REFERENCES DIM_BUSINESS_UNIT(unit_id),
+          assessment_date TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('Effective', 'Partially Effective', 'Ineffective', 'Not Tested')),
+          tester TEXT NOT NULL,
+          evidence_ref TEXT,
+          notes TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS FCT_EXCEPTION (
+          exception_id INTEGER PRIMARY KEY,
+          control_id INTEGER NOT NULL REFERENCES DIM_CONTROL(control_id),
+          unit_id INTEGER NOT NULL REFERENCES DIM_BUSINESS_UNIT(unit_id),
+          opened_at TEXT NOT NULL,
+          severity TEXT NOT NULL CHECK (severity IN ('Critical', 'High', 'Medium', 'Low')),
+          status TEXT NOT NULL CHECK (status IN ('Open', 'In Remediation', 'Pending Validation', 'Closed')),
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          assignee TEXT NOT NULL,
+          due_date TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS FCT_TRANSACTION_ALERT (
+          alert_id INTEGER PRIMARY KEY,
+          unit_id INTEGER NOT NULL REFERENCES DIM_BUSINESS_UNIT(unit_id),
+          alert_at TEXT NOT NULL,
+          alert_type TEXT NOT NULL,
+          amount_usd REAL NOT NULL,
+          customer_ref TEXT NOT NULL,
+          channel TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('New', 'Under Review', 'Escalated', 'Cleared', 'SAR Filed')),
+          risk_score REAL NOT NULL,
+          narrative TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS FCT_AUDIT_EVENT (
+          event_id INTEGER PRIMARY KEY,
+          event_at TEXT NOT NULL,
+          actor TEXT NOT NULL,
+          action TEXT NOT NULL,
+          entity_type TEXT NOT NULL,
+          entity_id TEXT NOT NULL,
+          detail TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS APP_OVERVIEW_SNAPSHOT (
+          snapshot_key TEXT PRIMARY KEY,
+          payload_json TEXT NOT NULL,
+          refreshed_at TEXT NOT NULL
+        );
+        """
+    )
+    conn.commit()
+
+
+def ensure_warehouse_indexes(conn: sqlite3.Connection) -> None:
+    statements = [
+        "CREATE INDEX IF NOT EXISTS idx_control_similarity ON DIM_CONTROL(similarity_key)",
+        "CREATE INDEX IF NOT EXISTS idx_control_golden ON DIM_CONTROL(is_golden)",
+        "CREATE INDEX IF NOT EXISTS idx_assessment_control ON FCT_CONTROL_ASSESSMENT(control_id)",
+        "CREATE INDEX IF NOT EXISTS idx_exception_status ON FCT_EXCEPTION(status)",
+        "CREATE INDEX IF NOT EXISTS idx_alert_status ON FCT_TRANSACTION_ALERT(status)",
+    ]
+    for stmt in statements:
+        try:
+            conn.execute(stmt)
+        except sqlite3.OperationalError:
+            continue
+    conn.commit()
+
+
 def apply_schema(conn: sqlite3.Connection, schema_path: Path) -> None:
     ddl = schema_path.read_text(encoding="utf-8")
-    conn.executescript(ddl)
-    conn.commit()
+    tables_ddl, indexes_ddl = _split_schema_ddl(ddl)
     migrate_control_catalog_columns(conn)
+    if tables_ddl.strip():
+        conn.executescript(tables_ddl)
+    ensure_warehouse_schema(conn)
+    migrate_control_catalog_columns(conn)
+    ensure_warehouse_indexes(conn)
+    if indexes_ddl.strip():
+        for stmt in indexes_ddl.split(";"):
+            stmt = stmt.strip()
+            if not stmt:
+                continue
+            try:
+                conn.execute(stmt)
+            except sqlite3.OperationalError:
+                continue
+    conn.commit()
 
 
 def migrate_control_catalog_columns(conn: sqlite3.Connection) -> None:
@@ -44,10 +171,14 @@ def migrate_control_catalog_columns(conn: sqlite3.Connection) -> None:
 
 def prepare_connection(conn: sqlite3.Connection) -> None:
     """Apply lightweight migrations before serving API requests."""
+    ensure_warehouse_schema(conn)
     migrate_control_catalog_columns(conn)
+    ensure_warehouse_indexes(conn)
     from banking_control.llm.admin_store import ensure_admin_llm_schema
+    from banking_control.seed import ensure_monitoring_seed_data
 
     ensure_admin_llm_schema(conn)
+    ensure_monitoring_seed_data(conn)
 
 
 def refresh_overview_cache(conn: sqlite3.Connection) -> dict[str, Any]:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from typing import Any
 
 from fastapi import HTTPException, Request
@@ -24,7 +25,7 @@ def get_tool_engine(request: Request) -> ControlToolEngine:
     return engine
 
 
-def get_db_connection() -> Any:
+def get_db_connection() -> Generator[Any, None, None]:
     path = default_db_path()
     if not path.is_file():
         raise HTTPException(
@@ -33,4 +34,7 @@ def get_db_connection() -> Any:
         )
     conn = connect(path)
     prepare_connection(conn)
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()

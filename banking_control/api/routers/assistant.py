@@ -31,10 +31,7 @@ def chat_stream(
     engine: ControlToolEngine = Depends(get_tool_engine),
 ) -> StreamingResponse:
     def event_gen():
-        try:
-            yield from stream_assistant_events(conn, engine, message=body.message)
-        finally:
-            conn.close()
+        yield from stream_assistant_events(conn, engine, message=body.message)
 
     return StreamingResponse(
         event_gen(),
