@@ -9,6 +9,7 @@ from banking_control.db import connect, prepare_connection
 from banking_control.paths import default_db_path
 from banking_control.plugins.manager import PluginManager
 from banking_control.tools.engine import ControlToolEngine
+from banking_control.tools.registry import ToolRegistry
 
 
 def get_plugin_manager(request: Request) -> PluginManager:
@@ -23,6 +24,13 @@ def get_tool_engine(request: Request) -> ControlToolEngine:
     if engine is None:
         raise HTTPException(status_code=503, detail="Tool engine not initialized")
     return engine
+
+
+def get_tool_registry(request: Request) -> ToolRegistry:
+    registry = getattr(request.app.state, "tool_registry", None)
+    if registry is None:
+        raise HTTPException(status_code=503, detail="Tool registry not initialized")
+    return registry
 
 
 def get_db_connection() -> Generator[Any, None, None]:

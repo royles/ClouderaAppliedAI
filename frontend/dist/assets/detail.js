@@ -24,7 +24,7 @@
     return res.json();
   }
 
-  const DETAIL_ROUTE = /^#\/(controls|alerts|exceptions|audit)\/(\d+)$/;
+  const DETAIL_ROUTE = /^#\/(controls|alerts|exceptions|audit)\/(new|\d+)$/;
 
   function parseDetailHash() {
     const m = (location.hash || "").match(DETAIL_ROUTE);
@@ -32,8 +32,20 @@
     return { kind: m[1], id: m[2] };
   }
 
+  function isCreateControlRoute(route) {
+    return route?.kind === "controls" && route.id === "new";
+  }
+
   function navigateToDetail(kind, id) {
     location.hash = `#/${kind}/${id}`;
+  }
+
+  function navigateToCreateControl() {
+    location.hash = "#/controls/new";
+  }
+
+  function setDetailAddControlVisible(visible) {
+    document.getElementById("detail-add-control")?.classList.toggle("hidden", !visible);
   }
 
   function closeDetailView() {
@@ -56,7 +68,7 @@
     document.title = "Banking Control Solution";
   }
 
-  function showDetailShell(title) {
+  function showDetailShell(title, { showAddControl = false } = {}) {
     document.getElementById("dashboard-home")?.classList.add("hidden");
     const detail = document.getElementById("detail-view");
     detail?.classList.remove("hidden");
@@ -64,6 +76,247 @@
     setTimelineDockVisible(false);
     const titleEl = document.getElementById("detail-title");
     if (titleEl) titleEl.textContent = title;
+    setDetailAddControlVisible(showAddControl);
+  }
+
+  async function apiJson(path, options) {
+    const res = await fetch(path, options);
+    const text = await res.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = null;
+    }
+    if (!res.ok) {
+      const msg =
+        (data && (data.detail?.validation_errors?.join?.("; ") || data.detail?.message || data.detail)) ||
+        text ||
+        res.statusText;
+      throw new Error(typeof msg === "string" ? msg : JSON.stringify(msg));
+    }
+    return data;
+  }
+
+  let recommendTimer = null;
+
+  function renderSimilarControlsList(rows) {
+    if (!rows?.length) {
+      return `<p class="empty">No close catalog matches yet — keep typing name and description.</p>`;
+    }
+    return `<ul class="detail-link-list control-recommend-list">${rows
+      .map(
+        (r) => `<li>
+        <button type="button" class="detail-entity-link" data-detail="controls" data-id="${r.control_id}">
+          <code>${escapeHtml(r.control_code)}</code> — ${escapeHtml(r.control_name)}
+          <span class="related-meta">${escapeHtml(r.relation_label || r.relation)} · score ${r.score}</span>
+        </button>
+      </li>`
+      )
+      .join("")}</ul>`;
+  }
+
+  function renderControlCreateForm(options) {
+    const domains = options?.domains || [];
+    const domainOpts = domains
+      .map(
+        (d) =>
+          `<option value="${escapeHtml(d.code)}">${escapeHtml(d.code)} — ${escapeHtml(d.default_owner)}</option>`
+      )
+      .join("");
+    const riskOpts = (options?.risk_tiers || [])
+      .map((t) => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`)
+      .join("");
+    const freqOpts = (options?.frequencies || [])
+      .map((f) => `<option value="${escapeHtml(f)}">${escapeHtml(f)}</option>`)
+      .join("");
+
+    return `
+      <p class="detail-lead">Define a new catalog control. We validate completeness, compare peers, and run an initial simulation test.</p>
+      <form id="control-create-form" class="control-create-form">
+        <section class="detail-section">
+          <h3>Control definition</h3>
+          <div class="control-create-grid">
+            <label class="field">
+              <span>Control name</span>
+              <input name="control_name" required minlength="8" maxlength="200" placeholder="e.g. Real-time mule account detection" />
+            </label>
+            <label class="field">
+              <span>Domain</span>
+              <select name="domain" required>${domainOpts}</select>
+            </label>
+            <label class="field">
+              <span>Risk tier</span>
+              <select name="risk_tier" required>${riskOpts}</select>
+            </label>
+            <label class="field">
+              <span>Owner</span>
+              <input name="owner" required maxlength="120" placeholder="Control owner" />
+            </label>
+            <label class="field">
+              <span>Frequency</span>
+              <select name="frequency" required>${freqOpts}</select>
+            </label>
+            <label class="field">
+              <span>Control code (optional)</span>
+              <input name="control_code" maxlength="16" placeholder="Auto-assigned (e.g. AML-045)" pattern="[A-Za-z]{2,8}-[0-9]{3,4}" />
+            </label>
+            <label class="field field-wide">
+              <span>Description</span>
+              <textarea name="description" required minlength="40" maxlength="8000" rows="5" placeholder="Objective, scope, evidence, and how the control operates…"></textarea>
+            </label>
+            <label class="field field-wide">
+              <span>Similarity group (optional)</span>
+              <input name="similarity_key" maxlength="80" placeholder="Harmonization key — suggested when recommendations load" />
+            </label>
+          </div>
+          <div class="control-create-actions">
+            <button type="submit" class="btn btn-primary">Create control &amp; run simulation</button>
+            <button type="button" class="btn btn-ghost" id="control-create-cancel">Cancel</button>
+          </div>
+          <p id="control-create-status" class="hint" role="status"></p>
+        </section>
+        <section class="detail-section" id="control-recommend-section">
+          <h3>Catalog recommendations</h3>
+          <p class="hint">Similar and related controls from the catalog, plus optional LLM commentary.</p>
+          <div id="control-recommend-llm" class="control-recommend-llm assistant-msg-text"></div>
+          <div id="control-recommend-similar">${renderSimilarControlsList([])}</div>
+        </section>
+        <section class="detail-section hidden" id="control-create-result">
+          <h3>Create result</h3>
+          <div id="control-create-result-body"></div>
+        </section>
+      </form>`;
+  }
+
+  function bindControlCreateForm(options) {
+    const form = document.getElementById("control-create-form");
+    if (!form) return;
+    const domainSelect = form.querySelector('[name="domain"]');
+    const ownerInput = form.querySelector('[name="owner"]');
+    domainSelect?.addEventListener("change", () => {
+      const code = domainSelect.value;
+      const match = (options?.domains || []).find((d) => d.code === code);
+      if (match && ownerInput && !ownerInput.value.trim()) {
+        ownerInput.value = match.default_owner;
+      }
+      queueRecommendations(form);
+    });
+    if (domainSelect && ownerInput) {
+      const initial = (options?.domains || []).find((d) => d.code === domainSelect.value);
+      if (initial && !ownerInput.value) ownerInput.value = initial.default_owner;
+    }
+
+    const queueFields = ["control_name", "description", "domain", "risk_tier"];
+    queueFields.forEach((name) => {
+      form.querySelector(`[name="${name}"]`)?.addEventListener("input", () => queueRecommendations(form));
+    });
+
+    document.getElementById("control-create-cancel")?.addEventListener("click", () => closeDetailView());
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      void submitControlCreate(form);
+    });
+  }
+
+  function queueRecommendations(form) {
+    clearTimeout(recommendTimer);
+    recommendTimer = setTimeout(() => void fetchControlRecommendations(form), 650);
+  }
+
+  async function fetchControlRecommendations(form) {
+    const fd = new FormData(form);
+    const control_name = String(fd.get("control_name") || "").trim();
+    const description = String(fd.get("description") || "").trim();
+    if (control_name.length < 8 || description.length < 20) return;
+    const status = document.getElementById("control-create-status");
+    if (status) status.textContent = "Checking catalog for similar controls…";
+    try {
+      const data = await apiJson("/api/controls/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          control_name,
+          description,
+          domain: fd.get("domain"),
+          risk_tier: fd.get("risk_tier"),
+        }),
+      });
+      const llmEl = document.getElementById("control-recommend-llm");
+      const similarEl = document.getElementById("control-recommend-similar");
+      if (similarEl) similarEl.innerHTML = renderSimilarControlsList(data.similar_controls);
+      if (llmEl && typeof window.setAssistantMessageBody === "function") {
+        window.setAssistantMessageBody(llmEl, "assistant", data.llm?.summary || "");
+      } else if (llmEl) {
+        llmEl.textContent = data.llm?.summary || "";
+      }
+      const simInput = form.querySelector('[name="similarity_key"]');
+      if (simInput && !simInput.value && data.suggested_similarity_key) {
+        simInput.placeholder = `Suggested: ${data.suggested_similarity_key}`;
+      }
+      if (status) status.textContent = "";
+    } catch (err) {
+      if (status) status.textContent = err instanceof Error ? err.message : "Recommendations unavailable";
+    }
+  }
+
+  async function submitControlCreate(form) {
+    const status = document.getElementById("control-create-status");
+    const fd = new FormData(form);
+    const payload = Object.fromEntries(fd.entries());
+    if (status) status.textContent = "Validating, comparing to catalog, and running simulation…";
+    form.querySelector('[type="submit"]')?.setAttribute("disabled", "true");
+    try {
+      const result = await apiJson("/api/controls", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, run_simulation: true }),
+      });
+      const resultSection = document.getElementById("control-create-result");
+      const resultBody = document.getElementById("control-create-result-body");
+      resultSection?.classList.remove("hidden");
+      const sim = result.simulation?.outputs;
+      const warnings = result.catalog_review?.warnings || [];
+      resultBody.innerHTML = `
+        <p class="detail-lead"><code>${escapeHtml(result.control_code)}</code> created (id ${result.control_id}).</p>
+        ${warnings.length ? `<ul class="control-create-warnings">${warnings.map((w) => `<li>${escapeHtml(w)}</li>`).join("")}</ul>` : ""}
+        ${
+          sim
+            ? `<dl class="detail-dl">
+            ${dlRow("Simulation status", statusPill(sim.status))}
+            ${dlRow("Summary", escapeHtml(sim.summary || "—"))}
+            ${dlRow("Exception rate", sim.metrics?.exception_rate_pct != null ? `${sim.metrics.exception_rate_pct}%` : "—")}
+          </dl>`
+            : `<p class="empty">${escapeHtml(result.simulation_error || "Simulation did not run.")}</p>`
+        }
+        <button type="button" class="btn btn-primary" id="control-create-open" data-id="${result.control_id}">Open control detail</button>`;
+      document.getElementById("control-create-open")?.addEventListener("click", (ev) => {
+        navigateToDetail("controls", ev.currentTarget.dataset.id);
+      });
+      if (status) status.textContent = "Control created successfully.";
+      if (typeof window.loadControls === "function") window.loadControls();
+      if (typeof window.loadOverview === "function") window.loadOverview(true);
+    } catch (err) {
+      if (status) status.textContent = err instanceof Error ? err.message : "Create failed";
+    } finally {
+      form.querySelector('[type="submit"]')?.removeAttribute("disabled");
+    }
+  }
+
+  async function loadControlCreateView() {
+    showDetailShell("Create control", { showAddControl: false });
+    document.title = "Create control · Banking Control Solution";
+    const body = document.getElementById("detail-body");
+    if (!body) return;
+    body.innerHTML = `<p class="empty">Loading form…</p>`;
+    try {
+      const options = await api("/api/controls/form-options");
+      body.innerHTML = renderControlCreateForm(options);
+      bindControlCreateForm(options);
+    } catch (err) {
+      body.innerHTML = `<p class="empty pane-error">${err instanceof Error ? err.message : String(err)}</p>`;
+    }
   }
 
   function dlRow(label, valueHtml) {
@@ -541,7 +794,12 @@
   };
 
   async function loadDetailView(kind, id) {
-    showDetailShell(DETAIL_TITLES[kind] || "Detail");
+    if (kind === "controls" && id === "new") {
+      await loadControlCreateView();
+      return;
+    }
+
+    showDetailShell(DETAIL_TITLES[kind] || "Detail", { showAddControl: kind === "controls" });
     const body = document.getElementById("detail-body");
     if (!body) return;
     body.innerHTML = `<p class="empty">Loading…</p>`;
@@ -553,6 +811,7 @@
         html = renderControlDetail(controlData);
         body.innerHTML = html;
         paintControlFlowGraph(controlData.process_graph);
+        requestAnimationFrame(() => paintControlFlowGraph(controlData.process_graph));
         return;
       } else if (kind === "alerts") {
         html = renderAlertDetail(await api(`/api/alerts/${id}`));
@@ -597,6 +856,7 @@
 
   function initDetailRouting() {
     document.getElementById("detail-back")?.addEventListener("click", () => closeDetailView());
+    document.getElementById("detail-add-control")?.addEventListener("click", () => navigateToCreateControl());
 
     document.getElementById("detail-view")?.addEventListener("click", (e) => {
       const dagNode = e.target.closest(".control-dag-node[data-id]");

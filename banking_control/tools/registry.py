@@ -8,10 +8,11 @@ from banking_control.tools.models import ControlTool
 
 
 class ToolRegistry:
-    """Read-only catalog of control tools (metadata only; schemas via plugins)."""
+    """Catalog of control tools (metadata only; schemas via plugins)."""
 
     def __init__(self, controls: list[ControlDefinition] | None = None) -> None:
         self._controls = controls or build_control_catalog()
+        self._dynamic: dict[str, ControlDefinition] = {}
 
     @classmethod
     def default(cls) -> ToolRegistry:
@@ -22,8 +23,12 @@ class ToolRegistry:
     def cached(cls) -> ToolRegistry:
         return cls()
 
+    def register_dynamic(self, definition: ControlDefinition) -> None:
+        self._dynamic[definition.control_code.upper()] = definition
+
     def list_tools(self, *, golden_only: bool = False) -> list[ControlTool]:
         tools = [self._to_tool(c) for c in self._controls]
+        tools.extend(self._to_tool(c) for c in self._dynamic.values())
         if golden_only:
             tools = [t for t in tools if t.is_golden]
         return sorted(tools, key=lambda t: (t.domain, t.control_code))
@@ -31,6 +36,9 @@ class ToolRegistry:
     def get_tool(self, control_code: str) -> ControlTool | None:
         by_code = {t.control_code: t for t in self.list_tools()}
         for candidate in control_code_candidates(control_code):
+            key = candidate.upper()
+            if key in self._dynamic:
+                return self._to_tool(self._dynamic[key])
             if candidate in by_code:
                 return by_code[candidate]
         return None

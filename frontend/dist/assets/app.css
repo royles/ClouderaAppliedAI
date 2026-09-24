@@ -1006,6 +1006,74 @@ tr.data-row:focus-visible,
   margin-bottom: 1.25rem;
 }
 
+.detail-head-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.control-create-form .control-create-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 0.75rem 1rem;
+  margin-top: 0.65rem;
+}
+
+.control-create-form .field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.control-create-form .field-wide {
+  grid-column: 1 / -1;
+}
+
+.control-create-form input,
+.control-create-form select,
+.control-create-form textarea {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  padding: 0.45rem 0.55rem;
+}
+
+.control-create-form textarea {
+  resize: vertical;
+  min-height: 6rem;
+}
+
+.control-create-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.control-recommend-llm {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.55rem;
+  background: rgba(26, 36, 51, 0.55);
+  border: 1px solid var(--border);
+  font-size: 0.88rem;
+}
+
+.control-create-warnings {
+  color: #f0c674;
+  margin: 0.5rem 0 1rem;
+  padding-left: 1.1rem;
+}
+
+.control-recommend-list .related-meta {
+  display: block;
+}
+
 .detail-head h2 {
   margin: 0;
   font-size: 1.35rem;

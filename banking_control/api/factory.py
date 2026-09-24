@@ -63,11 +63,12 @@ def create_app(
         for plugin in extra_plugins:
             manager.register_plugin(plugin)
 
-    registry = tool_registry or ToolRegistry.cached()
+    registry = tool_registry or ToolRegistry.default()
     engine = ControlToolEngine(manager, registry)
 
     app = FastAPI(title="Banking Control Solution", version="0.2.0")
     app.state.plugin_manager = manager
+    app.state.tool_registry = registry
     app.state.tool_engine = engine
 
     app.add_middleware(

@@ -4,11 +4,177 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
 
-from banking_control.api.deps import get_db_connection
+from banking_control.api.deps import get_db_connection, get_tool_engine, get_tool_registry
+from banking_control.control_create import (
+    FREQUENCIES,
+    RISK_TIERS,
+    allocate_control_code,
+    compare_to_catalog,
+    default_simulation_inputs,
+    definition_from_row,
+    find_similar_controls,
+    form_options,
+    insert_control,
+    llm_control_recommendations,
+    record_initial_assessment,
+    validate_create_payload,
+)
 from banking_control.control_graph import build_process_graph, list_flows_for_control
+from banking_control.db import refresh_overview_cache
+from banking_control.tools.engine import ControlToolEngine, ToolValidationError
+from banking_control.tools.registry import ToolRegistry
 
 router = APIRouter(prefix="/api", tags=["controls"])
+
+
+class ControlRecommendRequest(BaseModel):
+    control_name: str = Field(..., min_length=3, max_length=200)
+    description: str = Field("", max_length=8000)
+    domain: str | None = Field(None, max_length=16)
+    risk_tier: str | None = None
+
+
+class ControlCreateRequest(BaseModel):
+    control_name: str = Field(..., min_length=8, max_length=200)
+    domain: str = Field(..., min_length=2, max_length=16)
+    risk_tier: str
+    owner: str = Field(..., min_length=2, max_length=120)
+    frequency: str
+    description: str = Field(..., min_length=40, max_length=8000)
+    control_code: str | None = Field(None, max_length=16)
+    similarity_key: str | None = Field(None, max_length=80)
+    run_simulation: bool = True
+
+
+@router.get("/controls/form-options")
+def get_control_form_options() -> dict[str, Any]:
+    return form_options()
+
+
+@router.post("/controls/recommend")
+def recommend_control(
+    body: ControlRecommendRequest,
+    conn: Any = Depends(get_db_connection),
+) -> dict[str, Any]:
+    domain = body.domain.strip().upper() if body.domain else None
+    similar = find_similar_controls(
+        conn,
+        control_name=body.control_name,
+        description=body.description,
+        domain=domain,
+    )
+    llm = llm_control_recommendations(
+        conn,
+        control_name=body.control_name,
+        description=body.description,
+        domain=domain or (similar[0]["domain"] if similar else "AML"),
+        similar_controls=similar,
+    )
+    return {
+        "similar_controls": similar,
+        "llm": llm,
+        "suggested_similarity_key": llm.get("suggested_similarity_key"),
+    }
+
+
+@router.post("/controls")
+def create_control(
+    body: ControlCreateRequest,
+    conn: Any = Depends(get_db_connection),
+    engine: ControlToolEngine = Depends(get_tool_engine),
+    registry: ToolRegistry = Depends(get_tool_registry),
+) -> dict[str, Any]:
+    payload = body.model_dump()
+    errors = validate_create_payload(payload)
+    if body.risk_tier not in RISK_TIERS:
+        errors.append(f"risk_tier must be one of: {', '.join(RISK_TIERS)}")
+    if body.frequency not in FREQUENCIES:
+        errors.append(f"frequency must be one of: {', '.join(FREQUENCIES)}")
+    if errors:
+        raise HTTPException(status_code=400, detail={"validation_errors": errors})
+
+    domain = body.domain.strip().upper()
+    control_code = (
+        body.control_code.strip().upper()
+        if body.control_code and body.control_code.strip()
+        else allocate_control_code(conn, domain)
+    )
+    catalog_review = compare_to_catalog(
+        conn,
+        control_name=body.control_name,
+        description=body.description,
+        domain=domain,
+        control_code=control_code,
+    )
+    if any("already in use" in w for w in catalog_review["warnings"]):
+        raise HTTPException(status_code=409, detail=catalog_review)
+
+    similarity_key = body.similarity_key
+    if not similarity_key and catalog_review["similar_controls"]:
+        similarity_key = catalog_review["similar_controls"][0].get("similarity_key")
+    if isinstance(similarity_key, str):
+        similarity_key = similarity_key.strip() or None
+
+    control_id = insert_control(
+        conn,
+        control_code=control_code,
+        control_name=body.control_name,
+        domain=domain,
+        risk_tier=body.risk_tier,
+        owner=body.owner,
+        frequency=body.frequency,
+        description=body.description,
+        similarity_key=similarity_key,
+    )
+
+    row = conn.execute(
+        "SELECT * FROM DIM_CONTROL WHERE control_id = ?", (control_id,)
+    ).fetchone()
+    definition = definition_from_row(dict(row))
+    registry.register_dynamic(definition)
+
+    simulation: dict[str, Any] | None = None
+    simulation_error: str | None = None
+    if body.run_simulation:
+        inputs = default_simulation_inputs()
+        try:
+            simulation = engine.invoke(control_code, inputs)
+            outputs = simulation.get("outputs") or {}
+            status = outputs.get("status") or "Not Tested"
+            summary = outputs.get("summary") or "Initial create simulation"
+            record_initial_assessment(
+                conn,
+                control_id=control_id,
+                status=status,
+                tester="Control create simulation",
+                notes=summary,
+            )
+        except ToolValidationError as exc:
+            simulation_error = str(exc)
+
+    conn.execute(
+        """
+        INSERT INTO FCT_AUDIT_EVENT (event_at, actor, action, entity_type, entity_id, detail)
+        VALUES (datetime('now'), 'dashboard_user', 'Control created', 'control', ?, ?)
+        """,
+        (
+            str(control_id),
+            f"{control_code} · {body.control_name[:80]}",
+        ),
+    )
+    conn.commit()
+    refresh_overview_cache(conn)
+
+    return {
+        "control_id": control_id,
+        "control_code": control_code,
+        "catalog_review": catalog_review,
+        "simulation": simulation,
+        "simulation_error": simulation_error,
+        "validation": {"ok": True, "fields_checked": list(payload.keys())},
+    }
 
 
 @router.get("/controls")
