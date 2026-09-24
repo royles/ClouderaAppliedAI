@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 
 from banking_control.alert_generator import (
+    ALERT_RETENTION_DAYS,
     ensure_alert_pool,
     expire_alerts_older_than,
     insert_transaction_alert,
@@ -102,14 +103,18 @@ class TransactionAlertWorker:
         try:
             conn = self._connect()
             try:
-                expired = expire_alerts_older_than(conn, days=2.0)
+                expired = expire_alerts_older_than(conn, days=ALERT_RETENTION_DAYS)
                 added = ensure_alert_pool(conn, self._rng)
                 if expired or added:
                     conn.commit()
                     refresh_overview_cache(conn)
                     conn.commit()
                 if expired:
-                    logger.debug("Expired %s TM alerts older than 2 days", expired)
+                    logger.debug(
+                        "Expired %s TM alerts older than %s days",
+                        expired,
+                        int(ALERT_RETENTION_DAYS),
+                    )
                 if added:
                     logger.debug("TM alert pool refilled with %s alerts after expiry", added)
             finally:

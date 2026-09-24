@@ -56,7 +56,13 @@ def parse_alert_at(value: str) -> datetime:
     return datetime.combine(day, time(23, 59, 59), tzinfo=timezone.utc)
 
 
-def expire_alerts_older_than(conn: sqlite3.Connection, *, days: float = 2.0) -> int:
+# Retain TM alerts for demo/history (2-year rolling window).
+ALERT_RETENTION_DAYS = 730.0
+
+
+def expire_alerts_older_than(
+    conn: sqlite3.Connection, *, days: float = ALERT_RETENTION_DAYS
+) -> int:
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     rows = conn.execute("SELECT alert_id, alert_at FROM FCT_TRANSACTION_ALERT").fetchall()
     stale = [int(r["alert_id"]) for r in rows if parse_alert_at(r["alert_at"]) < cutoff]
