@@ -141,10 +141,10 @@
     const svg = document.getElementById("control-flow-graph");
     if (!svg || !graph?.nodes?.length) return;
 
-    const NODE_W = 96;
-    const NODE_H = 40;
-    const LAYER_GAP = 36;
-    const ROW_GAP = 12;
+    const NODE_W = 112;
+    const NODE_H = 48;
+    const LAYER_GAP = 40;
+    const ROW_GAP = 14;
     const PAD = 14;
 
     const byLayer = new Map();
@@ -225,7 +225,8 @@
       label.setAttribute("y", String(labelY));
       label.setAttribute("text-anchor", "middle");
       label.setAttribute("class", "control-dag-edge-label");
-      label.textContent = e.label.length > 16 ? `${e.label.slice(0, 14)}…` : e.label;
+      label.setAttribute("font-size", "var(--dag-edge-size)");
+      label.textContent = e.label.length > 18 ? `${e.label.slice(0, 16)}…` : e.label;
       labelLayer.appendChild(label);
     });
 
