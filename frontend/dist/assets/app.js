@@ -10,6 +10,8 @@ const statusPill = (text) => {
   return `<span class="pill ${cls}">${text}</span>`;
 };
 
+let searchDebounce;
+
 async function api(path, options) {
   const res = await fetch(path, options);
   if (!res.ok) {
@@ -17,6 +19,16 @@ async function api(path, options) {
     throw new Error(detail || res.statusText);
   }
   return res.json();
+}
+
+function setTableLoading(tbodyId, colspan = 5) {
+  const el = document.getElementById(tbodyId);
+  if (el) el.innerHTML = `<tr><td colspan="${colspan}" class="empty">Loading…</td></tr>`;
+}
+
+function setListLoading(listId) {
+  const el = document.getElementById(listId);
+  if (el) el.innerHTML = `<li class="empty">Loading…</li>`;
 }
 
 function renderOverview(data) {
@@ -54,10 +66,27 @@ function renderOverview(data) {
     .join("");
 }
 
+function renderDomainFilter(domains, selected = "") {
+  const select = document.getElementById("domain-filter");
+  if (!select) return;
+  select.innerHTML =
+    `<option value="">All domains</option>` +
+    domains
+      .map((d) => {
+        const name = typeof d === "string" ? d : d.domain;
+        const count = typeof d === "string" ? "" : ` (${d.controls})`;
+        return `<option value="${name}">${name}${count}</option>`;
+      })
+      .join("");
+  select.value = selected || "";
+}
+
 function renderControls(rows) {
   const body = document.getElementById("controls-body");
+  const meta = document.getElementById("control-count-label");
+  if (meta) meta.textContent = rows.length ? `${rows.length} shown` : "";
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="5" class="empty">No controls</td></tr>`;
+    body.innerHTML = `<tr><td colspan="5" class="empty">No controls match your filters</td></tr>`;
     return;
   }
   body.innerHTML = rows
@@ -75,6 +104,10 @@ function renderControls(rows) {
 
 function renderAlerts(rows) {
   const body = document.getElementById("alerts-body");
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="5" class="empty">No alerts at this risk threshold</td></tr>`;
+    return;
+  }
   body.innerHTML = rows
     .map(
       (r) => `<tr>
@@ -91,6 +124,10 @@ function renderAlerts(rows) {
 function renderExceptions(rows) {
   const body = document.getElementById("exceptions-body");
   const open = rows.filter((r) => r.status !== "Closed");
+  if (!open.length) {
+    body.innerHTML = `<tr><td colspan="5" class="empty">No open exceptions</td></tr>`;
+    return;
+  }
   body.innerHTML = open
     .map(
       (r) => `<tr data-id="${r.exception_id}" data-status="${r.status}">
@@ -108,6 +145,10 @@ function renderExceptions(rows) {
 
 function renderAudit(rows) {
   const list = document.getElementById("audit-list");
+  if (!rows.length) {
+    list.innerHTML = `<li class="empty">No audit events yet</li>`;
+    return;
+  }
   list.innerHTML = rows
     .map(
       (r) => `<li>
@@ -136,39 +177,68 @@ async function advanceException(id) {
   await loadAudit();
 }
 
-async function loadOverview(refresh = false) {
-  const data = await api(`/api/overview${refresh ? "?refresh=1" : ""}`);
-  renderOverview(data);
+async function loadHealthPill() {
+  const health = document.getElementById("health-pill");
+  try {
+    const h = await api("/api/health");
+    if (h.database === "ready") {
+      const parts = ["Database ready"];
+      if (h.control_count != null) parts.push(`${h.control_count} controls`);
+      if (h.golden_count != null) parts.push(`${h.golden_count} golden`);
+      health.textContent = parts.join(" · ");
+      health.title = h.version ? `App v${h.version}` : "";
+      health.className = "pill pill-ok";
+    } else {
+      health.textContent = h.database === "error" ? "Database error" : "Database missing";
+      health.className = "pill pill-danger";
+    }
+  } catch {
+    health.textContent = "API offline";
+    health.className = "pill pill-danger";
+  }
 }
 
-async function loadControls(domain = "", goldenOnly = false) {
+async function loadOverview(refresh = false) {
+  const cards = document.getElementById("overview-cards");
+  if (cards && !cards.querySelector(".metric-card")) {
+    cards.innerHTML = `<p class="empty">Loading metrics…</p>`;
+  }
+  const data = await api(`/api/overview${refresh ? "?refresh=1" : ""}`);
+  renderOverview(data);
+  return data;
+}
+
+async function loadDomainOptions() {
+  const domains = await api("/api/domains");
+  renderDomainFilter(domains, document.getElementById("domain-filter")?.value || "");
+  return domains;
+}
+
+async function loadControls(domain = "", goldenOnly = false, search = "") {
+  setTableLoading("controls-body");
   const params = new URLSearchParams();
   if (domain) params.set("domain", domain);
   if (goldenOnly) params.set("golden", "true");
+  if (search.trim()) params.set("search", search.trim());
   params.set("limit", "500");
-  const q = params.toString() ? `?${params}` : "";
-  const rows = await api(`/api/controls${q}`);
+  const rows = await api(`/api/controls?${params}`);
   renderControls(rows);
-  const domains = [...new Set(rows.map((r) => r.domain))].sort();
-  const select = document.getElementById("domain-filter");
-  const current = select.value;
-  select.innerHTML =
-    `<option value="">All domains</option>` +
-    domains.map((d) => `<option value="${d}">${d}</option>`).join("");
-  select.value = current || "";
 }
 
 async function loadAlerts(minRisk = 0) {
+  setTableLoading("alerts-body");
   const rows = await api(`/api/alerts?min_risk=${minRisk}`);
   renderAlerts(rows);
 }
 
 async function loadExceptions() {
+  setTableLoading("exceptions-body");
   const rows = await api("/api/exceptions?limit=100");
   renderExceptions(rows);
 }
 
 async function loadAudit() {
+  setListLoading("audit-list");
   const rows = await api("/api/audit-log?limit=25");
   renderAudit(rows);
 }
@@ -179,19 +249,34 @@ function showPaneError(targetId, message) {
   el.innerHTML = `<tr><td colspan="5" class="empty pane-error">${message}</td></tr>`;
 }
 
-async function boot() {
-  const health = document.getElementById("health-pill");
+async function refreshDashboard() {
+  const btn = document.getElementById("refresh-btn");
+  btn?.setAttribute("disabled", "true");
   try {
-    const h = await api("/api/health");
-    health.textContent = h.database === "ready" ? "Database ready" : "Database missing";
-    health.className = `pill ${h.database === "ready" ? "pill-ok" : "pill-danger"}`;
-  } catch {
-    health.textContent = "API offline";
-    health.className = "pill pill-danger";
+    await Promise.all([
+      loadHealthPill(),
+      loadOverview(true),
+      loadDomainOptions(),
+      loadControls(
+        document.getElementById("domain-filter")?.value || "",
+        document.getElementById("golden-filter")?.checked || false,
+        document.getElementById("control-search")?.value || ""
+      ),
+      loadAlerts(Number(document.getElementById("risk-slider")?.value || 0) / 100),
+      loadExceptions(),
+      loadAudit(),
+    ]);
+  } finally {
+    btn?.removeAttribute("disabled");
   }
+}
+
+async function boot() {
+  await loadHealthPill();
 
   const jobs = [
     { name: "overview", run: () => loadOverview(), target: "overview-cards" },
+    { name: "domains", run: () => loadDomainOptions(), target: null },
     { name: "controls", run: () => loadControls(), target: "controls-body" },
     { name: "alerts", run: () => loadAlerts(), target: "alerts-body" },
     { name: "exceptions", run: () => loadExceptions(), target: "exceptions-body" },
@@ -202,6 +287,7 @@ async function boot() {
       try {
         await run();
       } catch (err) {
+        if (!target) return;
         const msg = err instanceof Error ? err.message : String(err);
         if (target === "overview-cards") {
           document.getElementById(target).innerHTML =
@@ -219,11 +305,16 @@ async function boot() {
   const reloadControls = () => {
     loadControls(
       document.getElementById("domain-filter").value,
-      document.getElementById("golden-filter").checked
+      document.getElementById("golden-filter").checked,
+      document.getElementById("control-search").value
     );
   };
   document.getElementById("domain-filter").addEventListener("change", reloadControls);
   document.getElementById("golden-filter").addEventListener("change", reloadControls);
+  document.getElementById("control-search").addEventListener("input", () => {
+    clearTimeout(searchDebounce);
+    searchDebounce = setTimeout(reloadControls, 250);
+  });
 
   const slider = document.getElementById("risk-slider");
   const label = document.getElementById("risk-label");
@@ -233,13 +324,12 @@ async function boot() {
     loadAlerts(v);
   });
 
-  document.getElementById("refresh-btn").addEventListener("click", () => loadOverview(true));
+  document.getElementById("refresh-btn").addEventListener("click", () => refreshDashboard());
 
   document.getElementById("exceptions-body").addEventListener("click", (e) => {
     const btn = e.target.closest(".advance-btn");
     if (btn) advanceException(btn.dataset.id);
   });
-
 }
 
 boot().catch((err) => {

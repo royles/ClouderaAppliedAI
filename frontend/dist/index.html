@@ -25,7 +25,7 @@
         <div class="topbar-actions">
           <span id="health-pill" class="pill pill-muted">Checking…</span>
           <button type="button" id="assistant-toggle" class="btn btn-secondary" aria-expanded="false" aria-controls="assistant-panel">Assistant</button>
-          <button type="button" id="refresh-btn" class="btn btn-secondary">Refresh metrics</button>
+          <button type="button" id="refresh-btn" class="btn btn-secondary">Refresh dashboard</button>
         </div>
       </header>
 
@@ -37,6 +37,13 @@
           <section class="panel">
             <div class="panel-head">
               <h2>Control catalog</h2>
+              <input
+                type="search"
+                id="control-search"
+                class="control-search"
+                placeholder="Search code or name…"
+                aria-label="Search controls"
+              />
               <select id="domain-filter" aria-label="Filter by domain">
                 <option value="">All domains</option>
               </select>
@@ -44,6 +51,7 @@
                 <input type="checkbox" id="golden-filter" />
                 MVP golden only
               </label>
+              <span id="control-count-label" class="panel-meta"></span>
             </div>
             <div class="table-wrap">
               <table>
@@ -155,7 +163,7 @@
       </aside>
       </div>
     </div>
-    <script src="/assets/assistant.js?v=2"></script>
-    <script src="/assets/app.js?v=2"></script>
+    <script src="/assets/assistant.js?v=3"></script>
+    <script src="/assets/app.js?v=3"></script>
   </body>
 </html>

@@ -15,11 +15,18 @@ def list_controls(
     risk_tier: str | None = None,
     golden: bool | None = None,
     similarity_key: str | None = None,
+    search: str | None = Query(None, max_length=120),
     limit: int = Query(100, le=500),
     conn: Any = Depends(get_db_connection),
 ) -> list[dict[str, Any]]:
     clauses: list[str] = []
     params: list[Any] = []
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        clauses.append(
+            "(c.control_code LIKE ? OR c.control_name LIKE ? OR c.description LIKE ?)"
+        )
+        params.extend([term, term, term])
     if domain:
         clauses.append("c.domain = ?")
         params.append(domain)

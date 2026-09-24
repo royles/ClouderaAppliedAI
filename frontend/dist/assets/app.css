@@ -253,6 +253,24 @@ input[type="range"] {
   font-size: 0.82rem;
 }
 
+.control-search {
+  min-width: 10rem;
+  flex: 1 1 12rem;
+  max-width: 16rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: inherit;
+  font-size: 0.86rem;
+}
+
+.panel-meta {
+  color: var(--muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
 .audit-list {
   list-style: none;
   margin: 0;
