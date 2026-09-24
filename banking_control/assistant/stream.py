@@ -21,6 +21,10 @@ from banking_control.llm.openai_tool_parse import (
     strip_model_artifacts,
 )
 from banking_control.llm.router import is_llm_configured
+from banking_control.assistant.response_format import (
+    answer_from_tool_messages,
+    postprocess_user_visible,
+)
 from banking_control.assistant.router import answer_question_rules, suggest_actions
 from banking_control.tools.engine import ControlToolEngine
 
@@ -45,6 +49,8 @@ When the user asks to test or simulate a control:
 Control codes: DOMAIN-NNN (examples: AML-001, KYC-003). If unknown_control_code, apologize and stop — do not retry invalid codes.
 
 Tool use: call functions via the API tool mechanism only. Do not print XML, JSON tool blocks, or chain-of-thought in the user-visible reply.
+
+Reply format: short markdown only — headings, numbered/bullet lists. No pipe tables. External regulator links as a bullet list with a one-line caution that they are third-party sites.
 """
 
 
@@ -242,39 +248,45 @@ def stream_assistant_events(
             oai_messages: list[dict[str, Any]] = [{"role": "user", "content": trimmed}]
             tools_called, oai_messages = _run_tool_loop_openai(conn, engine, cfg, oai_messages)
             tool_result_messages = oai_messages
+            structured = answer_from_tool_messages(tool_result_messages, tools_called)
             yield sse_event("meta", {"status": "Streaming response…", "tools_called": tools_called})
-            last = oai_messages[-1] if oai_messages else {}
-            text = ""
-            if last.get("role") == "assistant" and last.get("content"):
-                text = strip_model_artifacts(str(last["content"]))
-            if (not text or content_looks_like_tool_attempt(text)) and tools_called:
-                text = _summarize_after_tools_openai(conn, cfg, oai_messages)
-            if text:
-                for i in range(0, len(text), 32):
-                    piece = text[i : i + 32]
-                    buffer.append(piece)
-                    yield sse_event("delta", {"text": piece})
-            elif tools_called:
-                for piece in stream_openai_chat(
-                    system=SYSTEM_PROMPT,
-                    messages=oai_messages,
-                    config=cfg,
-                    tools=None,
-                ):
-                    clean = strip_model_artifacts(piece)
-                    if clean:
-                        buffer.append(clean)
-                        yield sse_event("delta", {"text": clean})
+            if structured:
+                yield sse_event("meta", {"status": "Formatting grounded reply…"})
+                buffer.append(structured)
+                yield sse_event("delta", {"text": structured})
             else:
-                for piece in stream_openai_chat(
-                    system=SYSTEM_PROMPT,
-                    messages=oai_messages,
-                    config=cfg,
-                ):
-                    clean = strip_model_artifacts(piece)
-                    if clean:
-                        buffer.append(clean)
-                        yield sse_event("delta", {"text": clean})
+                last = oai_messages[-1] if oai_messages else {}
+                text = ""
+                if last.get("role") == "assistant" and last.get("content"):
+                    text = strip_model_artifacts(str(last["content"]))
+                if (not text or content_looks_like_tool_attempt(text)) and tools_called:
+                    text = _summarize_after_tools_openai(conn, cfg, oai_messages)
+                if text:
+                    for i in range(0, len(text), 32):
+                        piece = text[i : i + 32]
+                        buffer.append(piece)
+                        yield sse_event("delta", {"text": piece})
+                elif tools_called:
+                    for piece in stream_openai_chat(
+                        system=SYSTEM_PROMPT,
+                        messages=oai_messages,
+                        config=cfg,
+                        tools=None,
+                    ):
+                        clean = strip_model_artifacts(piece)
+                        if clean:
+                            buffer.append(clean)
+                            yield sse_event("delta", {"text": clean})
+                else:
+                    for piece in stream_openai_chat(
+                        system=SYSTEM_PROMPT,
+                        messages=oai_messages,
+                        config=cfg,
+                    ):
+                        clean = strip_model_artifacts(piece)
+                        if clean:
+                            buffer.append(clean)
+                            yield sse_event("delta", {"text": clean})
         else:
             bedrock_messages: list[dict[str, Any]] = [
                 {"role": "user", "content": [{"type": "text", "text": trimmed}]},
@@ -301,20 +313,34 @@ def stream_assistant_events(
                     buffer.append(piece)
                     yield sse_event("delta", {"text": piece})
 
-        final_answer = "".join(buffer)
+        structured_final = answer_from_tool_messages(tool_result_messages, tools_called)
+        final_answer = structured_final or "".join(buffer)
         if not final_answer.strip() and tools_called:
             final_answer = _fallback_answer_from_tool_messages(tool_result_messages)
+        raw_assistant_text = ""
+        for msg in reversed(tool_result_messages):
+            if msg.get("role") == "assistant" and msg.get("content"):
+                raw_assistant_text = str(msg["content"])
+                break
+        _, thinking_from_model = postprocess_user_visible(raw_assistant_text)
+        if structured_final:
+            visible_answer = structured_final
+            thinking_trace = thinking_from_model
+        else:
+            visible_answer, thinking_trace = postprocess_user_visible(final_answer)
+            if not thinking_trace:
+                thinking_trace = thinking_from_model
         actions = suggest_actions(conn, trimmed, tools_called=tools_called)
-        yield sse_event(
-            "done",
-            {
-                "answer": final_answer.strip() or "No response generated.",
-                "source": provider,
-                "provider": provider,
-                "model_id": cfg.bedrock_model_id or cfg.openai_model_id,
-                "tools_called": tools_called,
-                "actions": actions,
-            },
-        )
+        done_payload: dict[str, Any] = {
+            "answer": visible_answer.strip() or "No response generated.",
+            "source": provider,
+            "provider": provider,
+            "model_id": cfg.bedrock_model_id or cfg.openai_model_id,
+            "tools_called": tools_called,
+            "actions": actions,
+        }
+        if thinking_trace:
+            done_payload["thinking_trace"] = thinking_trace
+        yield sse_event("done", done_payload)
     except LLMError as exc:
         yield sse_event("error", {"detail": str(exc)})

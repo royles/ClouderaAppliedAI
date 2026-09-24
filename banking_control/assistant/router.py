@@ -16,6 +16,7 @@ from banking_control.assistant.actions import (
     action_start_workflow,
 )
 from banking_control.assistant.grounding import fetch_control_grounding
+from banking_control.assistant.response_format import format_testing_guide_payload
 from banking_control.db import get_overview
 from banking_control.tools.engine import ControlToolEngine
 
@@ -199,46 +200,10 @@ def answer_question_rules(
         if any(w in lowered for w in ("test", "simulate", "simulation", "run control", "invoke")):
             guide = fetch_control_grounding(conn, code)
             if guide.get("found"):
-                ctrl = guide["control"]
-                lines = [
-                    f"### {ctrl['control_code']} — {ctrl['control_name']}",
-                    "",
-                    "Grounded checklist for **Effective** status (from catalog + linked regulators):",
-                    "",
-                ]
-                for i, item in enumerate(guide["effective_status_checklist"][:8], 1):
-                    lines.append(f"{i}. {item['requirement']}")
-                refs = guide.get("standards_refs") or []
-                if refs:
-                    lines.append("")
-                    lines.append("**Regulatory references (from catalog):**")
-                    for ref in refs:
-                        lines.append(f"- {ref['label']}: {ref['url']}")
-                wh = (guide.get("latest_assessment") or {}).get("evidence_ref")
-                if wh:
-                    lines.append("")
-                    lines.append(f"Latest warehouse assessment evidence ref: `{wh}` (only cite if relevant).")
-                wf = guide.get("workflow_suggestions") or []
-                if wf:
-                    lines.append("")
-                    lines.append("**Workflow (create evidence — do not assume it exists):**")
-                    for item in wf:
-                        if item.get("action") == "create" and item.get("proposed_artifact_ref"):
-                            lines.append(
-                                f"- {item['label']}: start workflow to create `{item['proposed_artifact_ref']}`"
-                            )
-                        elif item.get("artifact_ref"):
-                            lines.append(
-                                f"- {item['label']}: `{item['artifact_ref']}` ({item.get('status', 'Draft')})"
-                            )
-                lines.append("")
-                lines.append(
-                    "Use **Start workflow** shortcuts below to create workpapers; never list evidence as "
-                    "already reviewed unless it appears in warehouse data or an active workflow."
-                )
+                answer_body = format_testing_guide_payload(guide)
                 cid = _control_id_by_code(conn, code)
                 if cid:
-                    for item in wf:
+                    for item in guide.get("workflow_suggestions") or []:
                         if item.get("action") != "create":
                             continue
                         actions.insert(
@@ -251,7 +216,7 @@ def answer_question_rules(
                                 proposed_artifact_ref=item.get("proposed_artifact_ref"),
                             ),
                         )
-                return {"answer": "\n".join(lines), "actions": actions[:4], "source": "rules"}
+                return {"answer": answer_body, "actions": actions[:4], "source": "rules"}
 
         cid = _control_id_by_code(conn, code)
         if cid:

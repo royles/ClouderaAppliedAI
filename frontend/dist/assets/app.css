@@ -967,6 +967,37 @@ body.copilot-open .copilot-toggle {
   margin: 0.35rem 0;
 }
 
+.assistant-markdown .asst-md-ol {
+  margin: 0.35rem 0 0.65rem 1.1rem;
+  padding: 0;
+}
+
+.assistant-markdown .asst-md-link {
+  color: var(--accent, #3dd6c3);
+  word-break: break-word;
+}
+
+.assistant-thinking {
+  margin: 0.35rem 0 0.5rem;
+  font-size: 0.72rem;
+  color: var(--text-muted, #8b9cb3);
+}
+
+.assistant-thinking summary {
+  cursor: pointer;
+  user-select: none;
+}
+
+.assistant-thinking-body {
+  margin-top: 0.35rem;
+  max-height: 8rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
 .assistant-markdown .asst-md-ul {
   margin: 0.35rem 0 0.5rem;
   padding-left: 1.15rem;
