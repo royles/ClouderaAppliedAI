@@ -888,6 +888,48 @@ body.copilot-open .copilot-toggle {
   line-height: 1.45;
 }
 
+.assistant-msg-text.assistant-markdown {
+  white-space: normal;
+}
+
+.assistant-markdown .asst-md-h {
+  margin: 0.75rem 0 0.4rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+.assistant-markdown .asst-md-h:first-child {
+  margin-top: 0;
+}
+
+.assistant-markdown .asst-md-p {
+  margin: 0.35rem 0;
+}
+
+.assistant-markdown .asst-md-ul {
+  margin: 0.35rem 0 0.5rem;
+  padding-left: 1.15rem;
+}
+
+.assistant-markdown .asst-md-li {
+  margin: 0.2rem 0;
+}
+
+.assistant-markdown .asst-md-code {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 0.82em;
+  background: var(--surface-2);
+  padding: 0.05rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+.assistant-markdown strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
 .assistant-msg-meta {
   margin-top: 0.35rem;
   font-size: 0.72rem;

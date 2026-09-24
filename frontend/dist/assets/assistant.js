@@ -168,7 +168,11 @@
       roleEl.textContent = role === "user" ? "You" : "Assistant";
       const textEl = document.createElement("div");
       textEl.className = "assistant-msg-text";
-      textEl.textContent = text;
+      if (typeof window.setAssistantMessageBody === "function") {
+        window.setAssistantMessageBody(textEl, role, text);
+      } else {
+        textEl.textContent = text;
+      }
       wrap.appendChild(roleEl);
       wrap.appendChild(textEl);
       renderActionChips(wrap, actions);
@@ -195,7 +199,11 @@
         roleEl.textContent = "Assistant";
         const textEl = document.createElement("div");
         textEl.className = "assistant-msg-text";
-        textEl.textContent = data.answer || "";
+        if (typeof window.setAssistantMessageBody === "function") {
+          window.setAssistantMessageBody(textEl, "assistant", data.answer || "");
+        } else {
+          textEl.textContent = data.answer || "";
+        }
         wrap.appendChild(roleEl);
         wrap.appendChild(textEl);
         renderActionChips(wrap, data.actions);
@@ -303,14 +311,25 @@
       try {
         await postAssistantStream(message, {
           onMeta: (m) => {
-            if (textNode) textNode.textContent = m.status || "Working…";
+            if (textNode) {
+              textNode.classList.remove("assistant-markdown");
+              textNode.textContent = m.status || "Working…";
+            }
           },
           onDelta: (_piece, buffer) => {
-            if (textNode) textNode.textContent = buffer;
+            if (textNode && typeof window.setAssistantMessageBody === "function") {
+              window.setAssistantMessageBody(textNode, "assistant", buffer);
+            } else if (textNode) {
+              textNode.textContent = buffer;
+            }
             if (history) history.scrollTop = history.scrollHeight;
           },
           onDone: (done) => {
-            if (textNode) textNode.textContent = done.answer || "";
+            if (textNode && typeof window.setAssistantMessageBody === "function") {
+              window.setAssistantMessageBody(textNode, "assistant", done.answer || "");
+            } else if (textNode) {
+              textNode.textContent = done.answer || "";
+            }
             renderActionChips(assistantNode, done.actions);
             if (metaNode) {
               metaNode.textContent = [
