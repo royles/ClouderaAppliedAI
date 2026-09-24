@@ -12,7 +12,11 @@ dependencies = [
   "fastapi>=0.115.0",
   "uvicorn[standard]>=0.32.0",
   "pydantic>=2.9.0",
+  "jsonschema>=4.23.0",
 ]
+
+[project.entry-points."banking_control.plugins"]
+builtins = "banking_control.plugins.builtins:register"
 
 [tool.setuptools.packages.find]
 where = ["."]
