@@ -7,5 +7,5 @@ data/*.db
 .tools/
 frontend/node_modules/
 *.egg-info/
-dist/
+/dist/
 build/

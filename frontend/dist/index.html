@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Banking Control Solution</title>
+    <link rel="stylesheet" href="/assets/app.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=IBM+Plex+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <p class="brand-eyebrow">Cloudera Applied AI</p>
+            <h1>Banking Control Solution</h1>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <span id="health-pill" class="pill pill-muted">Checking…</span>
+          <button type="button" id="refresh-btn" class="btn btn-secondary">Refresh metrics</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="hero-metrics" id="overview-cards"></section>
+
+        <div class="grid-two">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Control catalog</h2>
+              <select id="domain-filter" aria-label="Filter by domain">
+                <option value="">All domains</option>
+              </select>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Control</th>
+                    <th>Domain</th>
+                    <th>Risk</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="controls-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Transaction monitoring alerts</h2>
+              <label class="inline-label">
+                Min risk
+                <input type="range" id="risk-slider" min="0" max="100" value="0" />
+                <span id="risk-label">0.00</span>
+              </label>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>When</th>
+                    <th>Type</th>
+                    <th>Amount</th>
+                    <th>Risk</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="alerts-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="grid-two">
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Open control exceptions</h2>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Severity</th>
+                    <th>Due</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="exceptions-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head">
+              <h2>Audit trail</h2>
+            </div>
+            <ul id="audit-list" class="audit-list"></ul>
+          </section>
+        </div>
+      </main>
+    </div>
+    <script src="/assets/app.js" type="module"></script>
+  </body>
+</html>
