@@ -1,5 +1,3 @@
-import { initAssistant } from "./assistant.js";
-
 const fmtMoney = (n) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(n);
 
@@ -175,6 +173,12 @@ async function loadAudit() {
   renderAudit(rows);
 }
 
+function showPaneError(targetId, message) {
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.innerHTML = `<tr><td colspan="6" class="empty pane-error">${message}</td></tr>`;
+}
+
 async function boot() {
   const health = document.getElementById("health-pill");
   try {
@@ -184,22 +188,30 @@ async function boot() {
   } catch {
     health.textContent = "API offline";
     health.className = "pill pill-danger";
-    return;
   }
 
-  const loaders = [
-    ["overview", loadOverview()],
-    ["controls", loadControls()],
-    ["alerts", loadAlerts()],
-    ["exceptions", loadExceptions()],
-    ["audit", loadAudit()],
+  const jobs = [
+    { name: "overview", run: () => loadOverview(), target: "overview-cards" },
+    { name: "controls", run: () => loadControls(), target: "controls-body" },
+    { name: "alerts", run: () => loadAlerts(), target: "alerts-body" },
+    { name: "exceptions", run: () => loadExceptions(), target: "exceptions-body" },
+    { name: "audit", run: () => loadAudit(), target: "audit-list" },
   ];
   await Promise.all(
-    loaders.map(async ([name, job]) => {
+    jobs.map(async ({ name, run, target }) => {
       try {
-        await job;
+        await run();
       } catch (err) {
-        throw new Error(`${name}: ${err.message}`);
+        const msg = err instanceof Error ? err.message : String(err);
+        if (target === "overview-cards") {
+          document.getElementById(target).innerHTML =
+            `<p class="empty pane-error">${name}: ${msg}</p>`;
+        } else if (target === "audit-list") {
+          document.getElementById(target).innerHTML =
+            `<li class="empty pane-error">${name}: ${msg}</li>`;
+        } else {
+          showPaneError(target, `${name}: ${msg}`);
+        }
       }
     })
   );
@@ -228,7 +240,6 @@ async function boot() {
     if (btn) advanceException(btn.dataset.id);
   });
 
-  initAssistant();
 }
 
 boot().catch((err) => {
