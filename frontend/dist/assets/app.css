@@ -435,6 +435,46 @@ input[type="range"] {
   font-size: 0.86rem;
 }
 
+.panel-submeta {
+  margin: 0.15rem 0 0;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.alerts-scroll {
+  max-height: min(420px, 52vh);
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.alerts-sentinel {
+  padding: 0.65rem;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.alerts-sentinel.is-loading {
+  color: var(--accent);
+}
+
+@keyframes alert-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+    background: rgba(61, 214, 195, 0.12);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    background: transparent;
+  }
+}
+
+#alerts-body tr.alert-row-enter {
+  animation: alert-row-in 0.45s ease-out;
+}
+
 .panel-meta {
   color: var(--muted);
   font-size: 0.82rem;

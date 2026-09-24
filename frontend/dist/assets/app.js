@@ -13,6 +13,7 @@ const statusPill = (text) => {
 let searchDebounce;
 let activeMetricFilter = null;
 let alertStatusFilter = null;
+window.getAlertStatusFilter = () => alertStatusFilter;
 
 const controlCatalogFilters = {
   riskTier: "",
@@ -225,24 +226,9 @@ function renderControls(rows) {
     .join("");
 }
 
-function renderAlerts(rows) {
-  const body = document.getElementById("alerts-body");
-  if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="5" class="empty">No alerts at this risk threshold</td></tr>`;
-    return;
-  }
-  body.innerHTML = rows
-    .map(
-      (r) => `<tr class="data-row" tabindex="0" role="link" data-detail="alerts" data-id="${r.alert_id}" aria-label="Open transaction alert">
-      <td>${r.alert_at}</td>
-      <td>${r.alert_type}<br /><small>${r.unit_code} · ${r.channel}</small></td>
-      <td>${fmtMoney(r.amount_usd)}</td>
-      <td>${(r.risk_score * 100).toFixed(0)}%</td>
-      <td>${statusPill(r.status)}</td>
-    </tr>`
-    )
-    .join("");
-}
+window.fmtMoney = fmtMoney;
+window.statusPill = statusPill;
+window.appendActivityTimeParams = appendActivityTimeParams;
 
 function renderExceptions(rows) {
   const body = document.getElementById("exceptions-body");
@@ -398,6 +384,10 @@ function appendActivityTimeParams(params) {
 }
 
 async function loadAlertsFromUi() {
+  if (window.alertsPanel?.resetAndLoadAlerts) {
+    await window.alertsPanel.resetAndLoadAlerts();
+    return;
+  }
   setTableLoading("alerts-body");
   const minRisk = Number(document.getElementById("risk-slider")?.value || 0) / 100;
   const params = new URLSearchParams();
@@ -405,8 +395,25 @@ async function loadAlertsFromUi() {
   params.set("limit", "50");
   if (alertStatusFilter) params.set("status", alertStatusFilter);
   appendActivityTimeParams(params);
-  const rows = await api(`/api/alerts?${params}`);
-  renderAlerts(rows);
+  const data = await api(`/api/alerts?${params}`);
+  const rows = data.items || data;
+  const body = document.getElementById("alerts-body");
+  if (!body) return;
+  if (!rows.length) {
+    body.innerHTML = `<tr><td colspan="5" class="empty">No alerts at this risk threshold</td></tr>`;
+    return;
+  }
+  body.innerHTML = rows
+    .map(
+      (r) => `<tr class="data-row" tabindex="0" role="link" data-detail="alerts" data-id="${r.alert_id}" aria-label="Open transaction alert">
+      <td>${r.alert_at}</td>
+      <td>${r.alert_type}<br /><small>${r.unit_code} · ${r.channel}</small></td>
+      <td>${fmtMoney(r.amount_usd)}</td>
+      <td>${(r.risk_score * 100).toFixed(0)}%</td>
+      <td>${statusPill(r.status)}</td>
+    </tr>`
+    )
+    .join("");
 }
 
 window.loadExceptions = loadExceptions;
@@ -455,6 +462,7 @@ async function refreshDashboard() {
 }
 
 async function boot() {
+  window.alertsPanel?.initAlertsPanel?.();
   await loadStatusChips();
 
   const jobs = [

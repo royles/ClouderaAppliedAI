@@ -25,6 +25,7 @@ from banking_control.plugins.manager import PluginManager
 from banking_control.plugins.protocols import BankingControlPlugin
 from banking_control.tools.engine import ControlToolEngine
 from banking_control.tools.registry import ToolRegistry
+from banking_control.alert_worker import TransactionAlertWorker
 
 _FALLBACK_INDEX = """<!DOCTYPE html>
 <html lang="en">
@@ -91,6 +92,15 @@ def create_app(
             prepare_connection(conn)
         finally:
             conn.close()
+        worker = TransactionAlertWorker(path)
+        worker.start()
+        app.state.alert_worker = worker
+
+    @app.on_event("shutdown")
+    def _stop_alert_worker() -> None:
+        worker = getattr(app.state, "alert_worker", None)
+        if worker is not None:
+            worker.stop()
 
     _mount_frontend(app)
     return app

@@ -134,14 +134,17 @@
 
           <section class="panel" id="panel-alerts">
             <div class="panel-head">
-              <h2>Transaction monitoring alerts</h2>
+              <div>
+                <h2>Transaction monitoring alerts</h2>
+                <p id="alerts-stream-meta" class="panel-submeta"></p>
+              </div>
               <label class="inline-label">
                 Min risk
                 <input type="range" id="risk-slider" min="0" max="100" value="0" />
                 <span id="risk-label">0.00</span>
               </label>
             </div>
-            <div class="table-wrap">
+            <div class="table-wrap alerts-scroll" id="alerts-scroll">
               <table>
                 <thead>
                   <tr>
@@ -154,6 +157,9 @@
                 </thead>
                 <tbody id="alerts-body"></tbody>
               </table>
+              <div id="alerts-load-sentinel" class="alerts-sentinel hidden" aria-hidden="true">
+                Loading older alerts…
+              </div>
             </div>
           </section>
         </div>
@@ -287,7 +293,8 @@
     </div>
     <script src="/assets/assistant-markdown.js?v=2"></script>
     <script src="/assets/assistant.js?v=11"></script>
-    <script src="/assets/app.js?v=13"></script>
+    <script src="/assets/alerts-panel.js?v=1"></script>
+    <script src="/assets/app.js?v=14"></script>
     <script src="/assets/detail.js?v=8"></script>
     <script src="/assets/timeline.js?v=1"></script>
   </body>
