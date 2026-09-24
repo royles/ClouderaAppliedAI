@@ -34,9 +34,17 @@ function setListLoading(listId) {
 function renderOverview(data) {
   const cards = [
     {
+      label: "Total controls",
+      value: data.control_count ?? 0,
+      hint:
+        data.golden_controls != null
+          ? `${data.golden_controls} MVP golden controls`
+          : "EU retail + commercial catalog",
+    },
+    {
       label: "Control health",
       value: `${data.control_health_pct}%`,
-      hint: `${data.control_count} controls in catalog`,
+      hint: "Share of tested controls rated effective",
     },
     {
       label: "Open exceptions",
