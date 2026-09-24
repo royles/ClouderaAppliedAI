@@ -242,6 +242,7 @@
           },
           onDelta: (_piece, buffer) => {
             if (textNode) textNode.textContent = buffer;
+            if (history) history.scrollTop = history.scrollHeight;
           },
           onDone: (done) => {
             if (textNode) textNode.textContent = done.answer || "";
