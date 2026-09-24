@@ -251,7 +251,7 @@ function renderExceptions(rows) {
   }
   body.innerHTML = open
     .map(
-      (r) => `<tr class="data-row" tabindex="0" role="link" data-detail="exceptions" data-id="${r.exception_id}" data-id-row="${r.exception_id}" data-status="${r.status}" aria-label="Open exception ${r.title}">
+      (r) => `<tr class="data-row" tabindex="0" role="link" data-detail="exceptions" data-id="${r.exception_id}" data-status="${r.status}" aria-label="Open exception ${r.title}">
       <td>${r.title}<br /><small>${r.control_code} · ${r.unit_code}</small></td>
       <td>${statusPill(r.severity)}</td>
       <td>${r.due_date}</td>
