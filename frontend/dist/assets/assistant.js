@@ -155,6 +155,37 @@
         case "open_detail":
           dash.openDetail?.(payload.kind, payload.id);
           break;
+        case "start_workflow": {
+          const code = payload.control_code;
+          const wfType = payload.workflow_type;
+          if (!code || !wfType) break;
+          try {
+            const res = await fetch(
+              `/api/controls/by-code/${encodeURIComponent(code)}/workflows`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ workflow_type: wfType }),
+              }
+            );
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail?.message || data.message || res.statusText);
+            const ref = data.workflow?.artifact_ref || payload.proposed_artifact_ref;
+            if (payload.control_id) {
+              dash.openDetail?.("controls", payload.control_id);
+            }
+            if (statusEl && ref) {
+              statusEl.textContent = data.created
+                ? `Created workflow ${ref}`
+                : `Opened existing workflow ${ref}`;
+            }
+          } catch (err) {
+            if (statusEl) {
+              statusEl.textContent = err instanceof Error ? err.message : String(err);
+            }
+          }
+          break;
+        }
         default:
           break;
       }

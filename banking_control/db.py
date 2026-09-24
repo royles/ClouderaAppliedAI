@@ -89,7 +89,8 @@ def ensure_warehouse_schema(conn: sqlite3.Connection) -> None:
           channel TEXT NOT NULL,
           status TEXT NOT NULL CHECK (status IN ('New', 'Under Review', 'Escalated', 'Cleared', 'SAR Filed')),
           risk_score REAL NOT NULL,
-          narrative TEXT NOT NULL
+          narrative TEXT NOT NULL,
+          alert_origin TEXT NOT NULL DEFAULT 'historical' CHECK (alert_origin IN ('historical', 'live'))
         );
 
         CREATE TABLE IF NOT EXISTS FCT_AUDIT_EVENT (
@@ -100,6 +101,17 @@ def ensure_warehouse_schema(conn: sqlite3.Connection) -> None:
           entity_type TEXT NOT NULL,
           entity_id TEXT NOT NULL,
           detail TEXT NOT NULL
+        );
+
+        CREATE TABLE IF NOT EXISTS FCT_CONTROL_WORKFLOW (
+          workflow_id INTEGER PRIMARY KEY,
+          control_id INTEGER NOT NULL REFERENCES DIM_CONTROL(control_id),
+          workflow_type TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('Draft', 'In Progress', 'Complete', 'Cancelled')),
+          artifact_ref TEXT NOT NULL UNIQUE,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          metadata_json TEXT
         );
 
         CREATE TABLE IF NOT EXISTS APP_OVERVIEW_SNAPSHOT (
@@ -121,6 +133,7 @@ def ensure_warehouse_indexes(conn: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_alert_status ON FCT_TRANSACTION_ALERT(status)",
         "CREATE INDEX IF NOT EXISTS idx_alert_at ON FCT_TRANSACTION_ALERT(alert_at)",
         "CREATE INDEX IF NOT EXISTS idx_audit_event_at ON FCT_AUDIT_EVENT(event_at)",
+        "CREATE INDEX IF NOT EXISTS idx_workflow_control ON FCT_CONTROL_WORKFLOW(control_id)",
     ]
     for stmt in statements:
         try:
@@ -174,6 +187,33 @@ def migrate_control_catalog_columns(conn: sqlite3.Connection) -> None:
     conn.commit()
 
 
+def migrate_alert_origin_column(conn: sqlite3.Connection) -> None:
+    tables = {
+        row[0]
+        for row in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    if "FCT_TRANSACTION_ALERT" not in tables:
+        return
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(FCT_TRANSACTION_ALERT)")}
+    if "alert_origin" not in columns:
+        conn.execute(
+            """
+            ALTER TABLE FCT_TRANSACTION_ALERT
+            ADD COLUMN alert_origin TEXT NOT NULL DEFAULT 'historical'
+            """
+        )
+    conn.execute(
+        """
+        UPDATE FCT_TRANSACTION_ALERT
+        SET alert_origin = 'historical'
+        WHERE alert_origin IS NULL OR alert_origin = ''
+        """
+    )
+    conn.commit()
+
+
 def prepare_connection(conn: sqlite3.Connection) -> None:
     """Apply lightweight migrations before serving API requests."""
     ensure_warehouse_schema(conn)
@@ -185,10 +225,11 @@ def prepare_connection(conn: sqlite3.Connection) -> None:
     ensure_admin_llm_schema(conn)
     sync_control_catalog_metadata(conn)
     ensure_monitoring_seed_data(conn)
-    from banking_control.alert_generator import ensure_alert_pool
+    migrate_alert_origin_column(conn)
+    from banking_control.alert_generator import ensure_historical_alerts
     import random
 
-    added = ensure_alert_pool(conn, random.Random())
+    added = ensure_historical_alerts(conn, random.Random())
     if added:
         conn.commit()
         refresh_overview_cache(conn)

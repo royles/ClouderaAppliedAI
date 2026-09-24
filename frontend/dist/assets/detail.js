@@ -716,6 +716,21 @@
           .join("")}</tbody></table></div>`
       : `<p class="empty">No assessments recorded yet.</p>`;
 
+    const workflows = data.workflows?.length
+      ? `<div class="table-wrap"><table><thead><tr>
+          <th>Artifact</th><th>Type</th><th>Status</th><th>Started</th>
+        </tr></thead><tbody>${data.workflows
+          .map(
+            (w) => `<tr>
+            <td><code>${escapeHtml(w.artifact_ref)}</code></td>
+            <td>${escapeHtml(w.label || w.workflow_type)}</td>
+            <td>${statusPill(w.status)}</td>
+            <td>${escapeHtml(w.created_at || "")}</td>
+          </tr>`
+          )
+          .join("")}</tbody></table></div>`
+      : `<p class="empty">No testing workflows started yet. Use the assistant to create a workpaper from the Effective checklist.</p>`;
+
     const exceptions = data.exceptions?.length
       ? `<ul class="detail-link-list">${data.exceptions
           .map(
@@ -742,6 +757,14 @@
         <h3>Related controls</h3>
         <p class="hint">Peers with the same similarity / objective grouping (harmonization set).</p>
         ${renderRelatedControls(data.related_controls)}
+      </section>
+      <section class="detail-section">
+        <h3>Testing workflows</h3>
+        <p class="hint">Workpapers and approval packs are created here — IDs are not assumed until a workflow runs.</p>
+        ${workflows}
+        <button type="button" class="btn btn-secondary control-start-workpaper" data-control-code="${escapeHtml(c.control_code)}" data-workflow-type="testing_workpaper">
+          Start testing workpaper
+        </button>
       </section>
       <section class="detail-section">
         <h3>Recent assessments</h3>
@@ -885,6 +908,31 @@
     await loadDetailView(route.kind, route.id);
   }
 
+  async function startControlWorkflowFromDetail(controlCode, workflowType) {
+    const route = parseDetailHash();
+    const controlId = route?.kind === "controls" ? route.id : null;
+    try {
+      const data = await api(
+        `/api/controls/by-code/${encodeURIComponent(controlCode)}/workflows`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workflow_type: workflowType }),
+        }
+      );
+      if (controlId) {
+        await loadDetailView("controls", controlId);
+      }
+      return data;
+    } catch (err) {
+      const body = document.getElementById("detail-body");
+      if (body) {
+        const msg = err instanceof Error ? err.message : String(err);
+        body.insertAdjacentHTML("afterbegin", `<p class="pane-error">${escapeHtml(msg)}</p>`);
+      }
+    }
+  }
+
   const STATUS_FLOW = ["Open", "In Remediation", "Pending Validation", "Closed"];
 
   async function advanceExceptionFromDetail(id, currentStatus) {
@@ -919,6 +967,13 @@
       const adv = e.target.closest("#detail-exception-advance");
       if (adv) {
         void advanceExceptionFromDetail(adv.dataset.id, adv.dataset.status);
+      }
+      const wpBtn = e.target.closest(".control-start-workpaper");
+      if (wpBtn?.dataset.controlCode) {
+        void startControlWorkflowFromDetail(
+          wpBtn.dataset.controlCode,
+          wpBtn.dataset.workflowType || "testing_workpaper"
+        );
       }
     });
 

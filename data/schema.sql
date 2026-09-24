@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS FCT_TRANSACTION_ALERT (
   channel TEXT NOT NULL,
   status TEXT NOT NULL CHECK (status IN ('New', 'Under Review', 'Escalated', 'Cleared', 'SAR Filed')),
   risk_score REAL NOT NULL,
-  narrative TEXT NOT NULL
+  narrative TEXT NOT NULL,
+  alert_origin TEXT NOT NULL DEFAULT 'historical' CHECK (alert_origin IN ('historical', 'live'))
 );
 
 CREATE TABLE IF NOT EXISTS FCT_AUDIT_EVENT (
@@ -90,6 +91,18 @@ CREATE TABLE IF NOT EXISTS APP_ADMIN_LLM (
   updated_at TEXT
 );
 
+CREATE TABLE IF NOT EXISTS FCT_CONTROL_WORKFLOW (
+  workflow_id INTEGER PRIMARY KEY,
+  control_id INTEGER NOT NULL REFERENCES DIM_CONTROL(control_id),
+  workflow_type TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('Draft', 'In Progress', 'Complete', 'Cancelled')),
+  artifact_ref TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  metadata_json TEXT
+);
+
 CREATE INDEX IF NOT EXISTS idx_assessment_control ON FCT_CONTROL_ASSESSMENT(control_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_control ON FCT_CONTROL_WORKFLOW(control_id);
 CREATE INDEX IF NOT EXISTS idx_exception_status ON FCT_EXCEPTION(status);
 CREATE INDEX IF NOT EXISTS idx_alert_status ON FCT_TRANSACTION_ALERT(status);

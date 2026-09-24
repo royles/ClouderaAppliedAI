@@ -34,6 +34,8 @@ def alerts_per_day_mean() -> float:
 
 
 MIN_ALERT_POOL = 48
+HISTORICAL_ALERT_TARGET = 100
+HISTORICAL_SPAN_DAYS = 365
 
 NARRATIVES: tuple[str, ...] = (
     "Monitoring rule fired on aggregated activity; analyst review required per policy.",
@@ -63,9 +65,16 @@ ALERT_RETENTION_DAYS = 730.0
 def expire_alerts_older_than(
     conn: sqlite3.Connection, *, days: float = ALERT_RETENTION_DAYS
 ) -> int:
+    """Drop only live-generated alerts past retention; keep historical seed rows."""
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
-    rows = conn.execute("SELECT alert_id, alert_at FROM FCT_TRANSACTION_ALERT").fetchall()
-    stale = [int(r["alert_id"]) for r in rows if parse_alert_at(r["alert_at"]) < cutoff]
+    rows = conn.execute(
+        "SELECT alert_id, alert_at, alert_origin FROM FCT_TRANSACTION_ALERT"
+    ).fetchall()
+    stale = [
+        int(r["alert_id"])
+        for r in rows
+        if (r["alert_origin"] or "live") == "live" and parse_alert_at(r["alert_at"]) < cutoff
+    ]
     if not stale:
         return 0
     placeholders = ",".join("?" for _ in stale)
@@ -81,6 +90,7 @@ def insert_transaction_alert(
     rng: random.Random,
     *,
     alert_at: str | None = None,
+    alert_origin: str = "live",
 ) -> int | None:
     unit_count = conn.execute("SELECT COUNT(*) AS n FROM DIM_BUSINESS_UNIT").fetchone()["n"]
     if unit_count == 0:
@@ -100,8 +110,8 @@ def insert_transaction_alert(
         """
         INSERT INTO FCT_TRANSACTION_ALERT
           (alert_id, unit_id, alert_at, alert_type, amount_usd, customer_ref, channel,
-           status, risk_score, narrative)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           status, risk_score, narrative, alert_origin)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             next_id,
@@ -114,6 +124,7 @@ def insert_transaction_alert(
             status,
             risk,
             rng.choice(NARRATIVES),
+            alert_origin,
         ),
     )
     return int(next_id)
@@ -141,7 +152,51 @@ def ensure_alert_pool(
     for _ in range(need):
         hours_ago = rng.uniform(0.05, 47.0)
         at = (now - timedelta(hours=hours_ago)).replace(microsecond=0).isoformat()
-        if insert_transaction_alert(conn, rng, alert_at=at):
+        if insert_transaction_alert(conn, rng, alert_at=at, alert_origin="live"):
+            created += 1
+    return created
+
+
+def ensure_historical_alerts(
+    conn: sqlite3.Connection,
+    rng: random.Random,
+    *,
+    target: int = HISTORICAL_ALERT_TARGET,
+    span_days: float = HISTORICAL_SPAN_DAYS,
+) -> int:
+    """Backfill dated historical alerts once; live worker adds alert_origin=live rows."""
+    try:
+        current = int(
+            conn.execute(
+                """
+                SELECT COUNT(*) AS n FROM FCT_TRANSACTION_ALERT
+                WHERE alert_origin = 'historical'
+                """
+            ).fetchone()["n"]
+        )
+    except sqlite3.OperationalError:
+        current = int(conn.execute("SELECT COUNT(*) AS n FROM FCT_TRANSACTION_ALERT").fetchone()["n"])
+        if current >= target:
+            return 0
+        need = target - current
+        now = datetime.now(timezone.utc)
+        created = 0
+        for _ in range(need):
+            days_ago = rng.uniform(1.0, span_days)
+            at = (now - timedelta(days=days_ago)).replace(microsecond=0).isoformat()
+            if insert_transaction_alert(conn, rng, alert_at=at, alert_origin="historical"):
+                created += 1
+        return created
+
+    if current >= target:
+        return 0
+    need = target - current
+    now = datetime.now(timezone.utc)
+    created = 0
+    for _ in range(need):
+        days_ago = rng.uniform(1.0, span_days)
+        at = (now - timedelta(days=days_ago)).replace(microsecond=0).isoformat()
+        if insert_transaction_alert(conn, rng, alert_at=at, alert_origin="historical"):
             created += 1
     return created
 

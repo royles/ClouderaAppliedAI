@@ -22,6 +22,7 @@ from banking_control.control_create import (
     validate_create_payload,
 )
 from banking_control.control_graph import build_process_graph, list_flows_for_control
+from banking_control.control_workflows import list_workflows_for_control, start_workflow
 from banking_control.db import refresh_overview_cache
 from banking_control.tools.engine import ControlToolEngine, ToolValidationError
 from banking_control.tools.registry import ToolRegistry
@@ -34,6 +35,10 @@ class ControlRecommendRequest(BaseModel):
     description: str = Field("", max_length=8000)
     domain: str | None = Field(None, max_length=16)
     risk_tier: str | None = None
+
+
+class StartWorkflowRequest(BaseModel):
+    workflow_type: str = Field(..., min_length=3, max_length=64)
 
 
 class ControlCreateRequest(BaseModel):
@@ -351,6 +356,7 @@ def fetch_control_detail(conn: Any, control_id: int) -> dict[str, Any]:
         "latest_status": latest["status"] if latest else "Not Tested",
         "assessments": [dict(r) for r in assessments],
         "exceptions": [dict(r) for r in exceptions],
+        "workflows": list_workflows_for_control(conn, control_id),
         "related_controls": related,
         "process_graph": process_graph,
         "process_flows": list_flows_for_control(control_code),
@@ -363,3 +369,24 @@ def get_control(
     conn: Any = Depends(get_db_connection),
 ) -> dict[str, Any]:
     return fetch_control_detail(conn, control_id)
+
+
+@router.post("/controls/by-code/{control_code}/workflows")
+def post_control_workflow(
+    control_code: str,
+    body: StartWorkflowRequest,
+    conn: Any = Depends(get_db_connection),
+) -> dict[str, Any]:
+    result = start_workflow(
+        conn,
+        control_code=control_code.strip(),
+        workflow_type=body.workflow_type.strip(),
+        actor="dashboard",
+    )
+    if not result.get("ok"):
+        if result.get("error") == "unknown_control_code":
+            raise HTTPException(status_code=404, detail=result)
+        raise HTTPException(status_code=400, detail=result)
+    conn.commit()
+    refresh_overview_cache(conn)
+    return result

@@ -89,3 +89,26 @@ def action_open_control_code(control_code: str, control_id: int, *, label: str |
         "action_type": "open_detail",
         "payload": {"kind": "controls", "id": control_id},
     }
+
+
+def action_start_workflow(
+    control_code: str,
+    control_id: int,
+    workflow_type: str,
+    *,
+    label: str,
+    proposed_artifact_ref: str | None = None,
+) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "control_code": control_code,
+        "control_id": control_id,
+        "workflow_type": workflow_type,
+    }
+    if proposed_artifact_ref:
+        payload["proposed_artifact_ref"] = proposed_artifact_ref
+    return {
+        "action_id": f"workflow_{workflow_type}_{control_code}",
+        "label": label,
+        "action_type": "start_workflow",
+        "payload": payload,
+    }
