@@ -1039,9 +1039,10 @@ tr.data-row:focus-visible,
 }
 
 .detail-section-graph .control-dag-wrap {
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 200px;
   margin-top: 0.65rem;
-  padding-bottom: 0.35rem;
+  padding: 0.35rem 0.5rem;
   border-radius: 0.55rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -1049,8 +1050,8 @@ tr.data-row:focus-visible,
 
 .control-dag-svg {
   display: block;
-  min-width: 100%;
   height: auto;
+  margin: 0 auto;
 }
 
 .control-dag-node rect {
@@ -1075,22 +1076,42 @@ tr.data-row:focus-visible,
   stroke: var(--accent-dim);
 }
 
-.control-dag-code {
-  fill: var(--accent);
-  font-size: 11px;
-  font-family: "IBM Plex Mono", monospace;
-  font-weight: 500;
+.control-dag-node-inner {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 3px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 2px;
+  pointer-events: none;
+  line-height: 1.2;
 }
 
-.control-dag-name {
-  fill: var(--muted);
-  font-size: 9px;
+.control-dag-node-inner .control-dag-code {
+  color: var(--accent);
+  font-size: 0.62rem;
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+}
+
+.control-dag-node-inner .control-dag-name {
+  color: var(--muted);
+  font-size: 0.58rem;
   font-family: "DM Sans", system-ui, sans-serif;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .control-dag-edge-label {
   fill: var(--muted);
-  font-size: 8px;
+  font-size: 7px;
   font-family: "DM Sans", system-ui, sans-serif;
+  pointer-events: none;
 }
 

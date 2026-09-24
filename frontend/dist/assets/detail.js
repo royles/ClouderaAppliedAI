@@ -43,11 +43,16 @@
     showDashboardHome();
   }
 
+  function setTimelineDockVisible(visible) {
+    document.getElementById("activity-timeline-dock")?.classList.toggle("hidden", !visible);
+  }
+
   function showDashboardHome() {
     document.getElementById("dashboard-home")?.classList.remove("hidden");
     const detail = document.getElementById("detail-view");
     detail?.classList.add("hidden");
     detail?.setAttribute("aria-hidden", "true");
+    setTimelineDockVisible(true);
     document.title = "Banking Control Solution";
   }
 
@@ -56,6 +61,7 @@
     const detail = document.getElementById("detail-view");
     detail?.classList.remove("hidden");
     detail?.setAttribute("aria-hidden", "false");
+    setTimelineDockVisible(false);
     const titleEl = document.getElementById("detail-title");
     if (titleEl) titleEl.textContent = title;
   }
@@ -135,11 +141,12 @@
     const svg = document.getElementById("control-flow-graph");
     if (!svg || !graph?.nodes?.length) return;
 
-    const NODE_W = 132;
-    const NODE_H = 52;
-    const LAYER_GAP = 48;
-    const ROW_GAP = 16;
-    const PAD = 20;
+    const NODE_W = 96;
+    const NODE_H = 40;
+    const LAYER_GAP = 36;
+    const ROW_GAP = 12;
+    const PAD = 14;
+    const LABEL_GUTTER = 10;
 
     const byLayer = new Map();
     graph.nodes.forEach((n) => {
@@ -149,34 +156,43 @@
     });
     byLayer.forEach((list) => list.sort((a, b) => a.control_code.localeCompare(b.control_code)));
 
+    const maxLayer = Math.max(...graph.nodes.map((n) => n.layer ?? 0));
+    const maxRows = Math.max(1, ...[...byLayer.values()].map((l) => l.length));
+    const columnHeight = maxRows * NODE_H + Math.max(0, maxRows - 1) * ROW_GAP;
+
     const positions = new Map();
-    let maxLayer = 0;
-    let maxRows = 1;
     byLayer.forEach((list, layer) => {
-      maxLayer = Math.max(maxLayer, layer);
-      maxRows = Math.max(maxRows, list.length);
+      const blockH = list.length * NODE_H + Math.max(0, list.length - 1) * ROW_GAP;
+      const startY = PAD + (columnHeight - blockH) / 2;
       list.forEach((n, i) => {
         positions.set(n.control_code, {
           x: PAD + layer * (NODE_W + LAYER_GAP),
-          y: PAD + i * (NODE_H + ROW_GAP),
+          y: startY + i * (NODE_H + ROW_GAP),
           node: n,
         });
       });
     });
 
     const width = PAD * 2 + (maxLayer + 1) * NODE_W + maxLayer * LAYER_GAP;
-    const rows = Math.max(...[...byLayer.values()].map((l) => l.length));
-    const height = PAD * 2 + rows * NODE_H + (rows - 1) * ROW_GAP;
+    const height = PAD * 2 + columnHeight;
 
     svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    svg.setAttribute("width", String(width));
+    svg.setAttribute("height", String(height));
     svg.innerHTML = "";
 
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-    defs.innerHTML = `<marker id="dag-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    defs.innerHTML = `<marker id="dag-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(147, 164, 188, 0.95)"></path>
     </marker>`;
     svg.appendChild(defs);
 
+    const edgeLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    edgeLayer.setAttribute("class", "control-dag-edges");
+    const labelLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    labelLayer.setAttribute("class", "control-dag-edge-labels");
+
+    const labelSlots = new Map();
     (graph.edges || []).forEach((e) => {
       const from = positions.get(e.from);
       const to = positions.get(e.to);
@@ -185,28 +201,37 @@
       const y1 = from.y + NODE_H / 2;
       const x2 = to.x;
       const y2 = to.y + NODE_H / 2;
-      const midX = (x1 + x2) / 2;
+      const midX = Math.round((x1 + x2) / 2);
+      const curve = Math.max(18, Math.abs(y2 - y1) * 0.35);
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute(
         "d",
-        `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`
+        `M ${x1} ${y1} C ${x1 + curve} ${y1}, ${x2 - curve} ${y2}, ${x2} ${y2}`
       );
       path.setAttribute("fill", "none");
-      path.setAttribute("stroke", "rgba(147, 164, 188, 0.55)");
-      path.setAttribute("stroke-width", "1.5");
+      path.setAttribute("stroke", "rgba(147, 164, 188, 0.5)");
+      path.setAttribute("stroke-width", "1.25");
       path.setAttribute("marker-end", "url(#dag-arrow)");
-      svg.appendChild(path);
+      edgeLayer.appendChild(path);
 
-      if (e.label) {
-        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        label.setAttribute("x", String(midX));
-        label.setAttribute("y", String((y1 + y2) / 2 - 4));
-        label.setAttribute("text-anchor", "middle");
-        label.setAttribute("class", "control-dag-edge-label");
-        label.textContent = e.label.length > 22 ? `${e.label.slice(0, 20)}…` : e.label;
-        svg.appendChild(label);
-      }
+      if (!e.label || x2 - x1 < 40) return;
+      const slotKey = `${midX}`;
+      const slot = labelSlots.get(slotKey) ?? 0;
+      labelSlots.set(slotKey, slot + 1);
+      const baseY = (y1 + y2) / 2;
+      const labelY = baseY - 6 + slot * 9 - (labelSlots.get(slotKey) > 1 ? 4 : 0);
+
+      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      label.setAttribute("x", String(midX));
+      label.setAttribute("y", String(labelY));
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("class", "control-dag-edge-label");
+      label.textContent = e.label.length > 16 ? `${e.label.slice(0, 14)}…` : e.label;
+      labelLayer.appendChild(label);
     });
+
+    svg.appendChild(edgeLayer);
+    svg.appendChild(labelLayer);
 
     positions.forEach(({ x, y, node }) => {
       const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -222,28 +247,23 @@
       rect.setAttribute("y", String(y));
       rect.setAttribute("width", String(NODE_W));
       rect.setAttribute("height", String(NODE_H));
-      rect.setAttribute("rx", "8");
+      rect.setAttribute("rx", "6");
       g.appendChild(rect);
 
-      const code = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      code.setAttribute("x", String(x + NODE_W / 2));
-      code.setAttribute("y", String(y + 20));
-      code.setAttribute("text-anchor", "middle");
-      code.setAttribute("class", "control-dag-code");
-      code.textContent = node.control_code;
-      g.appendChild(code);
-
-      const name = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      name.setAttribute("x", String(x + NODE_W / 2));
-      name.setAttribute("y", String(y + 38));
-      name.setAttribute("text-anchor", "middle");
-      name.setAttribute("class", "control-dag-name");
+      const fo = document.createElementNS("http://www.w3.org/2000/svg", "foreignObject");
+      fo.setAttribute("x", String(x));
+      fo.setAttribute("y", String(y));
+      fo.setAttribute("width", String(NODE_W));
+      fo.setAttribute("height", String(NODE_H));
       const shortName =
-        (node.control_name || "").length > 24
-          ? `${node.control_name.slice(0, 22)}…`
+        (node.control_name || "").length > 28
+          ? `${node.control_name.slice(0, 26)}…`
           : node.control_name || "";
-      name.textContent = shortName;
-      g.appendChild(name);
+      fo.innerHTML = `<div xmlns="http://www.w3.org/1999/xhtml" class="control-dag-node-inner">
+        <span class="control-dag-code">${node.control_code}</span>
+        <span class="control-dag-name">${shortName}</span>
+      </div>`;
+      g.appendChild(fo);
 
       svg.appendChild(g);
     });
