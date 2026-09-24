@@ -6,7 +6,7 @@ from datetime import date, timedelta
 from pathlib import Path
 
 from banking_control.db import apply_schema, connect, refresh_overview_cache
-from banking_control.paths import default_db_path, project_root
+from banking_control.paths import default_db_path, default_schema_path
 
 DOMAINS = [
     ("AML", "Anti-Money Laundering"),
@@ -61,7 +61,13 @@ def init_database(db_path: Path | None = None, *, rebuild: bool = False, seed: i
     if rebuild and path.exists():
         path.unlink()
 
-    schema = project_root() / "data" / "schema.sql"
+    schema = default_schema_path()
+    if not schema.is_file():
+        raise FileNotFoundError(
+            f"Database schema not found at {schema}. "
+            "Set BANKING_CONTROL_SCHEMA_PATH or BANKING_CONTROL_DATA_DIR if the repo "
+            "lives in a CDSW subfolder."
+        )
     conn = connect(path)
     try:
         apply_schema(conn, schema)
