@@ -18,6 +18,19 @@ def apply_schema(conn: sqlite3.Connection, schema_path: Path) -> None:
     ddl = schema_path.read_text(encoding="utf-8")
     conn.executescript(ddl)
     conn.commit()
+    migrate_control_catalog_columns(conn)
+
+
+def migrate_control_catalog_columns(conn: sqlite3.Connection) -> None:
+    """Add catalog columns for existing databases created before EU expansion."""
+    columns = {row[1] for row in conn.execute("PRAGMA table_info(DIM_CONTROL)")}
+    if "is_golden" not in columns:
+        conn.execute(
+            "ALTER TABLE DIM_CONTROL ADD COLUMN is_golden INTEGER NOT NULL DEFAULT 0"
+        )
+    if "similarity_key" not in columns:
+        conn.execute("ALTER TABLE DIM_CONTROL ADD COLUMN similarity_key TEXT")
+    conn.commit()
 
 
 def refresh_overview_cache(conn: sqlite3.Connection) -> dict[str, Any]:

@@ -15,8 +15,13 @@ CREATE TABLE IF NOT EXISTS DIM_CONTROL (
   risk_tier TEXT NOT NULL CHECK (risk_tier IN ('Critical', 'High', 'Medium', 'Low')),
   owner TEXT NOT NULL,
   frequency TEXT NOT NULL,
-  description TEXT NOT NULL
+  description TEXT NOT NULL,
+  is_golden INTEGER NOT NULL DEFAULT 0,
+  similarity_key TEXT
 );
+
+CREATE INDEX IF NOT EXISTS idx_control_similarity ON DIM_CONTROL(similarity_key);
+CREATE INDEX IF NOT EXISTS idx_control_golden ON DIM_CONTROL(is_golden);
 
 CREATE TABLE IF NOT EXISTS FCT_CONTROL_ASSESSMENT (
   assessment_id INTEGER PRIMARY KEY,

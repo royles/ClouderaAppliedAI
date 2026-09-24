@@ -52,7 +52,9 @@ def overview(refresh: bool = False) -> dict[str, Any]:
 def list_controls(
     domain: str | None = None,
     risk_tier: str | None = None,
-    limit: int = Query(100, le=200),
+    golden: bool | None = None,
+    similarity_key: str | None = None,
+    limit: int = Query(100, le=500),
 ) -> list[dict[str, Any]]:
     conn = _db()
     try:
@@ -64,12 +66,19 @@ def list_controls(
         if risk_tier:
             clauses.append("c.risk_tier = ?")
             params.append(risk_tier)
+        if golden is True:
+            clauses.append("c.is_golden = 1")
+        elif golden is False:
+            clauses.append("c.is_golden = 0")
+        if similarity_key:
+            clauses.append("c.similarity_key = ?")
+            params.append(similarity_key)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         params.append(limit)
         rows = conn.execute(
             f"""
             SELECT c.control_id, c.control_code, c.control_name, c.domain, c.risk_tier,
-                   c.owner, c.frequency,
+                   c.owner, c.frequency, c.is_golden, c.similarity_key,
                    (
                      SELECT a.status FROM FCT_CONTROL_ASSESSMENT a
                      WHERE a.control_id = c.control_id
@@ -77,14 +86,12 @@ def list_controls(
                    ) AS latest_status
             FROM DIM_CONTROL c
             {where}
-            ORDER BY c.risk_tier, c.control_code
+            ORDER BY c.is_golden DESC, c.risk_tier, c.control_code
             LIMIT ?
             """,
             params,
         ).fetchall()
         return [dict(r) for r in rows]
-    finally:
-        conn.close()
 
 
 @app.get("/api/exceptions")

@@ -63,8 +63,8 @@ function renderControls(rows) {
   body.innerHTML = rows
     .map(
       (r) => `<tr>
-      <td><code>${r.control_code}</code></td>
-      <td>${r.control_name}</td>
+      <td><code>${r.control_code}</code>${r.is_golden ? " ★" : ""}</td>
+      <td>${r.control_name}${r.similarity_key ? `<br /><small>${r.similarity_key}</small>` : ""}</td>
       <td>${r.domain}</td>
       <td>${statusPill(r.risk_tier)}</td>
       <td>${statusPill(r.latest_status || "Not Tested")}</td>
@@ -141,8 +141,12 @@ async function loadOverview(refresh = false) {
   renderOverview(data);
 }
 
-async function loadControls(domain = "") {
-  const q = domain ? `?domain=${encodeURIComponent(domain)}` : "";
+async function loadControls(domain = "", goldenOnly = false) {
+  const params = new URLSearchParams();
+  if (domain) params.set("domain", domain);
+  if (goldenOnly) params.set("golden", "true");
+  params.set("limit", "500");
+  const q = params.toString() ? `?${params}` : "";
   const rows = await api(`/api/controls${q}`);
   renderControls(rows);
   const domains = [...new Set(rows.map((r) => r.domain))].sort();
@@ -183,9 +187,14 @@ async function boot() {
 
   await Promise.all([loadOverview(), loadControls(), loadAlerts(), loadExceptions(), loadAudit()]);
 
-  document.getElementById("domain-filter").addEventListener("change", (e) => {
-    loadControls(e.target.value);
-  });
+  const reloadControls = () => {
+    loadControls(
+      document.getElementById("domain-filter").value,
+      document.getElementById("golden-filter").checked
+    );
+  };
+  document.getElementById("domain-filter").addEventListener("change", reloadControls);
+  document.getElementById("golden-filter").addEventListener("change", reloadControls);
 
   const slider = document.getElementById("risk-slider");
   const label = document.getElementById("risk-label");
