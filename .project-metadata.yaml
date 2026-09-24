@@ -1,0 +1,18 @@
+name: Banking Control Solution
+description: Compliance and operational control oversight dashboard for retail and corporate banking.
+author: Cloudera Applied AI
+runtime: python3.11
+
+environment:
+  BANKING_CONTROL_DB_PATH: data/banking_control.db
+
+tasks:
+  - name: 1. Install dependencies
+    type: session
+    script: 1_session-install-dependencies/install.py
+  - name: 2. Initialize control warehouse
+    type: job
+    script: 2_job-init-database/init_database.py
+  - name: 3. Banking Control application
+    type: application
+    script: 4_application/start-app.py
