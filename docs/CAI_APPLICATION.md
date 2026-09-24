@@ -4,7 +4,7 @@ This project is packaged as a **CAI application (AMP)** using `.project-metadata
 
 ## Import steps
 
-1. Create a Cloudera AI project from this Git repository (branch `cursor/banking-control-solution-8b7c`).
+1. Create a Cloudera AI project from this Git repository and select branch **`cursor/banking-control-solution-8b7c`** (do not deploy Banking Control from `main`).
 2. Run the configured tasks in order:
    - **Install dependencies** — installs Python packages and the editable `banking_control` library.
    - **Initialize control warehouse** — creates `data/banking_control.db` with demo controls, assessments, alerts, and exceptions.

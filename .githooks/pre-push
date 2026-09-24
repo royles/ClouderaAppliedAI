@@ -1,0 +1,19 @@
+#!/bin/sh
+# Block pushing Banking Control branch commits to main by mistake.
+TARGET_BRANCH="cursor/banking-control-solution-8b7c"
+BRANCH=$(git branch --show-current)
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ -z "$local_ref" ] && continue
+  case "$remote_ref" in
+    *refs/heads/main)
+      if [ "$BRANCH" = "$TARGET_BRANCH" ]; then
+        echo "pre-push: Push '$TARGET_BRANCH' to origin/$TARGET_BRANCH, not to main."
+        echo "  git push origin $TARGET_BRANCH"
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+exit 0

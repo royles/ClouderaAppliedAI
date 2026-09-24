@@ -1,8 +1,22 @@
 # ClouderaAppliedAI
 
-## Banking Control Solution
+## Development workflow
 
-**Branch:** `cursor/banking-control-solution-8b7c`
+**`main` stays minimal.** All Banking Control Solution work lives on **`cursor/banking-control-solution-8b7c`**.
+
+Every commit and push for this app must target that branch — not `main`.
+
+```bash
+git fetch origin
+git checkout cursor/banking-control-solution-8b7c
+git pull origin cursor/banking-control-solution-8b7c
+bash scripts/setup_git_hooks.sh      # enables .githooks (wrong-branch guard)
+bash scripts/ensure_branch.sh        # use in scripts/CI before builds
+```
+
+Cloud Agents and automated edits must follow [AGENTS.md](AGENTS.md).
+
+## Banking Control Solution
 
 Operational and compliance **control tower** for banking: cataloged controls (AML, KYC, SOX, cyber, credit), assessment status by business unit, transaction monitoring alerts, exception workflow, and an audit trail. Backed by SQLite and served through **FastAPI** with a prebuilt static dashboard.
 
@@ -44,11 +58,11 @@ See [docs/CAI_APPLICATION.md](docs/CAI_APPLICATION.md) for deployment notes.
 
 Generated databases are gitignored (`data/*.db`).
 
-### Workflow on this branch
-
-Commit and push **only** to `cursor/banking-control-solution-8b7c` — keep `main` as the lightweight repo root unless you intentionally merge.
+### Commit and push
 
 ```bash
 git add -A && git commit -m "Describe the change"
-git push -u origin cursor/banking-control-solution-8b7c
+git push origin cursor/banking-control-solution-8b7c
 ```
+
+Merge to `main` only through an intentional pull request when the app is ready to ship.
