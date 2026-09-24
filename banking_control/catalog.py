@@ -19,6 +19,7 @@ class ControlDefinition:
     description: str
     is_golden: bool = False
     similarity_key: str | None = None
+    standards_refs: tuple[tuple[str, str], ...] = ()
 
 
 DOMAIN_OWNERS: dict[str, str] = {
@@ -502,6 +503,7 @@ def _apply_similarity_keys(catalog: list[ControlDefinition]) -> list[ControlDefi
                 description=ctrl.description,
                 is_golden=ctrl.is_golden,
                 similarity_key=key,
+                standards_refs=ctrl.standards_refs,
             )
         )
     return out
@@ -528,6 +530,9 @@ def build_control_catalog() -> list[ControlDefinition]:
         key=lambda c: (c.domain, 0 if c.is_golden else 1, c.control_code),
     )
     catalog = _apply_similarity_keys(catalog)
+    from banking_control.catalog_content import enrich_control
+
+    catalog = [enrich_control(c) for c in catalog]
     total = len(catalog)
     if not 300 <= total <= 450:
         raise RuntimeError(f"Catalog size {total} outside 300–450 target")

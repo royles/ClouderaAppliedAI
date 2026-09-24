@@ -64,6 +64,31 @@
     return `<div class="detail-dl-row"><dt>${label}</dt><dd>${valueHtml}</dd></div>`;
   }
 
+  function escapeHtml(text) {
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function renderStandardsSection(refs) {
+    if (!refs?.length) return "";
+    return `<section class="detail-section">
+      <h3>Industry standards &amp; guidance</h3>
+      <p class="hint">Public sources from regulators and standards bodies (external links).</p>
+      <ul class="standards-link-list">
+        ${refs
+          .map(
+            (r) => `<li>
+          <a href="${escapeHtml(r.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(r.label)}</a>
+        </li>`
+          )
+          .join("")}
+      </ul>
+    </section>`;
+  }
+
   function relatedEntityLink(entityType, entityId) {
     const t = String(entityType || "").toLowerCase();
     const id = String(entityId || "").trim();
@@ -270,8 +295,9 @@
       <section class="detail-section">
         <h3>Overview</h3>
         <dl class="detail-dl">${meta}</dl>
-        <p class="detail-description">${c.description}</p>
+        <p class="detail-description detail-description-rich">${escapeHtml(c.description)}</p>
       </section>
+      ${renderStandardsSection(data.standards_refs)}
       ${renderProcessGraphSection(data.process_graph)}
       <section class="detail-section">
         <h3>Related controls</h3>

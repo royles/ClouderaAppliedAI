@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import random
 import sqlite3
 from datetime import date, timedelta
@@ -73,8 +74,8 @@ def _seed(conn: sqlite3.Connection, seed: int) -> None:
             """
             INSERT INTO DIM_CONTROL
               (control_id, control_code, control_name, domain, risk_tier, owner,
-               frequency, description, is_golden, similarity_key)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               frequency, description, is_golden, similarity_key, standards_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 idx,
@@ -87,6 +88,7 @@ def _seed(conn: sqlite3.Connection, seed: int) -> None:
                 ctrl.description,
                 1 if ctrl.is_golden else 0,
                 ctrl.similarity_key,
+                json.dumps([{"label": l, "url": u} for l, u in ctrl.standards_refs]),
             ),
         )
 
@@ -244,6 +246,27 @@ def _seed_audit_events(
                 "Recorded in banking control solution audit trail.",
             ),
         )
+
+
+def sync_control_catalog_metadata(conn: sqlite3.Connection) -> None:
+    """Refresh descriptions and standards links from catalog source (existing DBs)."""
+    if conn.execute("SELECT COUNT(*) FROM DIM_CONTROL").fetchone()[0] == 0:
+        return
+    catalog = build_control_catalog()
+    for ctrl in catalog:
+        conn.execute(
+            """
+            UPDATE DIM_CONTROL
+            SET description = ?, standards_json = ?
+            WHERE control_code = ?
+            """,
+            (
+                ctrl.description,
+                json.dumps([{"label": l, "url": u} for l, u in ctrl.standards_refs]),
+                ctrl.control_code,
+            ),
+        )
+    conn.commit()
 
 
 def ensure_monitoring_seed_data(conn: sqlite3.Connection, *, seed: int = 42) -> None:

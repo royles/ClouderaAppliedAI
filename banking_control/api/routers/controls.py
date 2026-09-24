@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -123,6 +124,13 @@ def get_control(
         (control_id,),
     ).fetchall()
     control = dict(row)
+    standards_refs: list[dict[str, str]] = []
+    raw_standards = control.pop("standards_json", None)
+    if raw_standards:
+        try:
+            standards_refs = json.loads(raw_standards)
+        except json.JSONDecodeError:
+            standards_refs = []
     control_code = control["control_code"]
     similarity_key = control.get("similarity_key")
 
@@ -170,6 +178,7 @@ def get_control(
 
     return {
         "control": control,
+        "standards_refs": standards_refs,
         "latest_status": latest["status"] if latest else "Not Tested",
         "assessments": [dict(r) for r in assessments],
         "exceptions": [dict(r) for r in exceptions],

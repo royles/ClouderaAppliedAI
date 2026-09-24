@@ -51,7 +51,8 @@ def ensure_warehouse_schema(conn: sqlite3.Connection) -> None:
           frequency TEXT NOT NULL,
           description TEXT NOT NULL,
           is_golden INTEGER NOT NULL DEFAULT 0,
-          similarity_key TEXT
+          similarity_key TEXT,
+          standards_json TEXT
         );
 
         CREATE TABLE IF NOT EXISTS FCT_CONTROL_ASSESSMENT (
@@ -168,6 +169,8 @@ def migrate_control_catalog_columns(conn: sqlite3.Connection) -> None:
         )
     if "similarity_key" not in columns:
         conn.execute("ALTER TABLE DIM_CONTROL ADD COLUMN similarity_key TEXT")
+    if "standards_json" not in columns:
+        conn.execute("ALTER TABLE DIM_CONTROL ADD COLUMN standards_json TEXT")
     conn.commit()
 
 
@@ -177,9 +180,10 @@ def prepare_connection(conn: sqlite3.Connection) -> None:
     migrate_control_catalog_columns(conn)
     ensure_warehouse_indexes(conn)
     from banking_control.llm.admin_store import ensure_admin_llm_schema
-    from banking_control.seed import ensure_monitoring_seed_data
+    from banking_control.seed import ensure_monitoring_seed_data, sync_control_catalog_metadata
 
     ensure_admin_llm_schema(conn)
+    sync_control_catalog_metadata(conn)
     ensure_monitoring_seed_data(conn)
 
 

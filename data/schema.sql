@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS DIM_CONTROL (
   frequency TEXT NOT NULL,
   description TEXT NOT NULL,
   is_golden INTEGER NOT NULL DEFAULT 0,
-  similarity_key TEXT
+  similarity_key TEXT,
+  standards_json TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_control_similarity ON DIM_CONTROL(similarity_key);
