@@ -1,4 +1,4 @@
-"""Loaded via importlib from CAI scripts before ``banking_control`` is on sys.path."""
+"""Loaded via importlib from job scripts before ``customer360`` is on sys.path."""
 
 from __future__ import annotations
 
@@ -9,15 +9,18 @@ from pathlib import Path
 
 def _has_project_markers(root: Path) -> bool:
     root = root.resolve()
-    return (root / "data" / "schema.sql").is_file() and (root / "banking_control").is_dir()
+    return (root / "data" / "schema.sql").is_file() and (
+        root / "1_session-install-dependencies" / "requirements.txt"
+    ).is_file()
 
 
 def discover_project_root(script_file: str | None = None) -> Path:
     """
     Locate the git project root on Cloudera AI.
 
-    ``CDSW_PROJECT`` is not always the repo root (e.g. repo checked out into a subfolder).
-    Prefer paths that contain ``data/schema.sql`` and ``banking_control/``.
+    CDSW_PROJECT is not always the repo root (e.g. repo checked out into
+    ``midgalpoc/`` under the project directory). Prefer paths that contain
+    ``data/schema.sql`` and install requirements.
     """
     ordered: list[Path] = []
 
@@ -59,8 +62,8 @@ def discover_project_root(script_file: str | None = None) -> Path:
     if script_file is not None:
         hints.append(f"  script_file={script_file}")
     raise FileNotFoundError(
-        "Could not locate the Banking Control project root (expected data/schema.sql and "
-        "banking_control/).\n" + "\n".join(hints)
+        "Could not locate the Customer 360 project root (expected data/schema.sql and "
+        "1_session-install-dependencies/requirements.txt).\n" + "\n".join(hints)
     )
 
 

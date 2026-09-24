@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cloudera Applied AI · Sentiment Demo</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #151b2e;
+      --accent: #4f8cff;
+      --pos: #22c55e;
+      --neg: #ef4444;
+      --text: #e6ebf5;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(1200px 600px at 20% -10%, #1b2748, var(--bg));
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 560px;
+      background: var(--card);
+      border: 1px solid #26304d;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    p.sub { color: var(--muted); margin: 0 0 20px; font-size: 14px; }
+    textarea {
+      width: 100%;
+      min-height: 110px;
+      resize: vertical;
+      background: #0e1424;
+      color: var(--text);
+      border: 1px solid #2a3660;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 15px;
+      outline: none;
+    }
+    textarea:focus { border-color: var(--accent); }
+    button {
+      margin-top: 14px;
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 600;
+      color: white;
+      background: var(--accent);
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .result {
+      margin-top: 22px;
+      padding: 18px;
+      border-radius: 12px;
+      background: #0e1424;
+      border: 1px solid #2a3660;
+      display: none;
+    }
+    .result.show { display: block; }
+    .label {
+      font-size: 20px;
+      font-weight: 700;
+      text-transform: capitalize;
+    }
+    .label.positive { color: var(--pos); }
+    .label.negative { color: var(--neg); }
+    .bar { height: 8px; border-radius: 6px; background: #1c2540; margin-top: 10px; overflow: hidden; }
+    .bar > span { display: block; height: 100%; background: var(--accent); }
+    .meta { color: var(--muted); font-size: 13px; margin-top: 8px; }
+    footer { margin-top: 18px; color: var(--muted); font-size: 12px; text-align: center; }
+    code { background: #0e1424; padding: 2px 6px; border-radius: 6px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Cloudera Applied AI</h1>
+    <p class="sub">Sentiment analysis demo — TF-IDF + Logistic Regression served with FastAPI.</p>
+    <textarea id="text" placeholder="Type a sentence, e.g. 'I absolutely love this product'"></textarea>
+    <button id="go">Analyze sentiment</button>
+
+    <div class="result" id="result">
+      <div class="label" id="label"></div>
+      <div class="bar"><span id="bar"></span></div>
+      <div class="meta" id="meta"></div>
+    </div>
+
+    <footer>API: <code>POST /predict</code> · Health: <code>GET /health</code></footer>
+  </div>
+
+  <script>
+    const btn = document.getElementById('go');
+    const textEl = document.getElementById('text');
+    const resultEl = document.getElementById('result');
+    const labelEl = document.getElementById('label');
+    const barEl = document.getElementById('bar');
+    const metaEl = document.getElementById('meta');
+
+    async function analyze() {
+      const text = textEl.value.trim();
+      if (!text) return;
+      btn.disabled = true;
+      btn.textContent = 'Analyzing…';
+      try {
+        const res = await fetch('/predict', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+        });
+        if (!res.ok) throw new Error('Request failed: ' + res.status);
+        const data = await res.json();
+        labelEl.textContent = data.label;
+        labelEl.className = 'label ' + data.label;
+        const pct = Math.round(data.confidence * 100);
+        barEl.style.width = pct + '%';
+        barEl.style.background = data.label === 'positive' ? 'var(--pos)' : 'var(--neg)';
+        metaEl.textContent = `confidence ${pct}% · scores ` +
+          Object.entries(data.scores).map(([k, v]) => `${k}: ${(v * 100).toFixed(1)}%`).join(', ');
+        resultEl.classList.add('show');
+      } catch (err) {
+        labelEl.textContent = 'Error';
+        labelEl.className = 'label';
+        metaEl.textContent = String(err);
+        barEl.style.width = '0%';
+        resultEl.classList.add('show');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Analyze sentiment';
+      }
+    }
+
+    btn.addEventListener('click', analyze);
+    textEl.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') analyze();
+    });
+  </script>
+</body>
+</html>

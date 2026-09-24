@@ -2,31 +2,107 @@
 
 ## Development workflow
 
-**`main` stays minimal.** All Banking Control Solution work lives on **`cursor/banking-control-solution-8b7c`**.
+**`main` is intentionally empty** (stub README only). All Insurance Customer 360
+work happens on **`cursor/insurance-customer-360-dashboard-85b8`**.
 
-Every commit and push for this app must target that branch — not `main`.
-
-```bash
-git fetch origin
-git checkout cursor/banking-control-solution-8b7c
-git pull origin cursor/banking-control-solution-8b7c
-bash scripts/setup_git_hooks.sh      # enables .githooks (wrong-branch guard)
-bash scripts/ensure_branch.sh        # use in scripts/CI before builds
-```
-
-Cloud Agents and automated edits must follow [AGENTS.md](AGENTS.md).
-
-## Banking Control Solution
-
-Operational and compliance **control tower** for banking: cataloged controls (AML, KYC, SOX, cyber, credit), assessment status by business unit, transaction monitoring alerts, exception workflow, and an audit trail. Backed by SQLite and served through **FastAPI** with a prebuilt static dashboard.
+When you are on that branch (or any active feature branch), **every commit and push
+targets that branch** — do not commit application code to `main`.
 
 ```bash
 git fetch origin
-git checkout cursor/banking-control-solution-8b7c
-git pull origin cursor/banking-control-solution-8b7c
+git checkout cursor/insurance-customer-360-dashboard-85b8
+git pull origin cursor/insurance-customer-360-dashboard-85b8
+# … edit, test …
+git add -A && git commit -m "Describe the change"
+git push origin cursor/insurance-customer-360-dashboard-85b8
 ```
 
-### Quick start (local)
+### Get the latest code on another machine
+
+```bash
+git fetch origin
+git checkout cursor/insurance-customer-360-dashboard-85b8
+git pull origin cursor/insurance-customer-360-dashboard-85b8
+```
+
+If the app looks old, run `git branch --show-current` — you should be on
+**`cursor/insurance-customer-360-dashboard-85b8`**, not `main`. Then restart the
+API and hard-refresh the browser (`frontend/dist` is committed with the app).
+
+## Insurance Customer 360
+
+Unified customer dashboard for Cloudera AI (CAI), backed by a DDS-aligned SQLite warehouse.
+
+### Deploy on Cloudera AI
+
+This repo is packaged as a **CAI application (AMP)** via `.project-metadata.yaml` and
+`amp-catalog.yaml`. Step-by-step instructions: [docs/CAI_APPLICATION.md](docs/CAI_APPLICATION.md).
+
+1. Create a project from this Git repository and **configure as prototype**, or launch from your
+   AMP catalog entry (**Insurance Customer 360**).
+2. On first import, `.project-metadata.yaml` runs these stages in order:
+
+   | Stage | Folder / script | Purpose |
+   | --- | --- | --- |
+   | 1 | `1_session-install-dependencies/` | Python deps + editable `customer360` install |
+   | 2 | `scripts/build_frontend.py` | `npm run build` → `frontend/dist` |
+   | 3 | `2_job-init-database/` | Seed `data/customer360.db` |
+   | 4 | `3_job-train-churn-model/` | Churn model → `APP_CUSTOMER_CHURN_SCORES` |
+   | 5 | `4_application/start-app.py` | FastAPI + React dashboard |
+3. Application scripts bind to `127.0.0.1` and use `CDSW_APP_PORT` (Workbench/CML) or `APP_PORT` (AI Inference, default 8080). Do not hard-code ports.
+
+Optional environment variable:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CUSTOMER360_DB_PATH` | `data/customer360.db` | SQLite file (relative to `CDSW_PROJECT`) |
+| `AWS_*`, `CUSTOMER360_BEDROCK_*` | — | Amazon Bedrock (insights + outreach drafts); see `.env.example` |
+
+### Project layout (CAI-compatible)
+
+```
+.
+├── .project-metadata.yaml          # CAI AMP import + application tasks
+├── amp-catalog.yaml                # Optional AMP catalog registration
+├── docs/CAI_APPLICATION.md         # Deploy guide
+├── 1_session-install-dependencies/ # stage 1: pip install
+├── 2_job-init-database/            # stage 3: warehouse seed
+├── 3_job-train-churn-model/        # stage 4: churn training
+├── 4_application/                  # stage 5: FastAPI app launcher
+├── customer360/                    # Shared Python package (seed, DB, churn, API)
+├── data/schema.sql                 # Warehouse DDL
+├── scripts/build_frontend.py       # stage 2: React build
+└── scripts/init_db.py                # Local dev CLI (same as stage 3 job)
+```
+
+### Warehouse domains
+
+| Table | Domain |
+| --- | --- |
+| `DWH_DIM_CUSTOMERS_UNIQUE` | Master customer dimension (MDM / portal) |
+| `DWH_DIM_ALL_POLICY` | Life, health, elementary, pension, and gemel policies |
+| `DWH_FCT_FORECLOSURES` / `DWH_FCT_FORECLOSURES_ASSETS` | Legal encumbrances and linked assets |
+| `DWH_FCT_POLICY_INVESTMENT_TRACK` | Monthly per-policy accumulation by track |
+| `DWH_FCT_INVESTMENT_TRACK` | Regulatory market track performance |
+| `DWH_FCT_POLICY_STATUS` | Policy status, coverage, and surrender/savings snapshots |
+| `APP_CUSTOMER_CHURN_SCORES` | Churn probability and risk tier per customer ID |
+| `APP_CUSTOMER_INTERACTION_EVENTS` | Synthetic reviews, agent questions, and web searches |
+| `APP_CUSTOMER_AI_INSIGHTS` | Cached Bedrock (or fallback) customer summaries |
+
+### Churn intelligence
+
+Features are built from warehouse behaviour plus **interaction events** (reviews, agent
+questions, product/help searches), normalized with `StandardScaler`, and modeled with
+balanced logistic regression. Scores are stored in SQLite for the API and UI. Interaction
+aggregates also feed **Amazon Bedrock** insight prompts when configured. Clickable
+recommendation drafts (email, SMS, call scripts) are **Bedrock-generated** as well — templates
+are not used when Bedrock is available.
+
+```bash
+python 3_job-train-churn-model/train_churn.py
+```
+
+### Local development
 
 ```bash
 python3 -m pip install -r requirements.txt
@@ -35,42 +111,130 @@ python3 scripts/init_db.py
 python3 4_application/start-app.py
 ```
 
-### CAI / AMP layout
+### `__file__` / Workbench interactive runs
 
-| Stage | Script | Purpose |
-| --- | --- | --- |
-| 1 | `1_session-install-dependencies/install.py` | Python dependencies |
-| 2 | `2_job-init-database/init_database.py` | Seed SQLite warehouse |
-| 3 | `4_application/start-app.py` | API + UI |
+`Path(__file__)` is only defined when Python executes a **file** (for example
+`python 2_job-init-database/init_database.py`). In an interactive Workbench cell,
+pasting lines that use `__file__` raises `NameError`.
 
-See [docs/CAI_APPLICATION.md](docs/CAI_APPLICATION.md) for deployment notes.
+Use one of these instead:
 
-### LLM-callable controls
+```python
+# From a session whose working directory is the project root:
+%run 2_job-init-database/init_database.py
+%run 3_job-train-churn-model/train_churn.py   # after database init
+```
 
-Each control can be invoked as a tool with JSON Schema I/O and a pluggable simulator. See [docs/PLUGINS.md](docs/PLUGINS.md).
+```python
+import importlib.util
+from pathlib import Path
 
-### Control assistant (streaming chat)
+for candidate in (Path.cwd(), *Path.cwd().parents):
+    boot = candidate / "bootstrap_entry.py"
+    if boot.is_file():
+        spec = importlib.util.spec_from_file_location("bootstrap_entry", boot)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        mod.bootstrap(None)
+        break
 
-Foldable **Assistant** panel in the UI with SSE streaming, **Amazon Bedrock** or **local OpenAI-compatible** LLM, admin settings (`/api/admin/llm`), and tool calling over overview, controls, simulations, and audit events (`/api/assistant/chat/stream`).
+from customer360.paths import default_db_path
+from customer360.seed import init_database
 
-### Data domains
+init_database(default_db_path(), rebuild=True)
+```
 
-| Table | Purpose |
-| --- | --- |
-| `DIM_CONTROL` | EU control catalog (~396 rows, 94 MVP golden); optional `similarity_key` for overlapping controls |
-| `FCT_CONTROL_ASSESSMENT` | Latest testing results by unit |
-| `FCT_EXCEPTION` | Open remediation items tied to controls |
-| `FCT_TRANSACTION_ALERT` | AML / monitoring alerts |
-| `FCT_AUDIT_EVENT` | User and system actions |
-| `APP_OVERVIEW_SNAPSHOT` | Cached KPIs for the overview API |
+On Cloudera AI, `CDSW_PROJECT` is set automatically. If the Git repo lives in a
+subfolder (e.g. `midgalpoc/`), bootstrap walks that folder too — you do **not** need
+to point `CDSW_PROJECT` at the subfolder, but `%cd midgalpoc` before `%run` is fine.
+
+If install fails with a missing `requirements.txt`, run:
+
+```python
+%cd midgalpoc   # folder that contains data/schema.sql
+%run 1_session-install-dependencies/install.py
+```
 
 Generated databases are gitignored (`data/*.db`).
 
-### Commit and push
+### Scale to ~5,000 customers
+
+The seed generator uses the same DDS-aligned patterns as the default warehouse (policies,
+investments, coverage snapshots, foreclosures, interactions) and scales every table from
+that logic:
 
 ```bash
-git add -A && git commit -m "Describe the change"
-git push origin cursor/banking-control-solution-8b7c
+python3 scripts/scale_warehouse.py --customers 5000
 ```
 
-Merge to `main` only through an intentional pull request when the app is ready to ship.
+Or set `CUSTOMER360_SEED_CUSTOMERS=5000` before the init job / `python3 -m customer360.seed --customers 5000`, then run `3_job-train-churn-model/train_churn.py` for churn scores.
+
+### API performance (large warehouses)
+
+After seeding, the warehouse precomputes:
+
+- **`APP_CUSTOMER_METRICS`** — per-customer value, policy count, investment tracks (customer list avoids heavy per-row subqueries).
+- **`APP_OVERVIEW_COUNTS`** — domain card counts.
+- **`APP_PORTFOLIO_ANALYTICS_CACHE`** — portfolio charts/KPIs per segment (seed, churn train, or `scripts/refresh_api_caches.py`). The API serves this JSON on read; cache misses are computed once and stored (write-through).
+- **`APP_BOOK_*_TREND`** — materialized book-wide strategic objective series (savings AUM, premium momentum, engagement) for fast chart loads without re-aggregating facts on every request.
+
+Refresh caches on an existing DB without reseeding:
+
+```bash
+python3 scripts/refresh_api_caches.py
+```
+
+The customer list API enforces **`limit` ≤ 100**; the UI defaults to 50 with 25/50/100 options.
+
+### Frontend without Node on PATH
+
+The repo includes a prebuilt `frontend/dist/`. Restart the application after `git pull` —
+you do **not** need `npm` for that.
+
+To rebuild the UI in a standard Python 3.11 CAI session (no system Node):
+
+```python
+%run scripts/build_frontend.py
+```
+
+The script skips work if `frontend/dist/index.html` already exists. It downloads a
+portable Node.js binary into `.tools/` when `npm` is missing (requires outbound HTTPS
+to `nodejs.org`).
+
+## Applied AI sentiment reference service
+
+A minimal, self-contained **Applied AI** demo (TF-IDF + logistic regression via
+scikit-learn) served through **FastAPI** with a small static web UI. It lives
+alongside Customer 360 in this repo and uses its own dependencies
+(`applied-ai-sentiment-requirements.txt`).
+
+```
+app/              FastAPI app + model training/inference
+scripts/train.py  Trains models/sentiment.joblib
+static/index.html Demo UI
+tests/            pytest unit + API tests
+.cursor/          Optional Cloud Agent install/start helpers for this demo
+```
+
+```bash
+bash .cursor/install.sh   # train model + venv deps for sentiment demo
+bash .cursor/start.sh     # http://localhost:8000
+```
+
+Manual run: `pip install -r applied-ai-sentiment-requirements.txt`, then
+`python -m scripts.train` and `uvicorn app.main:app --host 0.0.0.0 --port 8000`.
+
+## Bedrock Playground
+
+A separate **AWS Bedrock chat playground** (React + FastAPI) lives under
+[`bedrock-playground/`](bedrock-playground/README.md). It does not share the
+Customer 360 `frontend/` tree.
+
+```bash
+cd bedrock-playground
+cp backend/.env.example backend/.env   # optional AWS credentials
+python start.py
+```
+
+See [bedrock-playground/README.md](bedrock-playground/README.md) for architecture,
+CML/CDSW port notes, and security guidance.
