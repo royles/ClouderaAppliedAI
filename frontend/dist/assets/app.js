@@ -11,6 +11,13 @@ const statusPill = (text) => {
 };
 
 let searchDebounce;
+let activeMetricFilter = null;
+let alertStatusFilter = null;
+
+const controlCatalogFilters = {
+  riskTier: "",
+  needsAttention: false,
+};
 
 async function api(path, options) {
   const res = await fetch(path, options);
@@ -34,44 +41,133 @@ function setListLoading(listId) {
 function renderOverview(data) {
   const cards = [
     {
+      id: "total",
       label: "Total controls",
       value: data.control_count ?? 0,
       hint:
         data.golden_controls != null
           ? `${data.golden_controls} MVP golden controls`
           : "EU retail + commercial catalog",
+      filterHint: "Show full catalog",
     },
     {
+      id: "health",
       label: "Control health",
       value: `${data.control_health_pct}%`,
       hint: "Share of tested controls rated effective",
+      filterHint: "Filter controls needing attention",
     },
     {
+      id: "exceptions",
       label: "Open exceptions",
       value: data.open_exceptions,
       hint: "Requires remediation or validation",
+      filterHint: "Jump to open exceptions",
     },
     {
+      id: "critical",
       label: "Critical controls",
       value: data.critical_controls,
       hint: "Highest inherent risk tier",
+      filterHint: "Filter catalog to Critical tier",
     },
     {
+      id: "alerts-new",
       label: "New AML alerts",
       value: data.alert_status?.New ?? 0,
       hint: "Awaiting analyst review",
+      filterHint: "Filter alerts to New status",
     },
   ];
   document.getElementById("overview-cards").innerHTML = cards
     .map(
       (c) => `
-    <article class="metric-card">
+    <button type="button" class="metric-card metric-card-filter${
+      activeMetricFilter === c.id ? " is-active" : ""
+    }" data-metric-filter="${c.id}" aria-pressed="${activeMetricFilter === c.id ? "true" : "false"}">
       <p class="label">${c.label}</p>
       <p class="value">${c.value}</p>
       <p class="hint">${c.hint}</p>
-    </article>`
+      <p class="hint metric-filter-action">${c.filterHint}</p>
+    </button>`
     )
     .join("");
+}
+
+function clearPanelFocus() {
+  document.querySelectorAll(".panel-filter-focus").forEach((el) => {
+    el.classList.remove("panel-filter-focus");
+  });
+}
+
+function focusPanel(panelId) {
+  clearPanelFocus();
+  const panel = document.getElementById(panelId);
+  panel?.classList.add("panel-filter-focus");
+  panel?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function resetControlCatalogFilters() {
+  controlCatalogFilters.riskTier = "";
+  controlCatalogFilters.needsAttention = false;
+  const domain = document.getElementById("domain-filter");
+  const golden = document.getElementById("golden-filter");
+  const search = document.getElementById("control-search");
+  if (domain) domain.value = "";
+  if (golden) golden.checked = false;
+  if (search) search.value = "";
+}
+
+async function applyMetricFilter(filterId) {
+  activeMetricFilter = filterId;
+  clearPanelFocus();
+
+  if (filterId === "total") {
+    resetControlCatalogFilters();
+    alertStatusFilter = null;
+    await loadOverview();
+    await loadControlsFromUi();
+    await loadAlertsFromUi();
+    focusPanel("panel-controls");
+    return;
+  }
+
+  if (filterId === "health") {
+    resetControlCatalogFilters();
+    controlCatalogFilters.needsAttention = true;
+    alertStatusFilter = null;
+    await loadOverview();
+    await loadControlsFromUi();
+    await loadAlertsFromUi();
+    focusPanel("panel-controls");
+    return;
+  }
+
+  if (filterId === "critical") {
+    resetControlCatalogFilters();
+    controlCatalogFilters.riskTier = "Critical";
+    alertStatusFilter = null;
+    await loadOverview();
+    await loadControlsFromUi();
+    await loadAlertsFromUi();
+    focusPanel("panel-controls");
+    return;
+  }
+
+  if (filterId === "exceptions") {
+    alertStatusFilter = null;
+    await loadOverview();
+    await loadExceptions();
+    focusPanel("panel-exceptions");
+    return;
+  }
+
+  if (filterId === "alerts-new") {
+    alertStatusFilter = "New";
+    await loadOverview();
+    await loadAlertsFromUi();
+    focusPanel("panel-alerts");
+  }
 }
 
 function renderDomainFilter(domains, selected = "") {
@@ -259,20 +355,30 @@ async function loadDomainOptions() {
   return domains;
 }
 
-async function loadControls(domain = "", goldenOnly = false, search = "") {
+async function loadControlsFromUi() {
   setTableLoading("controls-body");
+  const domain = document.getElementById("domain-filter")?.value || "";
+  const goldenOnly = document.getElementById("golden-filter")?.checked || false;
+  const search = document.getElementById("control-search")?.value || "";
   const params = new URLSearchParams();
   if (domain) params.set("domain", domain);
   if (goldenOnly) params.set("golden", "true");
   if (search.trim()) params.set("search", search.trim());
+  if (controlCatalogFilters.riskTier) params.set("risk_tier", controlCatalogFilters.riskTier);
+  if (controlCatalogFilters.needsAttention) params.set("needs_attention", "true");
   params.set("limit", "500");
   const rows = await api(`/api/controls?${params}`);
   renderControls(rows);
 }
 
-async function loadAlerts(minRisk = 0) {
+async function loadAlertsFromUi() {
   setTableLoading("alerts-body");
-  const rows = await api(`/api/alerts?min_risk=${minRisk}`);
+  const minRisk = Number(document.getElementById("risk-slider")?.value || 0) / 100;
+  const params = new URLSearchParams();
+  params.set("min_risk", String(minRisk));
+  params.set("limit", "50");
+  if (alertStatusFilter) params.set("status", alertStatusFilter);
+  const rows = await api(`/api/alerts?${params}`);
   renderAlerts(rows);
 }
 
@@ -302,12 +408,8 @@ async function refreshDashboard() {
       loadStatusChips(),
       loadOverview(true),
       loadDomainOptions(),
-      loadControls(
-        document.getElementById("domain-filter")?.value || "",
-        document.getElementById("golden-filter")?.checked || false,
-        document.getElementById("control-search")?.value || ""
-      ),
-      loadAlerts(Number(document.getElementById("risk-slider")?.value || 0) / 100),
+      loadControlsFromUi(),
+      loadAlertsFromUi(),
       loadExceptions(),
       loadAudit(),
     ]);
@@ -322,8 +424,8 @@ async function boot() {
   const jobs = [
     { name: "overview", run: () => loadOverview(), target: "overview-cards" },
     { name: "domains", run: () => loadDomainOptions(), target: null },
-    { name: "controls", run: () => loadControls(), target: "controls-body" },
-    { name: "alerts", run: () => loadAlerts(), target: "alerts-body" },
+    { name: "controls", run: () => loadControlsFromUi(), target: "controls-body" },
+    { name: "alerts", run: () => loadAlertsFromUi(), target: "alerts-body" },
     { name: "exceptions", run: () => loadExceptions(), target: "exceptions-body" },
     { name: "audit", run: () => loadAudit(), target: "audit-list" },
   ];
@@ -348,11 +450,8 @@ async function boot() {
   );
 
   const reloadControls = () => {
-    loadControls(
-      document.getElementById("domain-filter").value,
-      document.getElementById("golden-filter").checked,
-      document.getElementById("control-search").value
-    );
+    activeMetricFilter = null;
+    void loadOverview().then(() => loadControlsFromUi());
   };
   document.getElementById("domain-filter").addEventListener("change", reloadControls);
   document.getElementById("golden-filter").addEventListener("change", reloadControls);
@@ -361,12 +460,20 @@ async function boot() {
     searchDebounce = setTimeout(reloadControls, 250);
   });
 
+  document.getElementById("overview-cards").addEventListener("click", (e) => {
+    const card = e.target.closest("[data-metric-filter]");
+    if (!card) return;
+    void applyMetricFilter(card.dataset.metricFilter);
+  });
+
   const slider = document.getElementById("risk-slider");
   const label = document.getElementById("risk-label");
   slider.addEventListener("input", () => {
     const v = Number(slider.value) / 100;
     label.textContent = v.toFixed(2);
-    loadAlerts(v);
+    alertStatusFilter = null;
+    activeMetricFilter = null;
+    void loadOverview().then(() => loadAlertsFromUi());
   });
 
   document.getElementById("refresh-btn").addEventListener("click", () => refreshDashboard());

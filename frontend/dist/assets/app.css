@@ -224,6 +224,37 @@ body {
   box-shadow: var(--shadow);
 }
 
+button.metric-card-filter {
+  display: block;
+  width: 100%;
+  margin: 0;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+button.metric-card-filter:hover {
+  border-color: var(--accent-dim);
+  transform: translateY(-1px);
+}
+
+button.metric-card-filter.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-dim), var(--shadow);
+}
+
+button.metric-card-filter:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.panel.panel-filter-focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-dim), var(--shadow);
+}
+
 .metric-card .label {
   color: var(--muted);
   font-size: 0.82rem;
@@ -241,6 +272,13 @@ body {
   margin: 0.35rem 0 0;
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+.metric-filter-action {
+  margin-top: 0.5rem;
+  font-size: 0.72rem;
+  color: var(--accent);
+  opacity: 0.85;
 }
 
 .grid-two {

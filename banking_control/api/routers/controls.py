@@ -16,9 +16,18 @@ def list_controls(
     golden: bool | None = None,
     similarity_key: str | None = None,
     search: str | None = Query(None, max_length=120),
+    latest_status: str | None = None,
+    needs_attention: bool | None = None,
     limit: int = Query(100, le=500),
     conn: Any = Depends(get_db_connection),
 ) -> list[dict[str, Any]]:
+    latest_status_sql = """
+        (
+          SELECT a.status FROM FCT_CONTROL_ASSESSMENT a
+          WHERE a.control_id = c.control_id
+          ORDER BY a.assessment_date DESC LIMIT 1
+        )
+    """
     clauses: list[str] = []
     params: list[Any] = []
     if search and search.strip():
@@ -40,6 +49,13 @@ def list_controls(
     if similarity_key:
         clauses.append("c.similarity_key = ?")
         params.append(similarity_key)
+    if latest_status:
+        clauses.append(f"COALESCE({latest_status_sql}, 'Not Tested') = ?")
+        params.append(latest_status)
+    if needs_attention is True:
+        clauses.append(
+            f"COALESCE({latest_status_sql}, 'Not Tested') != 'Effective'"
+        )
     where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     params.append(limit)
     rows = conn.execute(
