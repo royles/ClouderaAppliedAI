@@ -45,6 +45,10 @@ python3 4_application/start-app.py
 
 See [docs/CAI_APPLICATION.md](docs/CAI_APPLICATION.md) for deployment notes.
 
+### LLM-callable controls
+
+Each control can be invoked as a tool with JSON Schema I/O and a pluggable simulator. See [docs/PLUGINS.md](docs/PLUGINS.md).
+
 ### Data domains
 
 | Table | Purpose |
