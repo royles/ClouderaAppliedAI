@@ -146,7 +146,6 @@
     const LAYER_GAP = 36;
     const ROW_GAP = 12;
     const PAD = 14;
-    const LABEL_GUTTER = 10;
 
     const byLayer = new Map();
     graph.nodes.forEach((n) => {
