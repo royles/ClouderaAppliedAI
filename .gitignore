@@ -1,11 +1,18 @@
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/models/
 __pycache__/
 *.py[cod]
+*.egg-info/
+*.pyc
+.pytest_cache/
 .venv/
 venv/
-.env
-data/*.db
-.tools/
 frontend/node_modules/
-*.egg-info/
-/dist/
-build/
+bedrock-playground/frontend/node_modules/
+bedrock-playground/backend/venv/
+.tools/
+
+# Applied AI sentiment demo (see app/ + scripts/train.py)
+models/

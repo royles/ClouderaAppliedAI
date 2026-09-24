@@ -1,38 +1,75 @@
-# Deploy Banking Control Solution on Cloudera AI
+# Deploy Insurance Customer 360 as a Cloudera AI Application
 
-This project is packaged as a **CAI application (AMP)** using `.project-metadata.yaml`.
+This repository is packaged as a **Cloudera AI (CAI) Applied ML Prototype (AMP)**. The root
+`.project-metadata.yaml` defines import-time jobs and the web application.
 
-## Import steps
+## Option A — Import from Git (recommended)
 
-1. Create a Cloudera AI project from this Git repository and select branch **`cursor/banking-control-solution-8b7c`** (do not deploy Banking Control from `main`).
-2. Run the configured tasks in order:
-   - **Install dependencies** — installs Python packages and the editable `banking_control` library.
-   - **Initialize control warehouse** — creates `data/banking_control.db` with demo controls, assessments, alerts, and exceptions.
-   - **Banking Control application** — serves FastAPI and the static dashboard on the Workbench application port.
-3. Bind to `127.0.0.1` and use `CDSW_APP_PORT` (Workbench/CML) or `APP_PORT` (default `8080`).
+1. In Cloudera AI, create a **New Project** from Git:
+   - Repository: `https://github.com/royles/ClouderaAppliedAI`
+   - Branch: `main` (or your feature branch containing `.project-metadata.yaml`)
+2. Enable **Configure as Prototype** / run prototype tasks when prompted (wording varies by CAI version).
+3. CAI executes tasks in order:
+   - Install Python dependencies + `customer360` package
+   - Build React (`frontend/dist`) if needed
+   - Seed `data/customer360.db`
+   - Train churn model → `APP_CUSTOMER_CHURN_SCORES`
+   - **Start application** `Customer 360 Dashboard` on `customer-360` subdomain
+4. Open the application URL from the project **Applications** tab.
 
-The application task (`4_application/start-app.py`) launches **Uvicorn in a subprocess** (`python -m uvicorn banking_control.api.main:app`), matching the Insurance Customer 360 CAI pattern. That avoids asyncio event-loop conflicts when the script runs inside an IPython notebook kernel.
+If the repo lives in a subfolder under `CDSW_PROJECT` (e.g. `midgalpoc/`), bootstrap resolves the
+folder that contains `data/schema.sql` automatically.
+
+## Option B — AMP catalog
+
+1. As a **Site Administrator**, go to **Site Administration → AMPs**.
+2. Add a catalog source pointing at this repository (or host `amp-catalog.yaml` raw URL).
+3. Enable the **Insurance Customer 360** entry (`label: insurance-customer-360`).
+4. Users launch the prototype from the **AMP Catalog**; set Bedrock-related environment variables
+   during import if you use generative features.
+
+Update `git_url` / `git_ref` in `amp-catalog.yaml` if you fork the project.
+
+## Application runtime
+
+| Item | Detail |
+| --- | --- |
+| Entry script | `4_application/start-app.py` |
+| Server | Uvicorn → `customer360.api.main:app` |
+| Port | `CDSW_APP_PORT` (Workbench) or `APP_PORT` (default 8080) |
+| UI | Prebuilt `frontend/dist` served by FastAPI |
 
 ## Environment variables
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `BANKING_CONTROL_DB_PATH` | `<data dir>/banking_control.db` | SQLite file; relative paths resolve under `CDSW_PROJECT` |
-| `BANKING_CONTROL_DATA_DIR` | — | Folder containing `schema.sql` (e.g. `/home/cdsw/data` when the Git repo is under `/home/cdsw/banking-controls`) |
-| `BANKING_CONTROL_SCHEMA_PATH` | — | Full path to DDL file (overrides data dir discovery) |
-| `BANKING_CONTROL_FRONTEND_DIR` | — | Path to built UI (`frontend/dist` with `index.html`) |
-| `CDSW_APP_PORT` / `APP_PORT` | `8080` | Application listen port |
-| `BANKING_CONTROL_LOG_ALL_ACCESS` | — | Set to `1` to log every suppressed access line (default: first `GET /` and first live alerts poll only) |
+Set at **project** or **application** scope (see `.project-metadata.yaml`):
 
-Schema and database paths are discovered by walking up from `CDSW_PROJECT` and the installed package until `data/schema.sql` is found, so a project root of `/home/cdsw/banking-controls` still uses `/home/cdsw/data/schema.sql` when that is where the file lives.
+| Variable | Purpose |
+| --- | --- |
+| `CUSTOMER360_DB_PATH` | SQLite warehouse path (default `data/customer360.db`) |
+| `AWS_*` | Bedrock credentials (optional if IAM role has Bedrock) |
+| `CUSTOMER360_BEDROCK_REGION` | Bedrock client region (e.g. `us-east-1`) |
+| `CUSTOMER360_BEDROCK_MODEL_ID` | Model ID enabled in your account |
 
-## Local development
+Copy from `.env.example` for local testing.
 
-```bash
-python3 -m pip install -r requirements.txt
-python3 -m pip install -e .
-python3 scripts/init_db.py
-python3 4_application/start-app.py
+## Manual rerun (Workbench)
+
+```python
+%cd midgalpoc   # if needed — folder with data/schema.sql
+%run 1_session-install-dependencies/install.py
+%run 2_job-init-database/init_database.py
+%run 3_job-train-churn-model/train_churn.py
 ```
 
-Open the URL printed by uvicorn (default `http://127.0.0.1:8080/`).
+Start the app from the Applications UI or:
+
+```python
+%run 4_application/start-app.py
+```
+
+## Outbound network
+
+- **Bedrock**: AWS API endpoints for your region
+- **Frontend build** (optional): `nodejs.org` when `scripts/build_frontend.py` downloads portable Node
+
+Committed `frontend/dist` avoids Node download on import when the build job is skipped.

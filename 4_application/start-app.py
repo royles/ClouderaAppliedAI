@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import importlib.util
-import os
 import subprocess
 import sys
 from pathlib import Path
 
 
-def _bootstrap() -> Path:
+def _bootstrap() -> None:
     for candidate in (Path.cwd(), *Path.cwd().parents):
         path = candidate / "bootstrap_entry.py"
         if not path.is_file():
@@ -20,37 +19,32 @@ def _bootstrap() -> Path:
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         try:
-            return mod.bootstrap(__file__)
+            mod.bootstrap(__file__)
         except NameError:
-            return mod.bootstrap(None)
+            mod.bootstrap(None)
+        return
     raise RuntimeError("Project root not found (bootstrap_entry.py).")
 
 
-ROOT = _bootstrap()
+_bootstrap()
 
-from banking_control.cai_runtime import application_port  # noqa: E402
+from customer360.cai_runtime import application_port
 
-host = os.environ.get("BANKING_CONTROL_HOST", "127.0.0.1")
 port = application_port()
 
-print(f"Starting Banking Control Solution on {host}:{port}", flush=True)
-
-log_config = ROOT / "banking_control" / "uvicorn_log.json"
+print(f"Starting Customer 360 API on 127.0.0.1:{port}", flush=True)
 
 subprocess.check_call(
     [
         sys.executable,
         "-m",
         "uvicorn",
-        "banking_control.api.main:app",
+        "customer360.api.main:app",
         "--host",
-        host,
+        "127.0.0.1",
         "--port",
         str(port),
         "--workers",
         "1",
-        "--log-config",
-        str(log_config),
-    ],
-    cwd=str(ROOT),
+    ]
 )

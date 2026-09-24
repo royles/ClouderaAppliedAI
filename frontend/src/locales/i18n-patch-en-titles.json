@@ -1,0 +1,463 @@
+{
+  "app": {
+    "brand": {
+      "tagline": "Cloudera AI · Business and Customer Views"
+    },
+    "a11y": {
+      "applicationAreas": "Application Areas",
+      "administrationNav": "Administration"
+    },
+    "dataFreshness": {
+      "label": "Data Freshness",
+      "metricsCache": "Metrics Cache",
+      "portfolioCache": "Portfolio Cache",
+      "churnScores": "Churn Scores"
+    }
+  },
+  "nav": {
+    "business": {
+      "title": "The Business"
+    },
+    "customer": {
+      "title": "The Customer"
+    },
+    "admin": {
+      "title": "Data and Admin"
+    }
+  },
+  "errors": {
+    "boundary": {
+      "title": "Something Went Wrong",
+      "reload": "Reload Page"
+    }
+  },
+  "cohort": {
+    "fullBook": "Full Book",
+    "filteredCohort": "Filtered Cohort",
+    "fullActiveBook": "Full Active Customer Book",
+    "segments": {
+      "customers_all": "All Customers",
+      "with_policies": "With Policies",
+      "with_foreclosures": "With Foreclosures",
+      "with_investments": "With Investments",
+      "with_insurance_status": "With Insurance Status",
+      "with_market_products": "With Market Products"
+    }
+  },
+  "business": {
+    "cohort": {
+      "filteredBadge": "Filtered Cohort"
+    },
+    "portfolio": {
+      "sectionGrowth": "Book Growth and Churn Outlook",
+      "objectivesTitle": "Strategic Objective Trends",
+      "kpi": {
+        "totalBookValue": "Total Book Value",
+        "retentionForecast": "12m Retention (Forecast)",
+        "valueAtChurnRisk": "Value at Churn Risk",
+        "activeCustomers": "Active Customers",
+        "policyRecords": "Policy Records",
+        "avgCustomerValue": "Avg Customer Value",
+        "highRiskBookShare": "High-Risk Book Share",
+        "bookGrowthHistory": "Book Growth (History)"
+      }
+    },
+    "vsBookStats": {
+      "totalBookValue": "Total Book Value",
+      "policyRecords": "Policy Records",
+      "avgCustomerValue": "Avg Customer Value"
+    }
+  },
+  "mobile": {
+    "focusTitle": {
+      "customerProfile": "Customer Profile"
+    }
+  },
+  "charts": {
+    "bookValue": {
+      "title": "Book Value",
+      "coverageSavings": "Coverage and Savings",
+      "totalBook": "Total Book",
+      "cohortTotalBook": "Cohort Total Book",
+      "fullBookRef": "Full Book (Reference)"
+    },
+    "churnHorizon": {
+      "title": "Churn Horizon"
+    },
+    "investmentReturns": {
+      "title": "Investment Returns"
+    },
+    "premiumMomentum": {
+      "title": "Active Policies and Premium"
+    },
+    "savingsAum": {
+      "title": "Long-Term Savings (AUM)"
+    },
+    "engagementObjective": {
+      "title": "Customer Engagement"
+    },
+    "customerValue": {
+      "title": "Customer Value",
+      "latestTotal": "Latest Total",
+      "vsStart": "Vs Start",
+      "lapseHigh": "HIGH Tier Lapse Projection",
+      "legendActual": "Actual Total Value",
+      "legendProjected": "Projected (Tier Rules)",
+      "legendInvestmentAcc": "Investment Accumulation",
+      "legendCoverageSavings": "Coverage and Savings (Policy Status)"
+    }
+  },
+  "customer": {
+    "recent": {
+      "title": "Recently Viewed"
+    },
+    "homeLink": "Customer Home",
+    "back": {
+      "engagement": "← Back to Engagement",
+      "list": "← Back to Customers",
+      "business": "← Back to the Business"
+    },
+    "link": {
+      "engagementHub": "Back to Engagement Hub",
+      "list": "Back to Customer List",
+      "businessPortfolio": "Portfolio in the Business"
+    },
+    "churn": {
+      "notScored": "Not Scored",
+      "likelihoodTitle": "Churn Likelihood {{pct}}"
+    },
+    "profile": {
+      "birthDate": "Birth Date",
+      "maritalStatus": "Marital Status",
+      "lastInteraction": "Last Interaction"
+    },
+    "engagementHint": {
+      "prefix": "Suggested from Engagement Hub:"
+    },
+    "foreclosures": {
+      "title": "Foreclosures and Encumbrances"
+    },
+    "interactions": {
+      "title": "Interaction Timeline",
+      "eventType": {
+        "agentQuestion": "Agent Question",
+        "webSearch": "Web Search"
+      },
+      "signal": {
+        "helpSearch": "Help Search",
+        "productSearch": "Product Search"
+      }
+    },
+    "investments": {
+      "title": "Latest Investment Snapshots",
+      "policyFilter": "Policy Filter:"
+    },
+    "directory": {
+      "titleCompact": "Matching Customers",
+      "sort": {
+        "label": "Rank By",
+        "options": {
+          "name": "Name (A–Z)",
+          "policy_count": "Policy Count",
+          "investment_count": "Investment Tracks"
+        },
+        "order": {
+          "valueDesc": "Highest Value First ↓",
+          "valueAsc": "Lowest Value First ↑",
+          "riskDesc": "High Risk First ↓",
+          "riskAsc": "Low Risk First ↑",
+          "defaultDesc": "Highest First ↓",
+          "defaultAsc": "Lowest First ↑"
+        }
+      },
+      "view": {
+        "grid": "Cards"
+      },
+      "pagination": {
+        "perPage": "Per Page",
+        "pageOf": "Page {{page}} of {{pages}}"
+      }
+    },
+    "table": {
+      "columns": {
+        "lastLogin": "Last Login"
+      }
+    },
+    "card": {
+      "value": "Customer Value",
+      "lastLogin": "Last Login",
+      "churnScored": "Churn Scored",
+      "a11ySummary": "Customer Summary"
+    },
+    "insights": {
+      "title": "AI Insights and Next Best Action",
+      "refresh": "Refresh Insights",
+      "focusChurn": "Churn Focus",
+      "focusUpsell": "Growth / Upsell Focus",
+      "localAdvisor": "Local Advisor",
+      "cachedCopy": "Cached Copy",
+      "recommendedActions": "Recommended Actions",
+      "guidanceHeading": "Personalized Guidance",
+      "outreachHeading": "Suggested Outreach",
+      "bestNextTouch": "Best Next Touch",
+      "focusRetention": "Retention Focus",
+      "localOnlyBedrock": "Showing the built-in local advisor. Configure AWS credentials and CUSTOMER360_BEDROCK_* variables, or set an LLM provider under Data and Admin.",
+      "localOnlyPrivateAi": "Showing the built-in local advisor. Configure PrivateAI under Data and Admin → Configuration → LLM provider.",
+      "localOnlyGeneric": "Showing the built-in local advisor. Configure an LLM provider under Data and Admin → Configuration → LLM provider.",
+      "envHintPrivateAi": "To enable {{brand}}-generated text, complete the LLM provider settings under Data and Admin."
+    },
+    "outreach": {
+      "title": "Draft Outreach",
+      "send": "Send (Simulated)",
+      "copy": "Copy Body",
+      "previewEmail": "Draft Email ({{brand}})",
+      "previewSms": "Draft SMS ({{brand}})",
+      "previewCall": "Call Script ({{brand}})"
+    },
+    "policies": {
+      "columns": {
+        "monthlyPremium": "Monthly Premium"
+      }
+    },
+    "valueChart": {
+      "legendActualFull": "Total Customer Value (Actual)"
+    }
+  },
+  "engagement": {
+    "title": "Engagement and Touchpoints",
+    "summary": {
+      "touchpoints90": {
+        "label": "Touchpoints (90d)"
+      },
+      "digital90": {
+        "label": "Digital and Agent"
+      },
+      "reviews90": {
+        "label": "Reviews (90d)"
+      },
+      "openAgent": {
+        "label": "Open Agent Questions"
+      }
+    },
+    "list": {
+      "title": "Influence Priority List",
+      "titleMobile": "Top Outreach"
+    },
+    "a11y": {
+      "influenceTitle": "Propensity to Influence"
+    },
+    "action": {
+      "recommendedLabel": "Recommended Next Step",
+      "viewTouchpoints": "View Touchpoints"
+    },
+    "actions": {
+      "resolve_agent_question": {
+        "title": "Resolve Open Agent Question"
+      },
+      "retention_call": {
+        "title": "Retention Call (Channel Is Warm)"
+      },
+      "reengagement_outreach": {
+        "title": "Re-Engagement Outreach"
+      },
+      "invite_review": {
+        "title": "Invite Feedback After Digital Research"
+      },
+      "relationship_review": {
+        "title": "Schedule Relationship Review"
+      }
+    }
+  },
+  "products": {
+    "mobile": {
+      "title": "Top Products"
+    },
+    "filter": {
+      "clear": "Clear Filters"
+    },
+    "legend": {
+      "highest": "Highest Uptake"
+    },
+    "a11y": {
+      "legend": "Customer Count Intensity"
+    },
+    "filters": {
+      "cohort": "Customer Cohort",
+      "allCities": "All Cities"
+    },
+    "classes": {
+      "life_protection": "Life and Protection",
+      "health": "Health and Supplementary",
+      "property": "Property and Elementary",
+      "long_term_savings": "Long-Term Savings"
+    }
+  },
+  "admin": {
+    "mobile": {
+      "snapshotTitle": "Warehouse Snapshot"
+    },
+    "title": "Warehouse and Data Admin",
+    "health": {
+      "title": "System Health"
+    },
+    "kpi": {
+      "databaseFile": {
+        "label": "Database File"
+      },
+      "warehouseLoaded": {
+        "label": "Warehouse Last Loaded"
+      },
+      "cataloguedTables": {
+        "label": "Catalogued Tables"
+      },
+      "qualityFlags": {
+        "label": "Quality Flags",
+        "sub": "Non-OK Completeness Checks"
+      }
+    },
+    "tables": {
+      "title": "Table Overview",
+      "columns": {
+        "lastLoaded": "Last Loaded",
+        "sourceJob": "Source Job"
+      }
+    },
+    "schema": {
+      "title": "Schema Map",
+      "joinReference": "Join Reference"
+    },
+    "quality": {
+      "title": "Completeness and Quality"
+    },
+    "config": {
+      "title": "Configuration",
+      "a11y": "Admin Configuration",
+      "tabs": {
+        "warehouse": "Warehouse Backend",
+        "llm": "LLM Provider",
+        "kpiBenchmarks": "Business KPI Benchmarks",
+        "appearance": "Appearance and Themes"
+      }
+    },
+    "llm": {
+      "providerLegend": "Active Provider",
+      "bedrockSection": "Bedrock Model Overrides",
+      "bedrockRegion": "Bedrock Region",
+      "bedrockModelId": "Model ID",
+      "privateAiSection": "PrivateAI Endpoint",
+      "privateAiBaseUrl": "Base URL",
+      "privateAiModelId": "Model ID",
+      "privateAiToken": "API Token",
+      "clearToken": "Remove Stored API Token",
+      "samplingSection": "Generation Limits (All Providers)",
+      "maxTokens": "Max Tokens",
+      "save": "Save LLM Settings",
+      "test": "Test Provider"
+    },
+    "datasource": {
+      "title": "Warehouse Backend",
+      "modeLegend": "Backend Mode",
+      "sqlitePath": "SQLite Path",
+      "testConnection": "Test Connection",
+      "backendTypeLegend": "Backend Type",
+      "sqliteFilePath": "SQLite File Path",
+      "jdbcUrl": "JDBC URL",
+      "cdwHostOptional": "CDW Host (Optional if JDBC URL Set)",
+      "useTlsTrino": "Use TLS for Trino HTTP Test",
+      "icebergRestUri": "Iceberg REST Catalog URI",
+      "catalogName": "Catalog Name"
+    },
+    "kpiBenchmarks": {
+      "title": "Business KPI Benchmarks",
+      "save": "Save Benchmarks",
+      "previewAuto": "Auto (From Portfolio)",
+      "enabledColumn": "Enabled"
+    },
+    "schemaDiagram": {
+      "cachesTitle": "Caches, Config and Reference",
+      "legendPk": "Primary Key",
+      "legendFk": "Join / FK Column",
+      "noColumns": "No Columns (Table Missing in DB)"
+    },
+    "appearance": {
+      "modeLegend": "Light / Dark Mode",
+      "colorLegend": "Accent Palette"
+    },
+    "checks": {
+      "customers": {
+        "label": "Current Customers"
+      },
+      "email_coverage": {
+        "label": "Email Populated"
+      },
+      "mobile_coverage": {
+        "label": "Mobile Populated"
+      },
+      "churn_coverage": {
+        "label": "Churn Scores Present"
+      },
+      "metrics_cache": {
+        "label": "List Metrics Cache"
+      },
+      "policy_coverage": {
+        "label": "Customers With ≥1 Policy"
+      },
+      "scd_uniqueness": {
+        "label": "Single Current Row per Customer ID"
+      },
+      "policy_referential": {
+        "label": "Policies Reference Current Customers"
+      },
+      "investment_amounts": {
+        "label": "Investment Snapshots With Balance"
+      },
+      "churn_high_tier": {
+        "label": "High Churn Tier (Informational)"
+      },
+      "data_source": {
+        "label": "Configured Warehouse Backend"
+      },
+      "database": {
+        "label": "SQLite Warehouse"
+      },
+      "llm": {
+        "label": "LLM Provider",
+        "detail": "Configure Bedrock via AWS credentials or choose PrivateAI under Data and Admin → Configuration → LLM provider."
+      },
+      "churn_model": {
+        "label": "Churn Scoring"
+      }
+    }
+  },
+  "assistant": {
+    "title": "Executive Assistant",
+    "shortTitle": "Assistant",
+    "tabs": {
+      "retention": "Retention Queue"
+    },
+    "input": {
+      "label": "Ask Customer 360"
+    },
+    "a11y": {
+      "toggleClose": "Close Executive Assistant",
+      "toggleOpen": "Open Executive Assistant"
+    },
+    "toggleTitle": {
+      "close": "Close Assistant",
+      "open": "Open Assistant"
+    },
+    "retention": {
+      "actions": {
+        "retention_call": {
+          "title": "Priority Retention Call"
+        },
+        "proactive_review": {
+          "title": "Proactive Policy Review"
+        },
+        "loyalty_check_in": {
+          "title": "Loyalty Check-In"
+        }
+      }
+    }
+  }
+}
