@@ -16,6 +16,7 @@ from banking_control.api.routers import (
     controls,
     core,
     exceptions,
+    timeline,
     tools,
 )
 from banking_control.db import connect, prepare_connection
@@ -76,7 +77,7 @@ def create_app(
         allow_headers=["*"],
     )
 
-    for module in (core, controls, exceptions, alerts, audit, tools, assistant, admin_llm):
+    for module in (core, controls, exceptions, alerts, audit, timeline, tools, assistant, admin_llm):
         app.include_router(module.router)
 
     @app.on_event("startup")

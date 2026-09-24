@@ -388,6 +388,12 @@ async function loadControlsFromUi() {
   renderControls(rows);
 }
 
+function appendActivityTimeParams(params) {
+  const tf = window.activityTimeFilter;
+  if (tf?.from) params.set("from_date", tf.from);
+  if (tf?.to) params.set("to_date", tf.to);
+}
+
 async function loadAlertsFromUi() {
   setTableLoading("alerts-body");
   const minRisk = Number(document.getElementById("risk-slider")?.value || 0) / 100;
@@ -395,6 +401,7 @@ async function loadAlertsFromUi() {
   params.set("min_risk", String(minRisk));
   params.set("limit", "50");
   if (alertStatusFilter) params.set("status", alertStatusFilter);
+  appendActivityTimeParams(params);
   const rows = await api(`/api/alerts?${params}`);
   renderAlerts(rows);
 }
@@ -411,7 +418,10 @@ async function loadExceptions() {
 
 async function loadAudit() {
   setListLoading("audit-list");
-  const rows = await api("/api/audit-log?limit=25");
+  const params = new URLSearchParams();
+  params.set("limit", "25");
+  appendActivityTimeParams(params);
+  const rows = await api(`/api/audit-log?${params}`);
   renderAudit(rows);
 }
 
@@ -433,6 +443,7 @@ async function refreshDashboard() {
       loadAlertsFromUi(),
       loadExceptions(),
       loadAudit(),
+      typeof window.reloadActivityTimeline === "function" ? window.reloadActivityTimeline() : Promise.resolve(),
     ]);
   } finally {
     btn?.removeAttribute("disabled");
@@ -501,6 +512,10 @@ async function boot() {
   });
 
   document.getElementById("refresh-btn").addEventListener("click", () => refreshDashboard());
+
+  document.addEventListener("activity-time-filter", () => {
+    void Promise.all([loadAlertsFromUi(), loadAudit()]);
+  });
 
   document.getElementById("exceptions-body").addEventListener("click", (e) => {
     const btn = e.target.closest(".advance-btn");

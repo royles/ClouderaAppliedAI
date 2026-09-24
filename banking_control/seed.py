@@ -198,7 +198,7 @@ def _seed_transaction_alerts(
             (
                 alert_id,
                 unit_id,
-                _rand_date(rng, today - timedelta(days=30), 29),
+                _rand_date(rng, today - timedelta(days=365), 364),
                 rng.choice(ALERT_TYPES),
                 amount,
                 f"CUST-{rng.randint(10000, 99999)}",
@@ -236,7 +236,7 @@ def _seed_audit_events(
             """,
             (
                 i,
-                _rand_date(rng, today - timedelta(days=14), 13),
+                _rand_date(rng, today - timedelta(days=365), 364),
                 rng.choice(["compliance_bot", "audit_lead", "aml_analyst", "dora_lead"]),
                 action,
                 entity,

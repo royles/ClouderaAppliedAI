@@ -118,6 +118,8 @@ def ensure_warehouse_indexes(conn: sqlite3.Connection) -> None:
         "CREATE INDEX IF NOT EXISTS idx_assessment_control ON FCT_CONTROL_ASSESSMENT(control_id)",
         "CREATE INDEX IF NOT EXISTS idx_exception_status ON FCT_EXCEPTION(status)",
         "CREATE INDEX IF NOT EXISTS idx_alert_status ON FCT_TRANSACTION_ALERT(status)",
+        "CREATE INDEX IF NOT EXISTS idx_alert_at ON FCT_TRANSACTION_ALERT(alert_at)",
+        "CREATE INDEX IF NOT EXISTS idx_audit_event_at ON FCT_AUDIT_EVENT(event_at)",
     ]
     for stmt in statements:
         try:

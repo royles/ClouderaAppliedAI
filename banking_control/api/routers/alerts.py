@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
+from banking_control.api.date_filters import append_iso_date_range
 from banking_control.api.deps import get_db_connection
 
 router = APIRouter(prefix="/api", tags=["alerts"])
@@ -13,6 +14,8 @@ router = APIRouter(prefix="/api", tags=["alerts"])
 def list_alerts(
     status: str | None = None,
     min_risk: float = Query(0.0, ge=0.0, le=1.0),
+    from_date: str | None = Query(None, description="Inclusive start date (ISO YYYY-MM-DD)"),
+    to_date: str | None = Query(None, description="Inclusive end date (ISO YYYY-MM-DD)"),
     limit: int = Query(50, le=100),
     conn: Any = Depends(get_db_connection),
 ) -> list[dict[str, Any]]:
@@ -21,6 +24,7 @@ def list_alerts(
     if status:
         clauses.append("a.status = ?")
         params.append(status)
+    append_iso_date_range(clauses, params, column="a.alert_at", from_date=from_date, to_date=to_date)
     params.append(limit)
     where = "WHERE " + " AND ".join(clauses)
     rows = conn.execute(

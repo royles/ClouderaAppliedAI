@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Banking Control Solution</title>
-    <link rel="stylesheet" href="/assets/app.css?v=4" />
+    <link rel="stylesheet" href="/assets/app.css?v=5" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -91,6 +91,7 @@
       </header>
 
       <div class="app-shell">
+      <div class="app-stage">
       <main class="layout main-content">
         <div id="dashboard-home">
         <section class="hero-metrics" id="overview-cards"></section>
@@ -196,6 +197,42 @@
         </article>
       </main>
 
+      <section class="timeline-dock" id="activity-timeline-dock" aria-label="Activity timeline filter">
+        <div class="timeline-dock-head">
+          <div>
+            <h2 class="timeline-dock-title">Activity timeline</h2>
+            <p id="timeline-range-label" class="timeline-range-label">All dates · drag chart or handles to filter alerts &amp; audit</p>
+          </div>
+          <div class="timeline-dock-actions">
+            <span id="timeline-meta" class="timeline-meta"></span>
+            <label class="timeline-gran-label">
+              Granularity
+              <select id="timeline-granularity" aria-label="Timeline bucket size">
+                <option value="auto">Auto</option>
+                <option value="month">Month</option>
+                <option value="week">Week</option>
+                <option value="day">Day</option>
+              </select>
+            </label>
+            <button type="button" id="timeline-clear" class="btn btn-ghost">Clear range</button>
+          </div>
+        </div>
+        <div class="timeline-chart-wrap">
+          <canvas id="activity-timeline-canvas" height="120" aria-label="Alerts and audit counts over time"></canvas>
+          <div class="timeline-brush-rail" aria-hidden="true">
+            <span class="timeline-brush-handle" id="timeline-brush-left" title="Adjust range start"></span>
+            <span class="timeline-brush-band"></span>
+            <span class="timeline-brush-handle" id="timeline-brush-right" title="Adjust range end"></span>
+          </div>
+        </div>
+        <div class="timeline-legend">
+          <span><i class="swatch swatch-alerts"></i> Transaction alerts</span>
+          <span><i class="swatch swatch-audit"></i> Audit events</span>
+        </div>
+        <div id="timeline-scroll" class="timeline-scroll"></div>
+      </section>
+      </div>
+
       <div id="copilot-rail" class="copilot-rail is-closed">
       <aside id="assistant-panel" class="assistant-panel" aria-label="Control assistant" aria-hidden="true">
         <div class="assistant-head">
@@ -243,7 +280,8 @@
       </button>
     </div>
     <script src="/assets/assistant.js?v=8"></script>
-    <script src="/assets/app.js?v=10"></script>
+    <script src="/assets/app.js?v=11"></script>
     <script src="/assets/detail.js?v=1"></script>
+    <script src="/assets/timeline.js?v=1"></script>
   </body>
 </html>
