@@ -11,6 +11,8 @@ This project is packaged as a **CAI application (AMP)** using `.project-metadata
    - **Banking Control application** — serves FastAPI and the static dashboard on the Workbench application port.
 3. Bind to `127.0.0.1` and use `CDSW_APP_PORT` (Workbench/CML) or `APP_PORT` (default `8080`).
 
+The application task (`4_application/start-app.py`) launches **Uvicorn in a subprocess** (`python -m uvicorn banking_control.api.main:app`), matching the Insurance Customer 360 CAI pattern. That avoids asyncio event-loop conflicts when the script runs inside an IPython notebook kernel.
+
 ## Environment variables
 
 | Variable | Default | Purpose |
