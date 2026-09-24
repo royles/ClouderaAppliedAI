@@ -42,7 +42,9 @@ _MARKDOWN_TOOL = re.compile(
 
 def strip_model_artifacts(text: str) -> str:
     """Remove reasoning and tool-call markup from text shown to the user."""
-    out = text or ""
+    from banking_control.assistant.thinking_suppress import suppress_thinking_markup
+
+    out = suppress_thinking_markup(text)
     for pat in _THINKING_PATTERNS:
         out = pat.sub("", out)
     out = _TOOL_CALL_BLOCK.sub("", out)

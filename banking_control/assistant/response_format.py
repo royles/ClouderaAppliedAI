@@ -6,6 +6,7 @@ import json
 import re
 from typing import Any
 
+from banking_control.assistant.thinking_suppress import suppress_thinking_markup
 from banking_control.llm.openai_tool_parse import strip_model_artifacts
 
 _PLANNING_CUE = re.compile(
@@ -142,37 +143,14 @@ def trim_planning_monologue(text: str) -> str:
     return text
 
 
-def extract_thinking_blocks(text: str) -> tuple[str, str]:
-    """Return (visible_text, thinking_trace) for optional collapsed UI."""
-    raw = text or ""
-    thinking_parts: list[str] = []
-    patterns = (
-        re.compile(r"<think>[\s\S]*?</think>", re.IGNORECASE),
-        re.compile(r"<thinking>[\s\S]*?</thinking>", re.IGNORECASE),
-        re.compile(r"<reasoning>[\s\S]*?</reasoning>", re.IGNORECASE),
-    )
-    open_t = "<" + "think>"
-    close_t = "</" + "think>"
-    patterns = (
-        *patterns,
-        re.compile(re.escape(open_t) + r"[\s\S]*?" + re.escape(close_t), re.IGNORECASE),
-    )
-    visible = raw
-    for pat in patterns:
-        for m in pat.finditer(visible):
-            thinking_parts.append(m.group(0).strip())
-        visible = pat.sub("", visible)
+def postprocess_user_visible(text: str) -> str:
+    visible = suppress_thinking_markup(text)
     visible = strip_model_artifacts(visible)
     visible = trim_planning_monologue(visible)
     visible = demote_markdown_tables(visible)
     visible = re.sub(r"<br\s*/?>", " ", visible, flags=re.IGNORECASE)
     visible = re.sub(r"\n{3,}", "\n\n", visible).strip()
-    thinking = "\n\n".join(thinking_parts).strip()
-    return visible, thinking
-
-
-def postprocess_user_visible(text: str) -> tuple[str, str]:
-    return extract_thinking_blocks(text)
+    return visible
 
 
 def _parse_tool_payload(raw: str) -> Any:

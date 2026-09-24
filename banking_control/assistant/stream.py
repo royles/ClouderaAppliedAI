@@ -18,13 +18,13 @@ from banking_control.llm.openai_compat import invoke_openai_chat, stream_openai_
 from banking_control.llm.openai_tool_parse import (
     content_looks_like_tool_attempt,
     parse_tool_calls_from_content,
-    strip_model_artifacts,
 )
 from banking_control.llm.router import is_llm_configured
 from banking_control.assistant.response_format import (
     answer_from_tool_messages,
     postprocess_user_visible,
 )
+from banking_control.assistant.thinking_suppress import suppress_thinking_markup
 from banking_control.assistant.router import answer_question_rules, suggest_actions
 from banking_control.tools.engine import ControlToolEngine
 
@@ -125,7 +125,7 @@ def _run_tool_loop_openai(
             tool_calls = parse_tool_calls_from_content(str(raw_content))
 
         if not tool_calls:
-            clean = strip_model_artifacts(str(raw_content))
+            clean = postprocess_user_visible(str(raw_content))
             if not clean and content_looks_like_tool_attempt(str(raw_content)):
                 continue
             messages.append({"role": "assistant", "content": clean})
@@ -180,7 +180,7 @@ def _summarize_after_tools_openai(
     )
     choice = (payload.get("choices") or [{}])[0]
     msg = choice.get("message") or {}
-    return strip_model_artifacts(str(msg.get("content") or ""))
+    return postprocess_user_visible(str(msg.get("content") or ""))
 
 
 def _run_tool_loop_bedrock(
@@ -258,10 +258,11 @@ def stream_assistant_events(
                 last = oai_messages[-1] if oai_messages else {}
                 text = ""
                 if last.get("role") == "assistant" and last.get("content"):
-                    text = strip_model_artifacts(str(last["content"]))
+                    text = postprocess_user_visible(str(last["content"]))
                 if (not text or content_looks_like_tool_attempt(text)) and tools_called:
                     text = _summarize_after_tools_openai(conn, cfg, oai_messages)
                 if text:
+                    text = postprocess_user_visible(text)
                     for i in range(0, len(text), 32):
                         piece = text[i : i + 32]
                         buffer.append(piece)
@@ -273,7 +274,7 @@ def stream_assistant_events(
                         config=cfg,
                         tools=None,
                     ):
-                        clean = strip_model_artifacts(piece)
+                        clean = suppress_thinking_markup(piece)
                         if clean:
                             buffer.append(clean)
                             yield sse_event("delta", {"text": clean})
@@ -283,7 +284,7 @@ def stream_assistant_events(
                         messages=oai_messages,
                         config=cfg,
                     ):
-                        clean = strip_model_artifacts(piece)
+                        clean = suppress_thinking_markup(piece)
                         if clean:
                             buffer.append(clean)
                             yield sse_event("delta", {"text": clean})
@@ -317,30 +318,21 @@ def stream_assistant_events(
         final_answer = structured_final or "".join(buffer)
         if not final_answer.strip() and tools_called:
             final_answer = _fallback_answer_from_tool_messages(tool_result_messages)
-        raw_assistant_text = ""
-        for msg in reversed(tool_result_messages):
-            if msg.get("role") == "assistant" and msg.get("content"):
-                raw_assistant_text = str(msg["content"])
-                break
-        _, thinking_from_model = postprocess_user_visible(raw_assistant_text)
         if structured_final:
             visible_answer = structured_final
-            thinking_trace = thinking_from_model
         else:
-            visible_answer, thinking_trace = postprocess_user_visible(final_answer)
-            if not thinking_trace:
-                thinking_trace = thinking_from_model
+            visible_answer = postprocess_user_visible(final_answer)
         actions = suggest_actions(conn, trimmed, tools_called=tools_called)
-        done_payload: dict[str, Any] = {
-            "answer": visible_answer.strip() or "No response generated.",
-            "source": provider,
-            "provider": provider,
-            "model_id": cfg.bedrock_model_id or cfg.openai_model_id,
-            "tools_called": tools_called,
-            "actions": actions,
-        }
-        if thinking_trace:
-            done_payload["thinking_trace"] = thinking_trace
-        yield sse_event("done", done_payload)
+        yield sse_event(
+            "done",
+            {
+                "answer": visible_answer.strip() or "No response generated.",
+                "source": provider,
+                "provider": provider,
+                "model_id": cfg.bedrock_model_id or cfg.openai_model_id,
+                "tools_called": tools_called,
+                "actions": actions,
+            },
+        )
     except LLMError as exc:
         yield sse_event("error", {"detail": str(exc)})

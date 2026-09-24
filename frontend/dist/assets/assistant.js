@@ -385,9 +385,7 @@
           },
           onDone: (done) => {
             if (textNode && typeof window.setAssistantMessageBody === "function") {
-              window.setAssistantMessageBody(textNode, "assistant", done.answer || "", {
-                thinkingTrace: done.thinking_trace || "",
-              });
+              window.setAssistantMessageBody(textNode, "assistant", done.answer || "");
             } else if (textNode) {
               textNode.textContent = done.answer || "";
             }

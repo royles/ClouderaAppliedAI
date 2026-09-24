@@ -7,12 +7,43 @@
       .replace(/"/g, "&quot;");
   }
 
+  function suppressThinkingMarkup(source) {
+    let out = String(source || "");
+    const openThink = "<" + "think>";
+    const closeThink = "</" + "think>";
+    const blockPatterns = [
+      /<redacted_thinking\b[^>]*>[\s\S]*?<\/redacted_thinking>/gi,
+      /<thinking\b[^>]*>[\s\S]*?<\/thinking>/gi,
+      /<reasoning\b[^>]*>[\s\S]*?<\/reasoning>/gi,
+      new RegExp(openThink.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "[\\s\\S]*?" + closeThink.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+      /<redacted_thinking\b[^>]*>[\s\S]*/gi,
+      /<thinking\b[^>]*>[\s\S]*/gi,
+      /<reasoning\b[^>]*>[\s\S]*/gi,
+      new RegExp(openThink.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "[\\s\\S]*", "gi"),
+    ];
+    const fragPatterns = [
+      /<\/?redacted_thinking\b[^>]*>/gi,
+      /<\/?thinking\b[^>]*>/gi,
+      /<\/?reasoning\b[^>]*>/gi,
+    ];
+    for (let pass = 0; pass < 4; pass += 1) {
+      const prev = out;
+      blockPatterns.forEach((re) => {
+        out = out.replace(re, "");
+      });
+      fragPatterns.forEach((re) => {
+        out = out.replace(re, "");
+      });
+      if (out === prev) break;
+    }
+    return out.replace(/\n{3,}/g, "\n\n").trim();
+  }
+
   function inlineMarkdown(text) {
     let s = escapeHtml(text);
     s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, (_m, label, url) => {
       const safeUrl = escapeHtml(url);
-      const safeLabel = label;
-      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="asst-md-link">${safeLabel}</a>`;
+      return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="asst-md-link">${label}</a>`;
     });
     s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
     s = s.replace(/\*(.+?)\*/g, "<em>$1</em>");
@@ -54,25 +85,8 @@
     return out.join("\n");
   }
 
-  function extractThinking(source) {
-    let visible = String(source || "");
-    const thinkingParts = [];
-    const patterns = [
-      /<think>[\s\S]*?<\/redacted_thinking>/gi,
-      /<thinking>[\s\S]*?<\/thinking>/gi,
-      /<reasoning>[\s\S]*?<\/reasoning>/gi,
-    ];
-    patterns.forEach((re) => {
-      visible = visible.replace(re, (block) => {
-        thinkingParts.push(block.replace(/<\/?[^>]+>/g, "").trim());
-        return "";
-      });
-    });
-    return { visible: visible.trim(), thinking: thinkingParts.filter(Boolean).join("\n\n") };
-  }
-
   function renderAssistantMarkdown(source) {
-    const cleaned = demoteTableLines(source);
+    const cleaned = demoteTableLines(suppressThinkingMarkup(source));
     const lines = cleaned.split("\n");
     const parts = [];
     let inList = false;
@@ -115,6 +129,8 @@
         parts.push(`<li class="asst-md-li">${inlineMarkdown(line.replace(/^[-*]\s+/, ""))}</li>`);
       } else if (line.trim() === "") {
         closeList();
+      } else if (/redacted_thinking|<\/?thinking/i.test(line)) {
+        continue;
       } else {
         closeList();
         parts.push(`<p class="asst-md-p">${inlineMarkdown(line)}</p>`);
@@ -125,7 +141,7 @@
   }
 
   function looksLikeMarkdown(text) {
-    const s = String(text || "");
+    const s = suppressThinkingMarkup(text);
     if (/^#{1,3}\s/m.test(s)) return true;
     if (/^\s*[-*]\s+/m.test(s)) return true;
     if (/^\s*\d+\.\s+/m.test(s)) return true;
@@ -135,32 +151,11 @@
     return false;
   }
 
-  function renderThinkingFold(thinkingText) {
-    if (!thinkingText || !thinkingText.trim()) return null;
-    const details = document.createElement("details");
-    details.className = "assistant-thinking";
-    const summary = document.createElement("summary");
-    summary.textContent = "Model reasoning (collapsed)";
-    const body = document.createElement("div");
-    body.className = "assistant-thinking-body";
-    body.textContent = thinkingText.trim();
-    details.appendChild(summary);
-    details.appendChild(body);
-    return details;
-  }
-
-  function setAssistantMessageBody(el, role, text, options) {
+  function setAssistantMessageBody(el, role, text) {
     if (!el) return;
-    const opts = options || {};
-    let visible = text;
-    let thinking = opts.thinkingTrace || "";
-    if (role === "assistant" && !thinking) {
-      const split = extractThinking(text);
-      visible = split.visible || text;
-      thinking = split.thinking;
-    }
-    const parent = el.parentElement;
-    parent?.querySelector(".assistant-thinking")?.remove();
+    const visible =
+      role === "assistant" ? suppressThinkingMarkup(text) : String(text || "");
+    el.parentElement?.querySelector(".assistant-thinking")?.remove();
 
     if (role === "assistant" && looksLikeMarkdown(visible)) {
       el.classList.add("assistant-markdown");
@@ -169,12 +164,9 @@
       el.classList.remove("assistant-markdown");
       el.textContent = visible;
     }
-    const fold = renderThinkingFold(thinking);
-    if (fold && parent) {
-      parent.insertBefore(fold, el.nextSibling);
-    }
   }
 
+  window.suppressThinkingMarkup = suppressThinkingMarkup;
   window.renderAssistantMarkdown = renderAssistantMarkdown;
   window.looksLikeMarkdown = looksLikeMarkdown;
   window.setAssistantMessageBody = setAssistantMessageBody;
