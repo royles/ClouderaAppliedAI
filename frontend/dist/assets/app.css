@@ -403,15 +403,22 @@ input[type="range"] {
 .app-shell {
   display: flex;
   align-items: stretch;
-  min-height: calc(100vh - var(--topbar-size));
+  height: calc(100vh - var(--topbar-size));
+  max-height: calc(100vh - var(--topbar-size));
+  min-height: 0;
+  overflow: hidden;
 }
 
 .main-content {
   flex: 1 1 auto;
   min-width: 0;
+  min-height: 0;
   width: 100%;
   max-width: none;
   margin: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .pane-error {
@@ -432,6 +439,9 @@ input[type="range"] {
   flex: 0 0 min(22rem, 34vw);
   min-width: 18rem;
   max-width: 26rem;
+  height: 100%;
+  max-height: 100%;
+  align-self: stretch;
 }
 
 .copilot-toggle {
@@ -508,11 +518,13 @@ body.copilot-open .copilot-toggle {
   width: 100%;
   min-height: 0;
   height: 100%;
+  max-height: 100%;
   border-left: 1px solid var(--border);
   background: var(--surface);
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow);
+  overflow: hidden;
 }
 
 .assistant-head {
@@ -520,6 +532,7 @@ body.copilot-open .copilot-toggle {
   justify-content: space-between;
   align-items: flex-start;
   gap: 0.5rem;
+  flex-shrink: 0;
   padding: 0.85rem 1rem;
   border-bottom: 1px solid var(--border);
   background: var(--surface-2);
@@ -531,8 +544,11 @@ body.copilot-open .copilot-toggle {
 }
 
 .assistant-history {
-  flex: 1;
-  overflow: auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.75rem 1rem;
   display: flex;
   flex-direction: column;
@@ -567,6 +583,7 @@ body.copilot-open .copilot-toggle {
 .assistant-msg-text {
   font-size: 0.88rem;
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
   line-height: 1.45;
 }
 
@@ -577,12 +594,15 @@ body.copilot-open .copilot-toggle {
 }
 
 .assistant-form {
+  flex-shrink: 0;
+  margin-top: auto;
   border-top: 1px solid var(--border);
-  padding: 0.75rem 1rem 1rem;
+  padding: 0.75rem 1rem max(1rem, env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  flex-shrink: 0;
+  background: var(--surface);
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .assistant-input-hint {

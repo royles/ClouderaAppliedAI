@@ -135,7 +135,9 @@
       metaEl.className = "assistant-msg-meta";
       wrap.appendChild(metaEl);
       history?.appendChild(wrap);
-      if (history) history.scrollTop = history.scrollHeight;
+      if (history) {
+        history.scrollTop = history.scrollHeight;
+      }
       return wrap;
     }
 
